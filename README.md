@@ -14,7 +14,9 @@ pip install fake-bpy-module-latest
 ## Setup Blender and Pycharm
 1) Download [https://www.blender.org/download/](https://www.blender.org/download/)
 2) Install blend-charm plugin via: [https://github.com/BlackStartx/PyCharm-Blender-Plugin](https://github.com/BlackStartx/PyCharm-Blender-Plugin) (see releases, make sure you have the correct pycharm version for the plugin!)
-3) Follow isntructions in the repository.
+3) Follow instructions in the repository.
+4) Mark the folder named "HE_blender_plugin" as plugin directory via rightclick -> new -> Blender-Charm -> Mark as Addon Folder
+5) Now every time you start blender via Blend-Charm it will automatically install the plugin in the "HE_blender_plugin" folder and you can ecute the plugin.
 
 ## ToDos
 
