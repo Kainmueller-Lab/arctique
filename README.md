@@ -31,8 +31,10 @@ pip install fake-bpy-module-latest
 - Implement interpolation between cellTypes (to get more and less similar cellTypes)
 - Toggle cell occlusion (Yes/No)
 - Implement minimum (or average) distance between cells
+
+### Mask creation
 - Add label members to cell type class (which will be needed to create (in)correctly labeled GT masks)
-- Add parameter betwee 0 and 1 that 
+- Add parameter between 0 and 1 that steers the ratio of mislabeled or unlabeled cell masks
 
 ## Pipeline
 1) Generation of cells
