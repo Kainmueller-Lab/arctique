@@ -17,7 +17,22 @@ pip install fake-bpy-module-latest
 3) Follow isntructions in the repository.
 
 ## ToDos
+
+### General
 - Create a simple end-to-end pipeline script (Generate blob, render it, export png) and check if this works without using Blender extension. This is important in case other users unfamiliar with Blender want to generate images.
+- Create config file that contains all input parameters, so that parameters and run script are decoupled
+
+### Cell geometry and distribution
+- Generate custom cell field shapes (e.g. rectangle, disc field) in which cells are randomly distributed
+- Define a field density parameter (for equidistribution on a cell field)
+- Implement different distributions (so far only: equidistribution on field shape; add: Gaussian distribution)
+- Pass a list of cell positions in case one needs non-random hand-picked cell positions.
+- Create more cell type classes if necessary (use specific cell names?)
+- Implement interpolation between cellTypes (to get more and less similar cellTypes)
+- Toggle cell occlusion (Yes/No)
+- Implement minimum (or average) distance between cells
+- Add label members to cell type class (which will be needed to create (in)correctly labeled GT masks)
+- Add parameter betwee 0 and 1 that 
 
 ## Pipeline
 1) Generation of cells
