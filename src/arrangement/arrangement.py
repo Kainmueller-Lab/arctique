@@ -1,0 +1,2 @@
+class CellArrangement:
+    pass

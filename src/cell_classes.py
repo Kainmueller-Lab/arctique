@@ -10,13 +10,14 @@ dir = os.path.dirname(bpy.data.filepath)
 if not dir in sys.path:
     sys.path.append(dir )
 
-import src.helper_methods as hm
+import src.utils.helper_methods as hm
 
 # this next part forces a reload in case you edit the source after you first start the blender session
 import imp
 imp.reload(hm)
 
 
+# todo: move to cells
 class RandomDeformedCell:
     def __init__(self, size=1.0, scale=(1,1,1), deformation_strength=0.1, orientation=None):
         self.size = size
