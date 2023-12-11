@@ -27,7 +27,7 @@ class RunScript(bpy.types.Operator):
         import sys
         sys.path.append(str(Path(os.path.dirname(os.path.realpath(__file__))).parent))
 
-        import HE_tile  # runs the script
+        import main  # runs the script
         return {'FINISHED'}
 
 

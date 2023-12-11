@@ -1,0 +1,21 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: Jannik
+    given-names: Franzen
+  - family-names: Albrecht
+    given-names: Jan Philipp
+    orcid: https://orcid.org/0000-0002-3792-9695
+  - family-names: Karg
+    given-names: Chris
+  - family-names: Winklmayr
+    given-names: Claudia
+  - family-names: Guarino
+    given-names: Vanessa
+title: "rHEnder"
+abstract: A library that lets you script bimomedical data in blender.
+license: MIT
+version: 0.1.6
+date-released: 2023-11-12
+repository: "https://github.com/Kainmueller-Lab/rendered_HE"
+type: software
