@@ -1,25 +1,29 @@
+import bpy
+import numpy as np
+import random
+import sys
+import os
+from math import radians, sin, cos, pi
+from mathutils import Matrix, Vector
+
 # IMPORT SOURCES
 dir = os.path.dirname(bpy.data.filepath)
 if not dir in sys.path:
     sys.path.append(dir )
 
-from src.arrangement.arrangement import CellArrangement
-from src.objects.cells import CellAttributeEndothelia
-from src.objects.cells import Cell
-from src.objects.tissue import Tissue
-from src.shading.shading import Material
-from src.scene import BioMedicalScene, Camera, LightSource
+import src.arrangement.arrangement as arr 
+import src.objects.cells as cells
+import src.objects.tissue as tissue
+import src.shading.shading as shading
+import src.scene as scene
 
 # this next part forces a reload in case you edit the source after you first start the blender session
 import imp
-imp.reload(CellArrangement)
-imp.reload(CellAttributeEndothelia)
-imp.reload(Cell)
-imp.reload(Tissue)
-imp.reload(Material)
-imp.reload(BioMedicalScene)
-imp.reload(Camera)
-imp.reloadLightSource)
+imp.reload(arr)
+imp.reload(cells)
+imp.reload(tissue)
+imp.reload(shading)
+imp.reload(scene)
 
 ###################  PARAMETER  #####################
 # args_camera = {'pos'}
@@ -27,30 +31,19 @@ imp.reloadLightSource)
 
 ###################  MAIN  METHOD  #####################
 # create the necessary objects
-
+scene.BioMedicalScene.clear()
+    
 # create cell arrangements
 # cells_a = CellArrangement()
 # cell_list = cells_a.cells
 
 # add microscope objects
-my_tissue = Tissue(Material())
-my_light_source = LightSource()
-my_camera = Camera()
+my_tissue = tissue.Tissue(shading.Material())
+my_light_source = scene.LightSource()
+my_camera = scene.Camera()
 
 # create scene
-my_scene = BioMedicalScene(my_light_source, my_camera)#, cell_list)
+my_scene = scene.BioMedicalScene(my_light_source, my_camera)#, cell_list)
 
 # render scene
 my_scene.render()
-
-
-
-# scn = bpy.context.scene
-# cam1 = bpy.data.cameras.new("Camera 1")
-# cam1.lens = 18
-
-# # create the first camera object
-# cam_obj1 = bpy.data.objects.new("Camera 1", cam1)
-# cam_obj1.location = (0, 0, 2)
-# cam_obj1.rotation_euler = (0, 0, 0)
-# scn.collection.objects.link(cam_obj1)
