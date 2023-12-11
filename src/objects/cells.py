@@ -53,7 +53,7 @@ class Cell:
 
     def add(self):
         # Create a cube
-        bpy.ops.mesh.primitive_cube_add(size=self.size, location=self.location)
+        bpy.ops.mesh.primitive_cube_add(size=self.cell_attributes.size, location=self.location)
         self.cell_object = bpy.context.active_object
         
         # Apply two levels of subdivision surface
@@ -65,10 +65,10 @@ class Cell:
             set_orientation(self.cell_object, self.orientation)
 
         # Scale 
-        self.cell_object.scale = self.scale
+        self.cell_object.scale = self.cell_attributes.scale
         
         # Deform the vertices randomly
-        self.deform_mesh(self.deformation_strength)
+        self.deform_mesh(self.cell_attributes.deformation_strength)
 
     def deform_mesh(self, deformation_strength):
         # Iterate through each vertex and deform its position
@@ -76,8 +76,8 @@ class Cell:
             original_position = vertex.co.copy()
             # TODO: Sample random unit vector and multiply by deformation strength - ck
             deformation_vector = Vector([
-                random.uniform(-self.deformation_strength, self.deformation_strength),
-                random.uniform(-self.deformation_strength, self.deformation_strength),
-                random.uniform(-self.deformation_strength, self.deformation_strength)
-            ])*Vector(self.scale)
+                random.uniform(-self.cell_attributes.deformation_strength, self.cell_attributes.deformation_strength),
+                random.uniform(-self.cell_attributes.deformation_strength, self.cell_attributes.deformation_strength),
+                random.uniform(-self.cell_attributes.deformation_strength, self.cell_attributes.deformation_strength)
+            ])*Vector(self.cell_attributes.scale)
             vertex.co = original_position + deformation_vector

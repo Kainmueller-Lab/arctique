@@ -17,6 +17,10 @@ class CellList:
             cell = Cell(idx, self.cell_attributes, location, self.name)
             self.objects.append(cell)
 
+    def add_to_scene(self):
+        for cell in self.objects:
+            cell.add()
+
 
 # TODO: Extend to different ditribution types, e.g. Gaussian distribution etc.
 class CellDistribution:
@@ -28,7 +32,7 @@ class CellDistribution:
         self.name = name
         self.objects = []
         
-    def generate_cells(self, cell_size, cell_scale, deformation_strength):
+    def generate_cells(self):
         for idx in range(self.num_cells):
             # Sample uniformly distributed location
             location = Vector([
@@ -38,3 +42,7 @@ class CellDistribution:
             ])
             cell = Cell(idx, self.cell_attributes, location, self.name)
             self.objects.append(cell)
+
+    def add_to_scene(self):
+        for cell in self.objects:
+            cell.add()
