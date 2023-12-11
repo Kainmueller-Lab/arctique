@@ -9,11 +9,10 @@ def move_selection(offset_vector):
         obj.location += offset_vector
         
         
-def delete_pos_z_objects():
-    # Select all objects with z location greater than 0
+def delete_objects():
+    # Select all objects 
     for obj in bpy.context.scene.objects:
-        if obj.location.z >= 0:
-            obj.select_set(True)
+        obj.select_set(True)
 
     # Delete the selected objects
     bpy.ops.object.delete()
