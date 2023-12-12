@@ -74,10 +74,9 @@ class Cell:
         # Iterate through each vertex and deform its position
         for vertex in self.cell_object.data.vertices:
             original_position = vertex.co.copy()
-            # TODO: Sample random unit vector and multiply by deformation strength - ck
             deformation_vector = Vector([
-                random.uniform(-self.cell_attributes.deformation_strength, self.cell_attributes.deformation_strength),
-                random.uniform(-self.cell_attributes.deformation_strength, self.cell_attributes.deformation_strength),
-                random.uniform(-self.cell_attributes.deformation_strength, self.cell_attributes.deformation_strength)
-            ])*Vector(self.cell_attributes.scale)
+                random.uniform(-1, 1),
+                random.uniform(-1, 1),
+                random.uniform(-1, 1)
+            ])*Vector(self.cell_attributes.scale)*self.cell_attributes.deformation_strength
             vertex.co = original_position + deformation_vector

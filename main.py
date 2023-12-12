@@ -33,26 +33,6 @@ imp.reload(scene)
 # create the necessary objects
 scene.BioMedicalScene.clear()
     
-# create cell arrangements
-# cells_a = CellArrangement()
-# cell_list = cells_a.cells
-cell_distribution = arr.CellDistribution(
-    cell_attributes = cells.CellAttributeA(),
-    num_cells = 200,
-    min_coords = Vector([0, 0, 0]),
-    max_coords = Vector([1, 1, 1])
-)
-cell_distribution.generate_cells()
-cell_distribution.add_to_scene()
-
-locations = [Vector([0, 0, 0]), Vector([0, 0, 1]), Vector([0, 1, 0]), Vector([0, 1, 1]), Vector([1, 0, 0]), Vector([1, 0, 1]), Vector([1, 1, 0]), Vector([1, 1, 1])]
-cell_list = arr.CellList(
-    cell_attributes = cells.CellAttributeB(),
-    locations = locations
-)
-cell_list.generate_cells()
-cell_list.add_to_scene()
-
 # add microscope objects
 my_materials = shading.Material()
 my_tissue = tissue.Tissue(my_materials)
@@ -60,7 +40,25 @@ my_light_source = scene.LightSource(material=my_materials.light_source)
 my_camera = scene.Camera()
 
 # create scene
-my_scene = scene.BioMedicalScene(my_light_source, my_camera)#, cell_list)
+my_scene = scene.BioMedicalScene(my_light_source, my_camera)
+
+# define cell arrangements
+cell_distribution = arr.CellDistribution(
+    cell_attributes = cells.CellAttributeA(),
+    num_cells = 200,
+    min_coords = Vector([-1, -1, 0.4]),
+    max_coords = Vector([1, 1, 0.6])
+)
+locations = [Vector([-0.5, -0.5, 0.5]), Vector([0.5, -0.5, 0.5]), Vector([-0.5, 0.5, 0.5]), Vector([0.5, 0.5, 0.5])]
+cell_list = arr.CellList(
+    cell_attributes = cells.CellAttributeB(),
+    locations = locations
+)
+
+# add cell arrangements to scene
+my_scene.add_arangement(cell_distribution)
+my_scene.add_arangement(cell_list)
+
 
 # render scene
 my_scene.render()
