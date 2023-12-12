@@ -1,0 +1,79 @@
+# This workflow will install Python dependencies and run the implemented unittests
+
+name: ci-python-unitest
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+permissions:
+  contents: read
+
+jobs:
+  build_linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10"]
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.10"
+      - name: Install_linux
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Testing_linux
+        run: |
+          pip install -U pytest
+          pytest test/test_integration.py
+
+  build_windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: ["3.10"]
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.10"
+      - name: Install_windows
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Testing_windows
+        run: |
+          pip install -U pytest
+          pytest test\\test_integration.py
+
+  build_macos:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        python-version: ["3.10"]
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.10"
+      - name: Install_macos
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Testing_macos
+        run: |
+          pip install -U pytest
+          pytest test/test_integration.py

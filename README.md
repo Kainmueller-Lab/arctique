@@ -18,6 +18,15 @@ pip install fake-bpy-module-latest
 4) Mark the folder named "HE_blender_plugin" as plugin directory via rightclick -> new -> Blender-Charm -> Mark as Addon Folder
 5) Now every time you start blender via Blend-Charm it will automatically install the plugin in the "HE_blender_plugin" folder and you can ecute the plugin.
 
+## Testing:
+We use pytest for our testing: [https://docs.pytest.org/en/7.4.x/](https://docs.pytest.org/en/7.4.x/).
+To test this suite install pytest in the environment where you additionally installed this repository.
+
+Then run on the cmdline:
+```    
+pytest
+```
+
 ## ToDos
 
 ### General
