@@ -60,7 +60,7 @@ SEED = 123
         
 ###################  MAIN  METHOD  #####################
 
-hm.delete_pos_z_objects()
+hm.delete_objects()
 
 # Create single deformed cell in origin
 random_cell = cell_classes.RandomDeformedCell(size=0.05, scale=(2,1,1), deformation_strength=0.02)
