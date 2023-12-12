@@ -11,10 +11,33 @@ world: Domain Adaption and Uncertainty Prediction.
 
 For now, let's dive into the installation procedure.
 
-## Setup Blender and VS Code
+## Automatic installation with album solution
+
+Install album [https://album.solutions/](https://album.solutions/)
+Install the solution form this repository:
+
+`album install rendered_HE/album_solution`
+
+Use with:
+
+`album run rHEnder`
+
+## Manual Installation
+1) Download [https://www.blender.org/download/](https://www.blender.org/download/)
+2) install rHEnder in the blender python via commandline in the following way:
+    Linux:
+       `blender_install_path/4.0/python/bin/python3.10 rendered_HE/album_solution/install_rhender.py`
+    Windows:
+        `blender_install_path\\4.0\\python\\bin\\python.exe rendered_HE/album_solution/install_rhender.py`
+    Mac:
+        `blender_install_path/Contents/Resources/4.0/python/bin/python3.10 rendered_HE/album_solution/install_rhender.py`
+3) Open blender and run the main.py file in blenders scripting block.
+
+## Setup Blender and VS Code for development
 
 1) Download [https://www.blender.org/download/](https://www.blender.org/download/)
 2) Follow the steps in: [5 Steps to setup VSCode for Blender Python (on Windows)](https://www.youtube.com/watch?v=YUytEtaVrrc).
+3) Install the package with pip in the development option (e.g. run `pip install -e .` in the repository base environment)
 In particular best create a virtual environment where you need to install
 ```
 pip install fake-bpy-module-latest
@@ -26,8 +49,9 @@ pip install fake-bpy-module-latest
 1) Download [https://www.blender.org/download/](https://www.blender.org/download/)
 2) Install blend-charm plugin via: [https://github.com/BlackStartx/PyCharm-Blender-Plugin](https://github.com/BlackStartx/PyCharm-Blender-Plugin) (see releases, make sure you have the correct pycharm version for the plugin!)
 3) Follow instructions in the repository.
-4) Mark the folder named "HE_blender_plugin" as plugin directory via rightclick -> new -> Blender-Charm -> Mark as Addon Folder
-5) Now every time you start blender via Blend-Charm it will automatically install the plugin in the "HE_blender_plugin" folder and you can ecute the plugin.
+4) Install rHEnder in the python you use to develop (probably a conda environment) with the `-e` option.
+5) Mark the folder named "HE_blender_plugin" as plugin directory via rightclick -> new -> Blender-Charm -> Mark as Addon Folder
+6) now every time you start blender via Blend-Charm it will automatically install the plugin in the "HE_blender_plugin" folder and you can ecute the plugin.
 
 ## Testing:
 We use pytest for our testing: [https://docs.pytest.org/en/7.4.x/](https://docs.pytest.org/en/7.4.x/).
