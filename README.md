@@ -1,4 +1,15 @@
-# rendered_HE
+# rHEnder
+
+rHEnder is a package that lets you create synthetic biomedical data, together with their corresponding masks.
+The package is specifically designed for H&E stained biomedical images, but could be easily 
+used outside its original scope. Thereby, rHEnder allows you to maximally control this creation process and 
+offers an easy interface for you to explore dataset creation.
+
+This flexibility allows you to render various biomedical realistically looking images to study various research question
+in a downstream analysis. Here, we demonstrate how to use the dataset for two major challenges from the machine learning
+world: Domain Adaption and Uncertainty Prediction.
+
+For now, let's dive into the installation procedure.
 
 ## Setup Blender and VS Code
 
