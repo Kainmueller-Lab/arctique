@@ -30,11 +30,19 @@ class LightSource:
 class BioMedicalScene:
     def __init__(self, light_source: LightSource, camera: Camera):
         self.light_source = light_source
-        self.scene = camera.scene 
+        self.scene = bpy.context.scene#camera.scene 
+        self._clear_compositor()
 
     @staticmethod
     def clear():
         hm.delete_objects()
+
+    def _clear_compositor(self):
+        # delete all materials
+        if self.scene.node_tree is not None:
+            bpy.context.scene.node_tree.nodes.clear()
+            # for node in self.scene.node_tree.nodes:
+            #     self.scene.node_tree.nodes.remove(node)
     
     def add_arangement(self, cell_arrangement: arr.CellArrangement):
         cell_arrangement.generate_cells()
@@ -62,10 +70,12 @@ class BioMedicalScene:
         self.filepath = filepath
         self.render_engine()
         
+        self.scene.use_nodes = True
         self.tree = self.scene.node_tree
-        links = self.tree.links
-        self.render_nodes = self.tree.nodes['Render Layers']
+        self.render_nodes = bpy.context.scene.node_tree.nodes.new(type='CompositorNodeRLayers')
+        bpy.context.scene.view_layers["ViewLayer"].use_pass_object_index = True
         self.add_output_file()
+        self.scene.node_tree.links.new(self.render_nodes.outputs['Image'], self.output_file.inputs[0])
         
         bpy.ops.render.render('INVOKE_DEFAULT', write_still=True)
         
