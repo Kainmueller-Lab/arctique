@@ -31,6 +31,7 @@ class BioMedicalScene:
     def __init__(self, light_source: LightSource, camera: Camera):
         self.light_source = light_source
         self.camera = camera
+        self.cell_objects = []
 
     @staticmethod
     def clear():
@@ -38,6 +39,7 @@ class BioMedicalScene:
     
     def add_arangement(self, cell_arrangement: arr.CellArrangement):
         cell_arrangement.generate_cells()
+        self.cell_objects = self.cell_objects + cell_arrangement.objects
         cell_arrangement.add()
     
     def render(self):
