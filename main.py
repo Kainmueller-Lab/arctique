@@ -5,6 +5,7 @@ import sys
 import os
 from math import radians, sin, cos, pi
 from mathutils import Matrix, Vector
+from pathlib import Path
 
 # IMPORT SOURCES
 dir = os.path.dirname(bpy.data.filepath)
@@ -34,8 +35,9 @@ imp.reload(scene)
 scene.BioMedicalScene.clear()
     
 # add microscope objects
-my_tissue = tissue.Tissue(shading.Material())
-my_light_source = scene.LightSource()
+my_materials = shading.Material()
+my_tissue = tissue.Tissue(my_materials.tissue_staining)
+my_light_source = scene.LightSource(material=my_materials.light_source)
 my_camera = scene.Camera()
 
 # create scene
@@ -61,3 +63,19 @@ my_scene.add_arangement(cell_list)
 
 # render scene
 my_scene.render()
+
+
+
+# Setup a folder called 3d_outputs and export scene as obj 
+current_folder = os.path.dirname(os.path.realpath(__file__))
+FOLDER = Path(current_folder).joinpath("Images")
+FOLDER = str(FOLDER)
+try:
+    if not os.path.exists(FOLDER):
+        os.makedirs(FOLDER)
+except OSError as error:
+    print("Directory '%s' can not be created")
+
+
+bpy.ops.export_scene.obj(filepath=FOLDER+"//my_scene.obj")
+

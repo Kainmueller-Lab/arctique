@@ -8,7 +8,6 @@ from mathutils import Vector
 from src.shading.shading import Material
 from src.utils.helper_methods import set_orientation
 
-
 class CellAttribute():
     def __init__(self):
         self.cell_type = None
@@ -16,7 +15,6 @@ class CellAttribute():
         self.scale = None
         self.deformation_strength = None
         self.attribute_name = None
-
 
 class CellAttributeA(CellAttribute):
     def __init__(self, cell_type = "A", size = 0.04, scale = (1,1,1), deformation_strength = 0.007, attribute_name = "Cell Type A"):
@@ -35,15 +33,15 @@ class CellAttributeB(CellAttribute):
         self.attribute_name = attribute_name
 
 class Cell:
-    def __init__(self, idx: int, location: Vector, arrangement_id: int, arrangement_type: str, cell_attributes: CellAttribute, orientation: Optional[Vector] = None):
+    def __init__(self, idx: int, location: Vector, arrangement_id: int, arrangement_type: str, cell_attributes: CellAttribute, orientation: Optional[Vector] = None, index: int = 1):
         self.cell_attributes = cell_attributes
         self.cell_id = idx # TODO: Add arrangement id as id. - ck
         self.location = location
         self.orientation = orientation
         # TODO: Improve cell naming for better overview in blender. - ck
         self.cell_name = f"Cell_{idx}_Arr_{arrangement_type}_{arrangement_id}_Type_{self.cell_attributes.cell_type}"
-
         self.arrangement_type = None
+        self.index = index
         self.semantic_id = None
         self.material = None
         self.cell_object = None
@@ -59,6 +57,9 @@ class Cell:
         bpy.ops.mesh.primitive_cube_add(size=self.cell_attributes.size, location=self.location)
         self.cell_object = bpy.context.active_object
         self.cell_object.name = self.cell_name
+        
+        pass_index = bpy.props.IntProperty(name="Pass Index", subtype='UNSIGNED')
+        bpy.context.object.pass_index = self.index
         
         # Apply two levels of subdivision surface
         modifier = self.cell_object.modifiers.new("Subsurface Modifier", "SUBSURF")

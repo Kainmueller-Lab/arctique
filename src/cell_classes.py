@@ -19,7 +19,7 @@ imp.reload(hm)
 
 # todo: move to cells
 class RandomDeformedCell:
-    def __init__(self, size=1.0, scale=(1,1,1), deformation_strength=0.1, orientation=None):
+    def __init__(self, size=1.0, scale=(1,1,1), deformation_strength=0.1, orientation=None, index=0):
         self.size = size
         self.scale = scale
         self.deformation_strength = deformation_strength
@@ -27,6 +27,10 @@ class RandomDeformedCell:
 
         # Create a cube
         bpy.ops.mesh.primitive_cube_add(size=self.size, location=(0, 0, 0))
+        
+        pass_index = bpy.props.IntProperty(name="Pass Index", subtype='UNSIGNED')
+        bpy.context.object.pass_index = index
+        
         self.cell_object = bpy.context.active_object
         
         # Apply two levels of subdivision surface
@@ -63,14 +67,17 @@ class RandomCellField:
         self.max_coords = max_coords
         
     def generate_cells(self, cell_size, cell_scale, deformation_strength):
-        for _ in range(self.num_cells):
-            cell = RandomDeformedCell(cell_size, cell_scale, deformation_strength)
-            cell.cell_object.location = Vector([
+        self.instance_objects = []
+        for i in range(self.num_cells):
+            cell = RandomDeformedCell(cell_size, cell_scale, deformation_strength, index=i+1).cell_object
+            # .copy()
+            # bpy.context.collection.objects.link(self.cell_object)
+            cell.location = Vector([
                 random.uniform(self.min_coords.x, self.max_coords.x),
                 random.uniform(self.min_coords.y, self.max_coords.y),
                 random.uniform(self.min_coords.z, self.max_coords.z)
             ])
-            
+            self.instance_objects.append(cell)
             
 class CellCurve:
     def __init__(self, num_cells, curve_function, curve_noise, curve_interval=(0,1), scale_weight=None):
