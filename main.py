@@ -5,6 +5,7 @@ import sys
 import os
 from math import radians, sin, cos, pi
 from mathutils import Matrix, Vector
+from pathlib import Path
 
 # IMPORT SOURCES
 dir = os.path.dirname(bpy.data.filepath)
@@ -62,3 +63,19 @@ my_scene.add_arangement(cell_list)
 
 # render scene
 my_scene.render()
+
+
+
+# Setup a folder called 3d_outputs and export scene as obj 
+current_folder = os.path.dirname(os.path.realpath(__file__))
+FOLDER = Path(current_folder).joinpath("Images")
+FOLDER = str(FOLDER)
+try:
+    if not os.path.exists(FOLDER):
+        os.makedirs(FOLDER)
+except OSError as error:
+    print("Directory '%s' can not be created")
+
+
+bpy.ops.export_scene.obj(filepath=FOLDER+"//my_scene.obj")
+
