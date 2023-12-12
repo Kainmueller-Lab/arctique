@@ -54,8 +54,9 @@ cell_list.generate_cells()
 cell_list.add_to_scene()
 
 # add microscope objects
-my_tissue = tissue.Tissue(shading.Material())
-my_light_source = scene.LightSource()
+my_materials = shading.Material()
+my_tissue = tissue.Tissue(my_materials)
+my_light_source = scene.LightSource(material=my_materials.light_source)
 my_camera = scene.Camera()
 
 # create scene
