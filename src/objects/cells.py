@@ -35,12 +35,15 @@ class CellAttributeB(CellAttribute):
         self.attribute_name = attribute_name
 
 class Cell:
-    def __init__(self, cell_id: int, cell_attributes: CellAttribute, location: Vector, cell_name: str, orientation: Optional[Vector] = None):
-        self.cell_id = cell_id
+    def __init__(self, idx: int, location: Vector, arrangement_id: int, arrangement_type: str, cell_attributes: CellAttribute, orientation: Optional[Vector] = None):
         self.cell_attributes = cell_attributes
+        self.cell_id = idx # TODO: Add arrangement id as id. - ck
         self.location = location
         self.orientation = orientation
-        self.cell_name = cell_name
+        # TODO: Improve cell naming for better overview in blender. - ck
+        self.cell_name = f"Cell_{idx}_Arr_{arrangement_type}_{arrangement_id}_Type_{self.cell_attributes.cell_type}"
+
+        self.arrangement_type = None
         self.semantic_id = None
         self.material = None
         self.cell_object = None
@@ -55,6 +58,7 @@ class Cell:
         # Create a cube
         bpy.ops.mesh.primitive_cube_add(size=self.cell_attributes.size, location=self.location)
         self.cell_object = bpy.context.active_object
+        self.cell_object.name = self.cell_name
         
         # Apply two levels of subdivision surface
         modifier = self.cell_object.modifiers.new("Subsurface Modifier", "SUBSURF")
