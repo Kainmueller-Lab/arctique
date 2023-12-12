@@ -1,6 +1,8 @@
 import bpy
+import src.arrangement.arrangement as arr
 import src.utils.helper_methods as hm
 import imp
+imp.reload(arr)
 imp.reload(hm)
 
 class Camera:
@@ -34,8 +36,9 @@ class BioMedicalScene:
     def clear():
         hm.delete_objects()
     
-    def add_arangement(self):
-        pass
+    def add_arangement(self, cell_arrangement: arr.CellArrangement):
+        cell_arrangement.generate_cells()
+        cell_arrangement.add()
     
     def render(self):
         pass
