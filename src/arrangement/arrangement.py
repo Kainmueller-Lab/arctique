@@ -27,7 +27,6 @@ class CellList(CellArrangement):
             cell = Cell(idx, self.cell_attributes, location, self.name)
             self.objects.append(cell)
         
-
 # TODO: Extend to different distribution types, e.g., Gaussian distribution, etc.
 class CellDistribution(CellArrangement):
     def __init__(self, cell_attributes, num_cells, min_coords, max_coords, name=None):
@@ -46,5 +45,5 @@ class CellDistribution(CellArrangement):
                 random.uniform(self.min_coords.y, self.max_coords.y),
                 random.uniform(self.min_coords.z, self.max_coords.z)
             ])
-            cell = Cell(idx, self.cell_attributes, location, self.name)
+            cell = Cell(idx, self.cell_attributes, location, self.name, idx)
             self.objects.append(cell)

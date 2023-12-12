@@ -8,7 +8,6 @@ from mathutils import Vector
 from src.shading.shading import Material
 from src.utils.helper_methods import set_orientation
 
-
 class CellAttribute():
     def __init__(self):
         self.cell_type = None
@@ -16,7 +15,6 @@ class CellAttribute():
         self.scale = None
         self.deformation_strength = None
         self.attribute_name = None
-
 
 class CellAttributeA(CellAttribute):
     def __init__(self, cell_type = "A", size = 0.04, scale = (1,1,1), deformation_strength = 0.007, attribute_name = "Cell Type A"):
@@ -35,12 +33,13 @@ class CellAttributeB(CellAttribute):
         self.attribute_name = attribute_name
 
 class Cell:
-    def __init__(self, cell_id: int, cell_attributes: CellAttribute, location: Vector, cell_name: str, orientation: Optional[Vector] = None):
+    def __init__(self, cell_id: int, cell_attributes: CellAttribute, location: Vector, cell_name: str, index: int = 1, orientation: Optional[Vector] = None):
         self.cell_id = cell_id
         self.cell_attributes = cell_attributes
         self.location = location
         self.orientation = orientation
         self.cell_name = cell_name
+        self.index = index
         self.semantic_id = None
         self.material = None
         self.cell_object = None
@@ -55,6 +54,9 @@ class Cell:
         # Create a cube
         bpy.ops.mesh.primitive_cube_add(size=self.cell_attributes.size, location=self.location)
         self.cell_object = bpy.context.active_object
+        
+        pass_index = bpy.props.IntProperty(name="Pass Index", subtype='UNSIGNED')
+        bpy.context.object.pass_index = self.index
         
         # Apply two levels of subdivision surface
         modifier = self.cell_object.modifiers.new("Subsurface Modifier", "SUBSURF")
