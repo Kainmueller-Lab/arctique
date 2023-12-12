@@ -15,6 +15,7 @@ class CellArrangement:
 
 class CellList(CellArrangement):
     def __init__(self, cell_attributes, locations, name=None):
+        super().__init__()
         self.cell_attributes = cell_attributes
         self.locations = locations
         self.name = name

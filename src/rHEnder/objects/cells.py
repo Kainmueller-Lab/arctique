@@ -20,6 +20,7 @@ class CellAttribute():
 
 class CellAttributeA(CellAttribute):
     def __init__(self, cell_type = "A", size = 0.04, scale = (1,1,1), deformation_strength = 0.007, attribute_name = "Cell Type A"):
+        super().__init__()
         self.cell_type = cell_type
         self.size = size
         self.scale = scale
@@ -27,7 +28,9 @@ class CellAttributeA(CellAttribute):
         self.attribute_name = attribute_name
 
 class CellAttributeB(CellAttribute):
-    def __init__(self, cell_type = "B", size = 0.07, scale = (2.3,1,1), deformation_strength = 0.007, attribute_name = "Cell Type B"):
+    def __init__(self, cell_type="B", size=0.07, scale=(2.3, 1, 1), deformation_strength=0.007,
+                 attribute_name="Cell Type B"):
+        super().__init__()
         self.cell_type = cell_type
         self.size = size
         self.scale = scale
@@ -48,7 +51,7 @@ class Cell:
     def set_material(self, material: Material):
         self.material = material
 
-    def set_material(self, semantic_id: int):
+    def set_semantic_id(self, semantic_id: int):
         self.semantic_id = semantic_id
 
     def add(self):
