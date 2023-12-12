@@ -35,7 +35,7 @@ scene.BioMedicalScene.clear()
     
 # add microscope objects
 my_materials = shading.Material()
-my_tissue = tissue.Tissue(my_materials)
+my_tissue = tissue.Tissue(my_materials.tissue_staining)
 my_light_source = scene.LightSource(material=my_materials.light_source)
 my_camera = scene.Camera()
 
