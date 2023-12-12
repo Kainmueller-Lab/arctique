@@ -1,10 +1,7 @@
 import bpy
-import numpy as np
-import random
 import sys
 import os
-from math import radians, sin, cos, pi
-from mathutils import Matrix, Vector
+from mathutils import Vector
 
 # IMPORT SOURCES
 dir = os.path.dirname(bpy.data.filepath)
@@ -14,7 +11,7 @@ if not dir in sys.path:
 import src.arrangement.arrangement as arr 
 import src.objects.cells as cells
 import src.objects.tissue as tissue
-import src.shading.shading as shading
+import rHEnder.shading.shading as shading
 import src.scene as scene
 
 # this next part forces a reload in case you edit the source after you first start the blender session

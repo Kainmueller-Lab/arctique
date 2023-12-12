@@ -5,9 +5,7 @@ from src.objects.cells import CellAttributeA, CellAttributeB
 from src.objects.cells import Cell
 
 from src.objects.tissue import Tissue
-from src.shading.shading import Material
-
-from src.scene import BioMedicalScene, Camera, LightSource
+from rHEnder.shading.shading import Material
 
 # Create random cell field
 

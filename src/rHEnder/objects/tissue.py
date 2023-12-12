@@ -1,4 +1,4 @@
-from src.shading.shading import Material
+from rHEnder.shading.shading import Material
 
 
 class Tissue():

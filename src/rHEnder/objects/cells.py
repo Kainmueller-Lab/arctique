@@ -5,8 +5,8 @@ from typing import List, Optional
 
 from mathutils import Vector
 
-from src.shading.shading import Material
-from src.utils.helper_methods import set_orientation
+from rHEnder.shading.shading import Material
+from rHEnder.utils.helper_methods import set_orientation
 
 
 class CellAttribute():

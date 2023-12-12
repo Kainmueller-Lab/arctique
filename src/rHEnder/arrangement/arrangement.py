@@ -1,6 +1,6 @@
 import random
 from mathutils import Vector
-from src.objects.cells import Cell
+from rHEnder.objects.cells import Cell
 
 class CellArrangement:
     def __init__(self):

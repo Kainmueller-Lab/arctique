@@ -1,6 +1,6 @@
 import bpy
-import src.arrangement.arrangement as arr
-import src.utils.helper_methods as hm
+import rHEnder.arrangement.arrangement as arr
+import rHEnder.utils.helper_methods as hm
 import imp
 imp.reload(arr)
 imp.reload(hm)

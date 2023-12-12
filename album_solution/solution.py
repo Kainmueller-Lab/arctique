@@ -11,7 +11,7 @@ path_run_windows = "blender-4.0.2-linux-x64\\blender.exe"
 path_run_macos = "Contents/MacOS/Blender"
 rel_python_path_linux = "blender-4.0.2-linux-x64/4.0/python/bin/python3.10"
 rel_python_path_windows = "blender-4.0.2-linux-x64\\4.0\\python\\bin\\python.exe"
-rel_python_path_macos = ""  # todo: updateme
+rel_python_path_macos = "Contents/Resources/4.0/python/bin/python3.10"
 
 
 def install():
