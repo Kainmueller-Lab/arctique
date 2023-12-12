@@ -18,9 +18,14 @@ class Camera:
         self.scene.collection.objects.link(cam_obj)
 
 class LightSource:
-    def __init__(self, name='lightsource'):
+    def __init__(self, material, name='lightsource'):
+        # create mesh
         bpy.ops.mesh.primitive_plane_add(size=2, location=(0, 0, -0.2))
+        self.light_source = bpy.context.active_object
+
         # add shading
+        bpy.context.active_object.data.materials.append(material)
+        bpy.context.active_object.active_material = material
         
 class BioMedicalScene:
     def __init__(self, light_source: LightSource, camera: Camera):
