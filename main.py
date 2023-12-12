@@ -8,11 +8,11 @@ dir = os.path.dirname(bpy.data.filepath)
 if not dir in sys.path:
     sys.path.append(dir )
 
-import src.arrangement.arrangement as arr 
-import src.objects.cells as cells
-import src.objects.tissue as tissue
+import rHEnder.arrangement.arrangement as arr
+import rHEnder.objects.cells as cells
+import rHEnder.objects.tissue as tissue
 import rHEnder.shading.shading as shading
-import src.scene as scene
+import rHEnder.scene as scene
 
 # this next part forces a reload in case you edit the source after you first start the blender session
 import imp
