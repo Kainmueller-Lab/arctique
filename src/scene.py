@@ -40,11 +40,8 @@ class BioMedicalScene:
         hm.delete_objects()
 
     def _clear_compositor(self):
-        # delete all materials
         if self.scene.node_tree is not None:
             bpy.context.scene.node_tree.nodes.clear()
-            # for node in self.scene.node_tree.nodes:
-            #     self.scene.node_tree.nodes.remove(node)
     
     def add_arangement(self, cell_arrangement: arr.CellArrangement):
         cell_arrangement.generate_cells()
