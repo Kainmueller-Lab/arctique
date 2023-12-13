@@ -52,5 +52,5 @@ class CellDistribution(CellArrangement):
                 random.uniform(self.min_coords.y, self.max_coords.y),
                 random.uniform(self.min_coords.z, self.max_coords.z)
             ])
-            cell = Cell(idx, location, self.id, self.type, self.cell_attributes, idx)
+            cell = Cell(idx, location, self.id, self.type, self.cell_attributes)
             self.objects.append(cell)
