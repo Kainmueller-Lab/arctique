@@ -42,6 +42,12 @@ class BioMedicalScene:
     def _clear_compositor(self):
         if self.scene.node_tree is not None:
             bpy.context.scene.node_tree.nodes.clear()
+
+    def cut_cells(self, target):
+        for cell in self.cell_objects:
+            boolean = cell.cell_object.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
+            boolean.operation = 'INTERSECT'
+            boolean.object = target
     
     def add_arangement(self, cell_arrangement: arr.CellArrangement):
         cell_arrangement.generate_cells()
