@@ -9,6 +9,7 @@ class Tissue():
         # create tissue mesh
         bpy.ops.mesh.primitive_cube_add(size=2, location=location)
         self.tissue = bpy.context.active_object
+        self.tissue.name = 'tissue'
 
         # resize to desired scale
         self.tissue.scale = (1, 1, thickness/size)
