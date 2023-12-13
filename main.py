@@ -59,6 +59,7 @@ cell_list = arr.CellList(
 # add cell arrangements to scene
 my_scene.add_arangement(cell_distribution)
 my_scene.add_arangement(cell_list)
+my_scene.cut_cells(my_tissue.tissue)
 
 
 # render scene
