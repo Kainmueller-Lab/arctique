@@ -33,15 +33,17 @@ class CellAttributeB(CellAttribute):
         self.attribute_name = attribute_name
 
 class Cell:
-    def __init__(self, idx: int, location: Vector, arrangement_id: int, arrangement_type: str, cell_attributes: CellAttribute, orientation: Optional[Vector] = None, index: int = 1):
+    cell_count = 0
+
+    def __init__(self, location: Vector, arrangement_id: int, arrangement_type: str, cell_attributes: CellAttribute, orientation: Optional[Vector] = None):
         self.cell_attributes = cell_attributes
-        self.cell_id = idx # TODO: Add arrangement id as id. - ck
+        self.cell_id = Cell.cell_count
+        Cell.cell_count += 1
         self.location = location
         self.orientation = orientation
-        # TODO: Improve cell naming for better overview in blender. - ck
-        self.cell_name = f"Cell_{idx}_Arr_{arrangement_type}_{arrangement_id}_Type_{self.cell_attributes.cell_type}"
+        self.cell_name = f"Cell_{self.cell_id}_Arr_{arrangement_type}_{arrangement_id}_Type_{self.cell_attributes.cell_type}"
+        self.pass_index = self.cell_id
         self.arrangement_type = None
-        self.index = index
         self.semantic_id = None
         self.material = None
         self.cell_object = None
@@ -59,7 +61,7 @@ class Cell:
         self.cell_object.name = self.cell_name
         
         pass_index = bpy.props.IntProperty(name="Pass Index", subtype='UNSIGNED')
-        bpy.context.object.pass_index = self.index
+        bpy.context.object.pass_index = self.pass_index
         
         # Apply two levels of subdivision surface
         modifier = self.cell_object.modifiers.new("Subsurface Modifier", "SUBSURF")
