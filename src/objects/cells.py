@@ -17,7 +17,7 @@ class CellAttribute():
         self.attribute_name = None
 
 class CellAttributeA(CellAttribute):
-    def __init__(self, cell_type = "A", size = 0.04, scale = (1,1,1), deformation_strength = 0.007, attribute_name = "Cell Type A"):
+    def __init__(self, cell_type = "A", size = 0.04, scale = (1,1,1), deformation_strength = 0.02, attribute_name = "Cell Type A"):
         self.cell_type = cell_type
         self.size = size
         self.scale = scale
@@ -25,7 +25,7 @@ class CellAttributeA(CellAttribute):
         self.attribute_name = attribute_name
 
 class CellAttributeB(CellAttribute):
-    def __init__(self, cell_type = "B", size = 0.07, scale = (2.3,1,1), deformation_strength = 0.007, attribute_name = "Cell Type B"):
+    def __init__(self, cell_type = "B", size = 0.07, scale = (2.3,1.3,1), deformation_strength = 0.02, attribute_name = "Cell Type B"):
         self.cell_type = cell_type
         self.size = size
         self.scale = scale

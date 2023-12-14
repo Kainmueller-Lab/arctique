@@ -44,21 +44,22 @@ my_camera = scene.Camera()
 my_scene = scene.BioMedicalScene(my_light_source, my_camera)
 
 # define cell arrangements
-cell_distribution = arr.CellDistribution(
+cell_distribution_A = arr.CellDistribution(
     cell_attributes = cells.CellAttributeA(),
-    num_cells = 200,
+    num_cells = 100,
     min_coords = Vector([-1, -1, 0.4]),
     max_coords = Vector([1, 1, 0.6])
 )
-locations = [Vector([-0.5, -0.5, 0.5]), Vector([0.5, -0.5, 0.5]), Vector([-0.5, 0.5, 0.5]), Vector([0.5, 0.5, 0.5])]
-cell_list = arr.CellList(
+cell_distribution_B = arr.CellDistribution(
     cell_attributes = cells.CellAttributeB(),
-    locations = locations
+    num_cells = 30,
+    min_coords = Vector([-1, -1, 0.4]),
+    max_coords = Vector([1, 1, 0.6])
 )
 
 # add cell arrangements to scene
-my_scene.add_arangement(cell_distribution)
-my_scene.add_arangement(cell_list)
+my_scene.add_arangement(cell_distribution_A)
+my_scene.add_arangement(cell_distribution_B)
 my_scene.cut_cells(my_tissue.tissue)
 
 
