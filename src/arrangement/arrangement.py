@@ -1,6 +1,7 @@
 import random
 from mathutils import Vector
 from src.objects.cells import Cell
+from src.utils.helper_methods import random_unit_vector
 
 class CellArrangement:
     # Class variable to keep track of the count
@@ -52,5 +53,7 @@ class CellDistribution(CellArrangement):
                 random.uniform(self.min_coords.y, self.max_coords.y),
                 random.uniform(self.min_coords.z, self.max_coords.z)
             ])
-            cell = Cell(location, self.id, self.type, self.cell_attributes)
+            orientation = random_unit_vector()
+            orientation = Vector([*orientation])
+            cell = Cell(location, self.id, self.type, self.cell_attributes, orientation)
             self.objects.append(cell)

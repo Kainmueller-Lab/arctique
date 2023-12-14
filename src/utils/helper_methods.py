@@ -41,3 +41,15 @@ def compute_normal(curve_function, t): # Only in x-y-plane
     # Compute the normal vector (perpendicular to the tangent)
     normal_vector = Vector([tangent_vector.y, -tangent_vector.x, 0])
     return normal_vector
+
+def random_unit_vector():
+    # Generate random values for x, y, and z
+    x, y, z = np.random.uniform(-1, 1, 3)
+
+    # Create a vector
+    vector = np.array([x, y, z])
+
+    # Normalize the vector to make it a unit vector
+    unit_vector = vector / np.linalg.norm(vector)
+
+    return unit_vector
