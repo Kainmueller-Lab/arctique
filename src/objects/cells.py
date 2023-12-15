@@ -1,5 +1,7 @@
 import bpy 
+#import bmesh
 import random
+import math
 
 from typing import List, Optional
 
@@ -15,33 +17,38 @@ class CellAttribute():
         self.scale = None
         self.deformation_strength = None
         self.attribute_name = None
+        self.max_bending_strength = None
 
 class CellAttributeA(CellAttribute):
-    def __init__(self, cell_type = "A", size = 0.04, scale = (1,1,1), deformation_strength = 0.007, attribute_name = "Cell Type A"):
+    def __init__(self, cell_type = "A", size = 0.04, scale = (1,1,1), deformation_strength = 0.02, attribute_name = "Cell Type A", max_bending_strength = 0.2):
         self.cell_type = cell_type
         self.size = size
         self.scale = scale
         self.deformation_strength = deformation_strength
         self.attribute_name = attribute_name
+        self.max_bending_strength = max_bending_strength
 
 class CellAttributeB(CellAttribute):
-    def __init__(self, cell_type = "B", size = 0.07, scale = (2.3,1,1), deformation_strength = 0.007, attribute_name = "Cell Type B"):
+    def __init__(self, cell_type = "B", size = 0.07, scale = (2.3,1.3,1), deformation_strength = 0.02, attribute_name = "Cell Type B", max_bending_strength = 0.6):
         self.cell_type = cell_type
         self.size = size
         self.scale = scale
         self.deformation_strength = deformation_strength
         self.attribute_name = attribute_name
+        self.max_bending_strength = max_bending_strength
 
 class Cell:
-    def __init__(self, idx: int, location: Vector, arrangement_id: int, arrangement_type: str, cell_attributes: CellAttribute, orientation: Optional[Vector] = None, index: int = 1):
+    cell_count = 0
+
+    def __init__(self, location: Vector, arrangement_id: int, arrangement_type: str, cell_attributes: CellAttribute, orientation: Optional[Vector] = None):
         self.cell_attributes = cell_attributes
-        self.cell_id = idx # TODO: Add arrangement id as id. - ck
+        self.cell_id = Cell.cell_count
+        Cell.cell_count += 1
         self.location = location
         self.orientation = orientation
-        # TODO: Improve cell naming for better overview in blender. - ck
-        self.cell_name = f"Cell_{idx}_Arr_{arrangement_type}_{arrangement_id}_Type_{self.cell_attributes.cell_type}"
+        self.cell_name = f"Cell_{self.cell_id}_Arr_{arrangement_type}_{arrangement_id}_Type_{self.cell_attributes.cell_type}"
+        self.pass_index = self.cell_id
         self.arrangement_type = None
-        self.index = index
         self.semantic_id = None
         self.material = None
         self.cell_object = None
@@ -54,28 +61,78 @@ class Cell:
 
     def add(self):
         # Create a cube
-        bpy.ops.mesh.primitive_cube_add(size=self.cell_attributes.size, location=self.location)
+        bpy.ops.mesh.primitive_cube_add(size=self.cell_attributes.size, location=self.location, scale=self.cell_attributes.scale)
         self.cell_object = bpy.context.active_object
         self.cell_object.name = self.cell_name
         
         pass_index = bpy.props.IntProperty(name="Pass Index", subtype='UNSIGNED')
-        bpy.context.object.pass_index = self.index
-        
-        # Apply two levels of subdivision surface
-        modifier = self.cell_object.modifiers.new("Subsurface Modifier", "SUBSURF")
-        modifier.levels = 2
+        bpy.context.object.pass_index = self.pass_index
         
         # Orient
         if self.orientation:
             set_orientation(self.cell_object, self.orientation)
 
-        # Scale 
-        self.cell_object.scale = self.cell_attributes.scale
-        
-        # Deform the vertices randomly
-        self.deform_mesh(self.cell_attributes.deformation_strength)
+        # Apply two levels of subdivision surface
+        modifier = self.cell_object.modifiers.new("Subsurface Modifier", "SUBSURF")
+        modifier.levels = 3    
 
-    def deform_mesh(self, deformation_strength):
+        # Deform the vertices proportionally in a random fashion
+        self.deform_mesh_old()
+        # Bend mesh along the z axis
+        self.bend_mesh()
+
+    def deform_mesh(self):
+        TRANSLATION_RANGE = 0.4
+        TRANSFORM_COUNT = 20
+        PROPORTIONAL_SIZE = 4        
+        # translate random mesh vertices using proportional edit
+        # i.e.: neighboring vertices are also translated proportionally
+        #bpy.ops.object.mode_set(mode='EDIT')
+        # bm = bmesh.from_edit_mesh(bpy.context.edit_object.data)
+        # # deselect all vertices
+        # for v in bm.verts:
+        #     v.select = False
+        # bm.verts.ensure_lookup_table() # NOTE: Necessary for accessing vertex list. - ck
+        # for i in range(TRANSFORM_COUNT):
+        #     transform = Vector([random.uniform(-1, 1),
+        #                 random.uniform(-1, 1),
+        #                 random.uniform(-1, 1)])*TRANSLATION_RANGE
+        #     v = bm.verts[random.randint(0, len(bm.verts) - 1)]
+        #     v.select = True
+        #     bpy.ops.transform.translate(value=transform, 
+        #                             constraint_axis=(False, False, False),
+        #                             orient_type='GLOBAL',
+        #                             mirror=False, 
+        #                             use_proportional_edit = True,
+        #                             use_proportional_connected =True,
+        #                             proportional_edit_falloff='SMOOTH',
+        #                             proportional_size=PROPORTIONAL_SIZE)
+        # v.select = False
+
+        # # Enter Object Mode
+        # bpy.ops.object.mode_set(mode='OBJECT')
+
+    def bend_mesh(self):
+        # Bend mesh along Z axis
+        modifier = self.cell_object.modifiers.new("Simple Deform Modifier", "SIMPLE_DEFORM")
+        modifier_index = len(self.cell_object.modifiers) - 1  # Index of the last added modifier
+        modifier = self.cell_object.modifiers[modifier_index]
+        modifier.deform_method = 'BEND'
+
+        # Create an empty
+        bpy.ops.object.empty_add(type='ARROWS', align='WORLD', location=self.cell_object.location, scale=(1, 1, 1))
+        empty = bpy.context.active_object
+
+        # Set the origin and deform axis
+        modifier.origin = empty
+        modifier.deform_axis = 'Z'
+        bending_strength = random.uniform(-1,1)*self.cell_attributes.max_bending_strength
+        modifier.angle = 2*math.pi*bending_strength
+
+        # Remove empty object
+        bpy.data.objects.remove(empty, do_unlink=True)
+
+    def deform_mesh_old(self):
         # Iterate through each vertex and deform its position
         for vertex in self.cell_object.data.vertices:
             original_position = vertex.co.copy()
