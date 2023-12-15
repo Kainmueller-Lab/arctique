@@ -59,7 +59,8 @@ cell_list = arr.CellList(
 # add cell arrangements to scene
 my_scene.add_arangement(cell_distribution)
 my_scene.add_arangement(cell_list)
-my_scene.cut_cells(my_tissue.tissue)
+my_scene.add_tissue(tissue=my_tissue.tissue)
+my_scene.cut_cells()
 
 
 # render scene
@@ -79,4 +80,3 @@ except OSError as error:
 
 
 bpy.ops.export_scene.obj(filepath=FOLDER+"//my_scene.obj")
-
