@@ -45,18 +45,31 @@ class BioMedicalScene:
 
     def add_tissue(self, tissue):
         self.tissue = tissue
-        bpy.context.view_layer.objects.active = tissue
-        bpy.ops.object.duplicate(linked=False)
-        self.tissue_empty = bpy.context.active_object
-        # self.tissue_empty.name = 'tissue_empty'
-        # self.tissue_empty.hide_viewport = True
-        # self.tissue_empty.hide_render = True
+        bpy.context.view_layer.objects.active = bpy.context.scene.objects['tissue']
+        self.tissue_empty = tissue.copy()
+        self.tissue_empty.data = tissue.data.copy()
+        bpy.context.collection.objects.link(self.tissue_empty)
+        self.tissue_empty.name = 'tissue_empty'
+        self.tissue_empty.hide_viewport = True
+        self.tissue_empty.hide_render = True
+        self.tissue_empty.scale.z = 1.001
     
     def cut_cells(self):
         for cell in self.cell_objects:
             boolean = cell.cell_object.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
             boolean.operation = 'INTERSECT'
-            boolean.object = self.tissue#_empty
+            boolean.object = self.tissue_empty
+
+    def cut_tissue(self):
+        for cell in self.cell_objects:
+            boolean = self.tissue.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
+            boolean.operation = 'DIFFERENCE'
+            boolean.object = cell.cell_object
+
+    def add_staining(self, material):
+        for cell in self.cell_objects:
+            cell.cell_object.data.materials.append(material)
+            cell.cell_object.active_material = material
     
     def add_arangement(self, cell_arrangement: arr.CellArrangement):
         cell_arrangement.generate_cells()
