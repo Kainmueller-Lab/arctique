@@ -14,9 +14,11 @@ def delete_objects():
     for obj in bpy.context.scene.objects:
         obj.hide_viewport = False
     bpy.ops.object.select_all(action='SELECT')
-
     # Delete the selected objects
     bpy.ops.object.delete()
+    # Remove orphaned meshes
+    for mesh in bpy.data.meshes:
+        bpy.data.meshes.remove(mesh, do_unlink=True)
 
 
 def lerp(a, b, t):
