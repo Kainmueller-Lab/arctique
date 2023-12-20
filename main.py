@@ -60,7 +60,10 @@ cell_distribution_B = arr.CellDistribution(
 # add cell arrangements to scene
 my_scene.add_arangement(cell_distribution_A)
 my_scene.add_arangement(cell_distribution_B)
-my_scene.cut_cells(my_tissue.tissue)
+my_scene.add_tissue(tissue=my_tissue.tissue)
+my_scene.cut_cells()
+my_scene.add_staining(material=my_materials.nuclei_staining)
+
 
 
 # render scene
@@ -80,4 +83,3 @@ except OSError as error:
 
 
 bpy.ops.export_scene.obj(filepath=FOLDER+"//my_scene.obj")
-

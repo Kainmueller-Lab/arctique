@@ -43,17 +43,43 @@ class BioMedicalScene:
         if self.scene.node_tree is not None:
             bpy.context.scene.node_tree.nodes.clear()
 
-    def cut_cells(self, target):
+    def add_tissue(self, tissue):
+        self.tissue = tissue
+        bpy.context.view_layer.objects.active = bpy.context.scene.objects['tissue']
+        self.tissue_empty = tissue.copy()
+        self.tissue_empty.data = tissue.data.copy()
+        bpy.context.collection.objects.link(self.tissue_empty)
+        self.tissue_empty.name = 'tissue_empty'
+        self.tissue_empty.hide_viewport = True
+        self.tissue_empty.hide_render = True
+        self.tissue_empty.scale.z = 1.001
+    
+    def cut_cells(self):
         for cell in self.cell_objects:
             boolean = cell.cell_object.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
             boolean.operation = 'INTERSECT'
-            boolean.object = target
+            boolean.object = self.tissue_empty
+
+    def cut_tissue(self):
+        for cell in self.cell_objects:
+            boolean = self.tissue.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
+            boolean.operation = 'DIFFERENCE'
+            boolean.object = cell.cell_object
+
+    def add_staining(self, material):
+        for cell in self.cell_objects:
+            cell.cell_object.data.materials.append(material)
+            cell.cell_object.active_material = material
     
     def add_arangement(self, cell_arrangement: arr.CellArrangement):
         cell_arrangement.generate_cells()
         self.cell_objects = self.cell_objects + cell_arrangement.objects
         cell_arrangement.add()
         self.objects_list = cell_arrangement.objects
+
+    def add_pass_index(self):
+        for cell in self.cell_objects:
+            pass
     
     def render_engine(self):
         self.scene.render.engine = 'CYCLES' #or 'BLENDER_EEVEE'
@@ -88,5 +114,7 @@ class BioMedicalScene:
         if mask:
             self.mask_objects(index)
             bpy.ops.render.render('INVOKE_DEFAULT', write_still=True)
+
+
         
         

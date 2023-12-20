@@ -74,8 +74,7 @@ class Cell:
 
         # Apply two levels of subdivision surface
         modifier = self.cell_object.modifiers.new("Subsurface Modifier", "SUBSURF")
-        modifier.levels = 2
-        bpy.ops.object.modifier_apply({"object": bpy.context.object}, modifier="Subsurface Modifier")
+        modifier.levels = 2    
 
         # Deform the vertices proportionally in a random fashion
         self.deform_mesh_old() # NOTE: This is just the random deformation method, the other needs moe care. - ck
@@ -91,8 +90,9 @@ class Cell:
         TRANSLATION_RANGE = 0.4
         TRANSFORM_COUNT = 3
         PROPORTIONAL_SIZE = 1       
-        #translate random mesh vertices using proportional edit
-        #i.e.: neighboring vertices are also translated proportionally
+
+        # apply subsurface modifier
+        bpy.ops.object.modifier_apply({"object": bpy.context.object}, modifier="Subsurface Modifier")
         #extract mesh
         bpy.ops.object.mode_set(mode='EDIT')
 

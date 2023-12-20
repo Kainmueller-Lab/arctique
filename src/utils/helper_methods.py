@@ -12,11 +12,12 @@ def move_selection(offset_vector):
 def delete_objects():
     # Select all objects 
     for obj in bpy.context.scene.objects:
-        obj.select_set(True)
+        obj.hide_viewport = False
+    bpy.ops.object.select_all(action='SELECT')
 
     # Delete the selected objects
     bpy.ops.object.delete()
-    
+
 
 def lerp(a, b, t):
     return a*(1-t) + b*t
