@@ -27,7 +27,7 @@ imp.reload(shading)
 imp.reload(scene)
 
 ###################  PARAMETER  #####################
-# args_camera = {'pos'}
+# args_camera = {'pos'} # no change just test
 
 
 ###################  MAIN  METHOD  #####################
