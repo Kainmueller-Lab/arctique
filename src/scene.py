@@ -78,7 +78,97 @@ class BioMedicalScene:
         self.objects_list = cell_arrangement.objects
 
 
-    #def 
+    def setup_scene_render_mask(self, output_shape = (500, 500)): 
+
+        self.scene.render.resolution_x = output_shape[0]
+        self.scene.render.resolution_y = output_shape[0]
+
+        self.scene.render.engine = "BLENDER_WORKBENCH"
+        self.scene.display.shading.light = "FLAT"
+
+        self.scene.display.shading.background_type = "WORLD"
+        self.scene.display.shading.single_color = (255, 255, 255)
+        self.scene.display.render_aa = "OFF"
+
+        self.scene.render.image_settings.color_mode = "RGBA"
+        #self.scene.render.filepath = self.filepath + "scene.png"
+
+    def setup_scene_render_default(self, output_shape = (500, 500)): 
+        self.scene.render.resolution_x = output_shape[0]
+        self.scene.render.resolution_y = output_shape[0]
+        self.scene.render.engine = "CYCLES"
+        self.scene.cycles.samples = 100
+        self.scene.render.filepath = self.filepath + "scene.png"
+        #pass
+
+    def export_scene(self): 
+        bpy.ops.render.render('INVOKE_DEFAULT', write_still=True)
+        #pass
+
+    def export_masks(self): 
+        pass 
+
+    def combine_masks_semantic(self): 
+        pass
+
+    def combine_masks_instance(self): 
+        pass
+
+    def remove_single_masks(self): 
+        pass
+
+    def export_depth(self): 
+        pass
+
+    def export_obj3d(self): 
+        pass
+
+    def render(self, 
+               filepath: str, 
+               scene: bool = True, 
+               masks: bool = False, 
+               semantic_mask: bool = False, 
+               instance_mask: bool = False,
+               depth_mask: bool = False, 
+               obj3d: bool = False, 
+               keep_single_masks: bool = False, 
+               output_shape = (500, 500)):
+        '''
+        filepath: the folder where all outputs will be stored
+        scene: if true a png of the scene will be generated
+        masks: if true individual masks for each cell will be rendered
+        semantic_mask: if true the individual masks will be combined to a single mask where pixel values distinguish between cell types
+        instance_mask: if true the individual masks will be combined to a single mask each cell has a different pixel value
+        depth_mask: if true a mask will be generated where pixel values correspond to depth values 
+        obj3d: if true the entire scene will be exported in .OBJ format
+        keep_single_masks: if true the an individual mask will be generated and saved for each cell
+        '''
+
+        self.filepath = filepath
+
+        if scene: 
+            self.setup_scene_render_default(output_shape=output_shape)
+            self.export_scene()
+
+        if masks:
+            self.setup_scene_render_mask(output_shape=output_shape)
+            self.export_masks()
+
+            if semantic_mask: 
+                self.combine_masks_semantic()
+            if instance_mask: 
+                self.combine_masks_instance()
+
+            if not keep_single_masks: 
+                self.remove_single_masks()
+
+        if depth_mask: 
+            self.export_depth()
+
+        if obj3d: 
+            self.export_obj3d()
+
+        
 
     # def add_pass_index(self):
     #     for cell in self.cell_objects:
