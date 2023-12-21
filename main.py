@@ -71,15 +71,15 @@ my_scene.render(filepath='renders/')
 
 
 
-# Setup a folder called 3d_outputs and export scene as obj 
-# current_folder = os.path.dirname(os.path.realpath(__file__))
-FOLDER = Path(dir).joinpath("Images")#Path(current_folder).joinpath("Images")
-FOLDER = str(FOLDER)
-try:
-    if not os.path.exists(FOLDER):
-        os.makedirs(FOLDER)
-except OSError as error:
-    print("Directory '%s' can not be created")
+# # Setup a folder called 3d_outputs and export scene as obj 
+# # current_folder = os.path.dirname(os.path.realpath(__file__))
+# FOLDER = Path(dir).joinpath("Images")#Path(current_folder).joinpath("Images")
+# FOLDER = str(FOLDER)
+# try:
+#     if not os.path.exists(FOLDER):
+#         os.makedirs(FOLDER)
+# except OSError as error:
+#     print("Directory '%s' can not be created")
 
 
-bpy.ops.export_scene.obj(filepath=FOLDER+"//my_scene.obj")
+#bpy.ops.export_scene.obj(filepath=FOLDER+"//my_scene.obj")
