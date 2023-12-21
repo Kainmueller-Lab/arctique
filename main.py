@@ -69,7 +69,7 @@ my_scene.add_staining(material=my_materials.nuclei_staining)
 
 
 # render scene
-my_scene.render(filepath='C:/Users/cwinklm/Documents/Alpacathon/rendered_HE/renders/')
+my_scene.render(filepath='/renders/')
 
 
 
