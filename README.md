@@ -20,6 +20,10 @@ In particular best create a virtual environment where you need to install
 pip install fake-bpy-module-latest
 ```
 4) Open the .py script you want to run, then CTRL + SHIFT + P to open the VS Code options and choose "Blender: Run Script". This should see the script results in your open Blender application.
+5) Some versions of the script might use the package scipy. In case Blender trows an unkwown module error about scipy although you have scipy install in your local python the problem might be that scipy is not installed in Blender's python. To solve that issue go to the bin folder of Blender's python, e.g. "C:\Program Files\Blender Foundation\Blender 3.6\3.6\python\bin" and then run
+```
+python.exe -m pip install scipy
+```
 
 
 ## Setup Blender and Pycharm
