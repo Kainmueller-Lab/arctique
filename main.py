@@ -46,13 +46,15 @@ my_scene = scene.BioMedicalScene(my_light_source, my_camera)
 # define cell arrangements
 cell_distribution_A = arr.CellDistribution(
     cell_attributes = cells.CellAttributeA(),
-    num_cells = 100,
+    num_cells = 10,
+    #num_cells = 100,
     min_coords = Vector([-1, -1, 0.4]),
     max_coords = Vector([1, 1, 0.6])
 )
 cell_distribution_B = arr.CellDistribution(
     cell_attributes = cells.CellAttributeB(),
-    num_cells = 30,
+    num_cells = 3,
+    #num_cells = 30,
     min_coords = Vector([-1, -1, 0.4]),
     max_coords = Vector([1, 1, 0.6])
 )
@@ -67,7 +69,7 @@ my_scene.add_staining(material=my_materials.nuclei_staining)
 
 
 # render scene
-my_scene.render(filepath='renders/')
+my_scene.render(filepath='C:/Users/cwinklm/Documents/Alpacathon/rendered_HE/renders/')
 
 
 
