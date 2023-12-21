@@ -46,13 +46,13 @@ my_scene = scene.BioMedicalScene(my_light_source, my_camera)
 # define cell arrangements
 cell_distribution_A = arr.CellDistribution(
     cell_attributes = cells.CellAttributeA(),
-    num_cells = 100,
+    num_cells = 50,
     min_coords = Vector([-1, -1, 0.4]),
     max_coords = Vector([1, 1, 0.6])
 )
 cell_distribution_B = arr.CellDistribution(
     cell_attributes = cells.CellAttributeB(),
-    num_cells = 30,
+    num_cells = 10,
     min_coords = Vector([-1, -1, 0.4]),
     max_coords = Vector([1, 1, 0.6])
 )
