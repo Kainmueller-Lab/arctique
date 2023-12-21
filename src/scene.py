@@ -2,20 +2,24 @@ import bpy
 import src.arrangement.arrangement as arr
 import src.utils.helper_methods as hm
 import imp
+import time
 imp.reload(arr)
 imp.reload(hm)
+
+def fn_print_time_when_render_done(dummy):
+    print("----- the time is: ", time.time())
 
 class Camera:
     def __init__(self, name='camera 1', pos = (0, 0, 2), rot = (0, 0, 0), size = (2, 2)):
         self.scene = bpy.context.scene
         cam = bpy.data.cameras.new(name)
         cam.lens = 18
+        
+        self.cam_obj = bpy.data.objects.new(name, cam)
+        self.cam_obj.location = pos
+        self.cam_obj.rotation_euler = rot
+        #self.scene.collection.objects.link(self.cam_obj)
 
-        # create camera object
-        cam_obj = bpy.data.objects.new(name, cam)
-        cam_obj.location = pos
-        cam_obj.rotation_euler = rot
-        self.scene.collection.objects.link(cam_obj)
 
 class LightSource:
     def __init__(self, material, name='lightsource'):
@@ -32,7 +36,8 @@ class BioMedicalScene:
         self.light_source = light_source
         self.camera = camera
         self.cell_objects = []
-        self.scene = bpy.context.scene#camera.scene 
+        self.scene = bpy.context.scene
+        self.scene.camera = self.camera.cam_obj
         self._clear_compositor()
 
     @staticmethod
@@ -101,7 +106,7 @@ class BioMedicalScene:
         self.scene.render.filepath = self.filepath + "scene.png"
 
     def export_scene(self): 
-        bpy.ops.render.render('INVOKE_DEFAULT', write_still=True)
+        bpy.ops.render.render('EXEC_DEFAULT', write_still=True)
     
     def export_masks(self): 
         self.tissue.hide_viewport = True
@@ -109,7 +114,7 @@ class BioMedicalScene:
 
         self.light_source.light_source.hide_viewport = True
         self.light_source.light_source.hide_render = True
-        bpy.ops.render.render('INVOKE_DEFAULT', write_still=True)
+        bpy.ops.render.render('EXEC_DEFAULT', write_still=True)
         
 
     def combine_masks_semantic(self): 
@@ -129,7 +134,7 @@ class BioMedicalScene:
 
     def render(self, 
                filepath: str, 
-               scene: bool = False, 
+               scene: bool = True, 
                masks: bool = True, 
                semantic_mask: bool = False, 
                instance_mask: bool = False,
@@ -151,6 +156,8 @@ class BioMedicalScene:
         '''
 
         self.filepath = filepath
+
+        bpy.app.handlers.render_complete.append(fn_print_time_when_render_done)
 
         if scene: 
             self.setup_scene_render_default(output_shape=output_shape, max_samples=max_samples)
@@ -174,7 +181,7 @@ class BioMedicalScene:
         if obj3d: 
             self.export_obj3d()
 
-        
+        bpy.app.handlers.render_complete.remove(fn_print_time_when_render_done)
 
     # def add_pass_index(self):
     #     for cell in self.cell_objects:
