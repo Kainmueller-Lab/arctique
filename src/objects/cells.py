@@ -60,6 +60,14 @@ class Cell:
         self.semantic_id = semantic_id
 
     def add(self):
+        """
+        Adds a cube object to the scene with the specified size, location, and scale.
+        Sets the pass index of the cube object to the specified pass index.
+        Orients the cube object according to the specified orientation.
+        Applies two levels of subdivision surface to the cube object.
+        Deforms the mesh of the cube object randomly.
+        Bends the cube object along the z axis.
+        """
         # Create a cube
         bpy.ops.mesh.primitive_cube_add(size=self.cell_attributes.size, location=self.location, scale=self.cell_attributes.scale)
         self.cell_object = bpy.context.active_object
@@ -82,7 +90,7 @@ class Cell:
         # 2) Use deform_mesh() and bend_mesh() afterwards. Not stable, Blender crashes after generating a random number of objects. But the deformations look good.
         # 3) Use a different approach using Voronoi diagrams. TBD.
 
-        # Deform the 8 vertices of a cube randomly
+        # Deform the cube mesh randomly
         self.deform_mesh()
         # Bend mesh along the z axis
         self.bend_mesh()
@@ -105,6 +113,8 @@ class Cell:
     	- TRANSFORM_COUNT: The number of transformations to apply.
     	- PROPORTIONAL_SIZE: The size of the proportional edit range.
     	"""
+        # TODO: Put these variables as members to CellAttributes class. - ck
+        # NOTE: One can fine tune these values for better results. So far this is good enough. - ck
         TRANSLATION_RANGE = 0.05
         TRANSFORM_COUNT = 3
         PROPORTIONAL_SIZE = 0.2     

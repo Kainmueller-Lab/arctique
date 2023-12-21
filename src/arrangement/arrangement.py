@@ -19,6 +19,13 @@ class CellArrangement:
 
 class CellList(CellArrangement):
     def __init__(self, cell_attributes, locations):
+        """
+        Initializes a new instance of the CellArrangement class.
+
+        Parameters:
+            cell_attributes (dict): A dictionary representing the cell attributes.
+            locations (list): A list of locations.
+        """
         self.cell_attributes = cell_attributes
         self.locations = locations
         self.type = "LIST"
@@ -36,6 +43,15 @@ class CellList(CellArrangement):
 # TODO: Extend to different distribution types, e.g., Gaussian distribution, etc.
 class CellDistribution(CellArrangement):
     def __init__(self, cell_attributes, num_cells, min_coords, max_coords):
+        """
+        Initializes a CellArrangement object with the given parameters.
+
+        Parameters:
+            cell_attributes (list): A list of cell attributes.
+            num_cells (int): The number of cells.
+            min_coords (tuple): The minimum coordinates.
+            max_coords (tuple): The maximum coordinates.
+        """
         self.cell_attributes = cell_attributes
         self.num_cells = num_cells
         self.min_coords = min_coords
@@ -46,6 +62,11 @@ class CellDistribution(CellArrangement):
         self.objects = []
 
     def generate_cells(self):
+        """
+        Generates cells and adds them to the list of objects.
+
+        This function generates a specified number of cells and adds them to the list of objects. Each cell is randomly located within the specified minimum and maximum coordinates. The orientation of each cell is also randomly generated. 
+        """
         for _ in range(self.num_cells):
             # Sample uniformly distributed location
             location = Vector([
