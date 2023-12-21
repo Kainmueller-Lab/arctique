@@ -91,22 +91,26 @@ class BioMedicalScene:
         self.scene.display.render_aa = "OFF"
 
         self.scene.render.image_settings.color_mode = "RGBA"
-        #self.scene.render.filepath = self.filepath + "scene.png"
+        self.scene.render.filepath = self.filepath + "mask.png"
 
-    def setup_scene_render_default(self, output_shape = (500, 500)): 
+    def setup_scene_render_default(self, output_shape = (500, 500), max_samples = 1024): 
         self.scene.render.resolution_x = output_shape[0]
         self.scene.render.resolution_y = output_shape[0]
         self.scene.render.engine = "CYCLES"
-        self.scene.cycles.samples = 100
+        self.scene.cycles.samples = max_samples
         self.scene.render.filepath = self.filepath + "scene.png"
-        #pass
 
     def export_scene(self): 
         bpy.ops.render.render('INVOKE_DEFAULT', write_still=True)
-        #pass
-
+    
     def export_masks(self): 
-        pass 
+        self.tissue.hide_viewport = True
+        self.tissue.hide_render = True
+
+        self.light_source.light_source.hide_viewport = True
+        self.light_source.light_source.hide_render = True
+        bpy.ops.render.render('INVOKE_DEFAULT', write_still=True)
+        
 
     def combine_masks_semantic(self): 
         pass
@@ -125,14 +129,15 @@ class BioMedicalScene:
 
     def render(self, 
                filepath: str, 
-               scene: bool = True, 
-               masks: bool = False, 
+               scene: bool = False, 
+               masks: bool = True, 
                semantic_mask: bool = False, 
                instance_mask: bool = False,
                depth_mask: bool = False, 
                obj3d: bool = False, 
                keep_single_masks: bool = False, 
-               output_shape = (500, 500)):
+               output_shape = (500, 500), 
+               max_samples = 10):
         '''
         filepath: the folder where all outputs will be stored
         scene: if true a png of the scene will be generated
@@ -142,12 +147,13 @@ class BioMedicalScene:
         depth_mask: if true a mask will be generated where pixel values correspond to depth values 
         obj3d: if true the entire scene will be exported in .OBJ format
         keep_single_masks: if true the an individual mask will be generated and saved for each cell
+        max_samples: number of samples for rendering. Fewer samples will render more quickly
         '''
 
         self.filepath = filepath
 
         if scene: 
-            self.setup_scene_render_default(output_shape=output_shape)
+            self.setup_scene_render_default(output_shape=output_shape, max_samples=max_samples)
             self.export_scene()
 
         if masks:
