@@ -2,6 +2,7 @@ import numpy as np
 from PIL import Image
 from pathlib import Path
 import matplotlib.pyplot as plt
+import os
 
 def reduce_single_masks(source_folder, file_names): 
     """
@@ -100,4 +101,14 @@ def build_instance_mask(source_folder, file_names):
         plt.imshow(instance_mask, interpolation="none")
         plt.axis("off")
         plt.savefig(str(Path(source_folder).joinpath("instance_mask.png")), bbox_inches='tight', pad_inches=0)
+
+
+
+def remove_single_masks(file_names): 
+    '''
+    Removes individual cell masks.
+    '''
+
+    for file_name in file_names: 
+        os.remove(file_name)
 
