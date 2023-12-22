@@ -43,23 +43,40 @@ my_camera = scene.Camera()
 # create scene
 my_scene = scene.BioMedicalScene(my_light_source, my_camera)
 
+# OPTION 1: Distributions & Deformations ############################
 # define cell arrangements
-cell_distribution_A = arr.CellDistribution(
-    cell_attributes = cells.CellAttributeA(),
-    num_cells = 50,
-    min_coords = Vector([-1, -1, 0.4]),
-    max_coords = Vector([1, 1, 0.6])
-)
-cell_distribution_B = arr.CellDistribution(
-    cell_attributes = cells.CellAttributeB(),
-    num_cells = 10,
-    min_coords = Vector([-1, -1, 0.4]),
-    max_coords = Vector([1, 1, 0.6])
-)
+# TODO: Add use_unstable_deform flag to toggle deformation mode
+# cell_distribution_A = arr.CellDistribution(
+#     cell_attributes = cells.CellAttributeA(),
+#     num_cells = 50,
+#     min_coords = Vector([-1, -1, 0.4]),
+#     max_coords = Vector([1, 1, 0.6])
+# )
+# cell_distribution_B = arr.CellDistribution(
+#     cell_attributes = cells.CellAttributeB(),
+#     num_cells = 10,
+#     min_coords = Vector([-1, -1, 0.4]),
+#     max_coords = Vector([1, 1, 0.6])
+# )
+# # add cell arrangements to scene
+# my_scene.add_arangement(cell_distribution_A)
+# my_scene.add_arangement(cell_distribution_B)
 
+# OPTION 2: Voronoi diagram ############################
+# NOTE: Per cell attribute type set the number of cells you want.
+# Those will be distributed rndomly in a box given by min/max_coord.
+# TODO: Add cell type to nucleus object name
+# TODO: Add type specific scale to the nuclei
+distribution_dict = {}
+distribution_dict["A"] = 100
+distribution_dict["B"] = 40 
+min_coords = Vector([-1, -1, 0.4])
+max_coords = Vector([1, 1, 0.6])
+# define cell arrangements
+voronoi_arr = arr.VoronoiDiagram(distribution_dict, min_coords, max_coords)
 # add cell arrangements to scene
-my_scene.add_arangement(cell_distribution_A)
-my_scene.add_arangement(cell_distribution_B)
+my_scene.add_arangement(voronoi_arr)
+
 my_scene.add_tissue(tissue=my_tissue.tissue)
 my_scene.cut_cells()
 my_scene.add_staining(material=my_materials.nuclei_staining)

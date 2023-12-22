@@ -72,15 +72,9 @@ class BioMedicalScene:
             cell.cell_object.active_material = material
     
     def add_arangement(self, cell_arrangement: arr.CellArrangement):
-        cell_arrangement.generate_cells()
-        self.cell_objects = self.cell_objects + cell_arrangement.objects
         cell_arrangement.add()
-        self.objects_list = cell_arrangement.objects
+        self.cell_objects = self.cell_objects + cell_arrangement.objects
 
-    def add_pass_index(self):
-        for cell in self.cell_objects:
-            pass
-    
     def render_engine(self):
         self.scene.render.engine = 'CYCLES' #or 'BLENDER_EEVEE'
         self.scene.render.filepath = self.filepath + "cells.png" #render full picture
