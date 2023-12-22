@@ -82,6 +82,10 @@ class BioMedicalScene:
         cell_arrangement.add()
         self.objects_list = cell_arrangement.objects
 
+    def hide_all_cells(self): 
+        for cell in self.cell_objects: 
+            cell.cell_object.hide_viewport = True
+            cell.cell_object.hide_render = True
 
     def setup_scene_render_mask(self, output_shape = (500, 500)): 
 
@@ -114,7 +118,14 @@ class BioMedicalScene:
 
         self.light_source.light_source.hide_viewport = True
         self.light_source.light_source.hide_render = True
+
+        
+
+
+
         bpy.ops.render.render('EXEC_DEFAULT', write_still=True)
+        self.light_source.light_source.hide_viewport = False
+        self.light_source.light_source.hide_render = False
         
 
     def combine_masks_semantic(self): 
