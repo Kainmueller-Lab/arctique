@@ -71,19 +71,24 @@ my_scene.cut_cells()
 my_scene.add_staining(material=my_materials.nuclei_staining)
 
 
-
+# Todo: 
+# remove all usage of + in path name generation
+# find out why matplotlib performn interpolation when generating png
+# functionality for exporting depth mask
 
 
 # render scene
-RENDER_PATH = 'C:/Users/cwinklm/Documents/Alpacathon/rendered_HE/renders/'
+#RENDER_PATH = 'C:/Users/cwinklm/Documents/Alpacathon/rendered_HE/renders/'
+RENDER_PATH = 'renders/'
+
 my_scene.render(filepath = RENDER_PATH,  # where to save renders
                scene = True, # if true scene is rendered
                masks = True, # if true singel cell masks are rendered
-               semantic_mask = False, # if true semantic mask is generated
-               instance_mask = False, # if true instance mask is generated
+               semantic_mask = True, # if true semantic mask is generated
+               instance_mask = True, # if true instance mask is generated
                depth_mask = False, # if true depth mask is generated
                obj3d = True, # if true scene is saved as 3d object
-               keep_single_masks = False, # if False single cell masks are deleted 
+               remove_single_masks = True, # if False single cell masks are deleted 
                output_shape = (500, 500), # dimensions of output
                max_samples = 10) # number of samples for rendering. Fewer samples will render more quickly. Default is 1024
 
