@@ -84,6 +84,7 @@ class BioMedicalScene:
         self.objects_list = cell_arrangement.objects
 
     def hide_everything(self): 
+        '''hide all objects in the scene'''
         # hide tissue 
         self.tissue.hide_viewport = True
         self.tissue.hide_render = True
@@ -96,6 +97,7 @@ class BioMedicalScene:
             cell.cell_object.hide_render = True
 
     def unhide_everything(self): 
+        '''unhide all objects in the scene'''
         # unhide tissue
         self.tissue.hide_viewport = False
         self.tissue.hide_render = False
@@ -108,7 +110,7 @@ class BioMedicalScene:
             cell.cell_object.hide_render = False
 
     def setup_scene_render_mask(self, output_shape = (500, 500)): 
-
+        '''specify settings for the rendering of the individual cell masks '''
         self.scene.render.resolution_x = output_shape[0]
         self.scene.render.resolution_y = output_shape[0]
 
@@ -124,6 +126,7 @@ class BioMedicalScene:
 
 
     def setup_scene_render_default(self, output_shape = (500, 500), max_samples = 1024): 
+        '''specify settings for the rendering of the full scene'''
         self.scene.render.resolution_x = output_shape[0]
         self.scene.render.resolution_y = output_shape[0]
         self.scene.render.engine = "CYCLES"
@@ -131,6 +134,7 @@ class BioMedicalScene:
         self.scene.render.filepath = self.filepath + "scene.png"
 
     def export_scene(self): 
+        '''Generates a png image of the complete scene using the specifications defined in setup_scene_render_default'''
         bpy.ops.render.render('EXEC_DEFAULT', write_still=True)
     
     def export_masks(self): 
@@ -217,43 +221,6 @@ class BioMedicalScene:
         bpy.app.handlers.render_complete.remove(fn_print_time_when_render_done)
         print("rendering completed")
 
-    # def add_pass_index(self):
-    #     for cell in self.cell_objects:
-    #         pass
-    
-    # def render_engine(self):
-    #     self.scene.render.engine = 'CYCLES' #or 'BLENDER_EEVEE'
-    #     self.scene.render.filepath = self.filepath + "cells.png" #render full picture
-    #     self.scene.render.image_settings.file_format = 'PNG'
-    
-    # def add_output_file(self):
-    #     self.output_file = self.tree.nodes.new("CompositorNodeOutputFile")
-    #     self.output_file.base_path = self.filepath
-    #     self.output_file.format.file_format = 'PNG'
-    
-    # def mask_objects(self, index):
-    #     maskid = self.tree.nodes.new('CompositorNodeIDMask')
-    #     maskid.index = index
-    #     self.scene.node_tree.links.new(self.render_nodes.outputs['IndexOB'], maskid.inputs[0])
-    #     self.output_file.file_slots.new(f"mask_output_{index}")
-    #     self.scene.node_tree.links.new(maskid.outputs['Alpha'], self.output_file.inputs[1])
-    
-    # def render(self, filepath: str, mask: str = False, index: int = 0):
-    #     self.filepath = filepath
-    #     self.render_engine()
-        
-    #     self.scene.use_nodes = True
-    #     self.tree = self.scene.node_tree
-    #     self.render_nodes = bpy.context.scene.node_tree.nodes.new(type='CompositorNodeRLayers')
-    #     bpy.context.scene.view_layers["ViewLayer"].use_pass_object_index = True
-    #     self.add_output_file()
-    #     self.scene.node_tree.links.new(self.render_nodes.outputs['Image'], self.output_file.inputs[0])
-        
-    #     bpy.ops.render.render('INVOKE_DEFAULT', write_still=True)
-        
-    #     if mask:
-    #         self.mask_objects(index)
-    #         bpy.ops.render.render('INVOKE_DEFAULT', write_still=True)
 
 
         
