@@ -6,6 +6,7 @@ import os
 from math import radians, sin, cos, pi
 from mathutils import Matrix, Vector
 from pathlib import Path
+from PIL import Image
 
 # IMPORT SOURCES
 dir = os.path.dirname(bpy.data.filepath)
@@ -18,6 +19,7 @@ import src.objects.tissue as tissue
 import src.shading.shading as shading
 import src.scene as scene
 
+
 # this next part forces a reload in case you edit the source after you first start the blender session
 #import imp
 import importlib as imp # imp module is deprecated since python 3.12
@@ -26,6 +28,7 @@ imp.reload(cells)
 imp.reload(tissue)
 imp.reload(shading)
 imp.reload(scene)
+
 
 ###################  PARAMETER  #####################
 # args_camera = {'pos'} # no change just test
@@ -72,19 +75,22 @@ my_scene.add_staining(material=my_materials.nuclei_staining)
 
 
 # render scene
-my_scene.render(filepath='C:/Users/cwinklm/Documents/Alpacathon/rendered_HE/renders/')
+RENDER_PATH = 'C:/Users/cwinklm/Documents/Alpacathon/rendered_HE/renders/'
+my_scene.render(filepath = RENDER_PATH,  # where to save renders
+               scene = True, # if true scene is rendered
+               masks = True, # if true singel cell masks are rendered
+               semantic_mask = False, # if true semantic mask is generated
+               instance_mask = False, # if true instance mask is generated
+               depth_mask = False, # if true depth mask is generated
+               obj3d = True, # if true scene is saved as 3d object
+               keep_single_masks = False, # if False single cell masks are deleted 
+               output_shape = (500, 500), # dimensions of output
+               max_samples = 10) # number of samples for rendering. Fewer samples will render more quickly. Default is 1024
 
 
 
-# # Setup a folder called 3d_outputs and export scene as obj 
-# # current_folder = os.path.dirname(os.path.realpath(__file__))
-# FOLDER = Path(dir).joinpath("Images")#Path(current_folder).joinpath("Images")
-# FOLDER = str(FOLDER)
-# try:
-#     if not os.path.exists(FOLDER):
-#         os.makedirs(FOLDER)
-# except OSError as error:
-#     print("Directory '%s' can not be created")
 
 
-#bpy.ops.export_scene.obj(filepath=FOLDER+"//my_scene.obj")
+
+
+
