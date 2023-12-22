@@ -21,6 +21,8 @@ pip install fake-bpy-module-latest
 ```
 4) Open the .py script you want to run, then CTRL + SHIFT + P to open the VS Code options and choose "Blender: Run Script". This should see the script results in your open Blender application.
 
+NOTE: Order to install python libraries inside Blender follow the description here: [pip install in Blender](https://blender.stackexchange.com/questions/56011/how-to-install-pip-for-blenders-bundled-python)
+
 
 ## Setup Blender and Pycharm
 1) Download [https://www.blender.org/download/](https://www.blender.org/download/)
