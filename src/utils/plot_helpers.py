@@ -5,7 +5,11 @@ from pathlib import Path
 
 def reduce_single_masks(source_folder, file_names): 
     """
-    Reduces the original RGB-A single masks by using only the alpha channel
+    Reduces the original RGB-A single masks by using only the alpha channel. 
+
+    This is a workaround because when masks are rendered the black background sometimes has pixel values >0
+    and the cell object sometimes has pixel values <255. Therefore we set the background to transparent 
+    and thereby guarantee that the alpha channel will only have two pixel values: 0 for background and 255 for the cell object. 
  
     Args:
         source_folder (int): The folder where the masks can be found
@@ -19,8 +23,6 @@ def reduce_single_masks(source_folder, file_names):
         if mask_np.shape[2] != 4: 
             raise ValueError("Expected masks to have alpha channel")
 
-        for i in range(4): 
-            print(file_name, "  ", i, "  ", np.unique(mask_np[:, :, i]))
         mask_np = mask_np[:, :, -1] # keep only alpha channel
         
 
