@@ -68,7 +68,7 @@ my_scene.cut_cells()
 my_scene.add_staining(material=my_materials.nuclei_staining)
 
 
-my_scene.hide_all_cells()
+
 
 
 # render scene
