@@ -1,11 +1,13 @@
 import bpy
 import src.arrangement.arrangement as arr
 import src.utils.helper_methods as hm
+import src.utils.plot_helpers as ph
 #import imp
 import importlib as imp # imp module is deprecated since python 3.12
 import time
 imp.reload(arr)
 imp.reload(hm)
+imp.reload(ph)
 
 def fn_print_time_when_render_done(dummy):
     print("----- the time is: ", time.time())
@@ -121,6 +123,7 @@ class BioMedicalScene:
         self.scene.display.shading.single_color = (255, 255, 255)
         self.scene.display.render_aa = "OFF"
 
+        self.scene.render.film_transparent = True # this makes the background transparent and the alpha chanell of output will have only two pixel values
         self.scene.render.image_settings.color_mode = "RGBA"
         
 
@@ -140,19 +143,23 @@ class BioMedicalScene:
     def export_masks(self): 
 
         self.hide_everything()
+        self.mask_filenames = []
         for cell in self.cell_objects: 
             # show only one cell 
             cell.cell_object.hide_viewport = False
             cell.cell_object.hide_render = False
             # ssave mask for one cell 
             mask_name = f"{cell.cell_name}.png"
-            self.scene.render.filepath = self.filepath + mask_name#"mask.png"
+            self.scene.render.filepath = self.filepath + mask_name
+            self.mask_filenames.append(self.filepath + mask_name)
             bpy.ops.render.render('EXEC_DEFAULT', write_still=True)
             # hide cell again
             cell.cell_object.hide_viewport = True
             cell.cell_object.hide_render = True
 
         self.unhide_everything()
+        ph.reduce_single_masks(self.filepath, self.mask_filenames)
+
 
     def combine_masks_semantic(self): 
         pass
@@ -177,7 +184,7 @@ class BioMedicalScene:
                instance_mask: bool = False,
                depth_mask: bool = False, 
                obj3d: bool = True, 
-               keep_single_masks: bool = False, 
+               remove_single_masks: bool = False, 
                output_shape = (500, 500), 
                max_samples = 10):
         '''
@@ -209,7 +216,7 @@ class BioMedicalScene:
             if instance_mask: 
                 self.combine_masks_instance()
 
-            if not keep_single_masks: 
+            if remove_single_masks: 
                 self.remove_single_masks()
 
         if depth_mask: 
