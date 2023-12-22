@@ -83,10 +83,29 @@ class BioMedicalScene:
         cell_arrangement.add()
         self.objects_list = cell_arrangement.objects
 
-    def hide_all_cells(self): 
+    def hide_everything(self): 
+        # hide tissue 
+        self.tissue.hide_viewport = True
+        self.tissue.hide_render = True
+        # hide light source
+        self.light_source.light_source.hide_viewport = True
+        self.light_source.light_source.hide_render = True
+        # hide cells 
         for cell in self.cell_objects: 
             cell.cell_object.hide_viewport = True
             cell.cell_object.hide_render = True
+
+    def unhide_everything(self): 
+        # unhide tissue
+        self.tissue.hide_viewport = False
+        self.tissue.hide_render = False
+        # unhide light source
+        self.light_source.light_source.hide_viewport = False
+        self.light_source.light_source.hide_render = False
+        # unhide cells 
+        for cell in self.cell_objects: 
+            cell.cell_object.hide_viewport = False
+            cell.cell_object.hide_render = False
 
     def setup_scene_render_mask(self, output_shape = (500, 500)): 
 
@@ -99,7 +118,6 @@ class BioMedicalScene:
         self.scene.display.shading.background_type = "WORLD"
         self.scene.display.shading.single_color = (255, 255, 255)
         self.scene.display.render_aa = "OFF"
-
 
         self.scene.render.image_settings.color_mode = "RGBA"
         
@@ -116,27 +134,21 @@ class BioMedicalScene:
         bpy.ops.render.render('EXEC_DEFAULT', write_still=True)
     
     def export_masks(self): 
-        self.tissue.hide_viewport = True
-        self.tissue.hide_render = True
 
-        self.light_source.light_source.hide_viewport = True
-        self.light_source.light_source.hide_render = True
-
-        
+        self.hide_everything()
         for cell in self.cell_objects: 
+            # show only one cell 
             cell.cell_object.hide_viewport = False
             cell.cell_object.hide_render = False
+            # ssave mask for one cell 
             mask_name = f"{cell.cell_name}.png"
             self.scene.render.filepath = self.filepath + mask_name#"mask.png"
             bpy.ops.render.render('EXEC_DEFAULT', write_still=True)
-
+            # hide cell again
             cell.cell_object.hide_viewport = True
             cell.cell_object.hide_render = True
 
-
-        self.light_source.light_source.hide_viewport = False
-        self.light_source.light_source.hide_render = False
-        
+        self.unhide_everything()
 
     def combine_masks_semantic(self): 
         pass
@@ -152,6 +164,7 @@ class BioMedicalScene:
 
     def export_obj3d(self): 
         pass
+        #bpy.ops.export_scene.obj(filepath=f"{self.filepath}/my_scene.obj")
 
     def render(self, 
                filepath: str, 
