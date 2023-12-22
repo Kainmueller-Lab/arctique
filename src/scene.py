@@ -1,7 +1,8 @@
 import bpy
 import src.arrangement.arrangement as arr
 import src.utils.helper_methods as hm
-import imp
+#import imp
+import importlib as imp # imp module is deprecated since python 3.12
 import time
 imp.reload(arr)
 imp.reload(hm)
@@ -99,8 +100,10 @@ class BioMedicalScene:
         self.scene.display.shading.single_color = (255, 255, 255)
         self.scene.display.render_aa = "OFF"
 
+
         self.scene.render.image_settings.color_mode = "RGBA"
-        self.scene.render.filepath = self.filepath + "mask.png"
+        
+
 
     def setup_scene_render_default(self, output_shape = (500, 500), max_samples = 1024): 
         self.scene.render.resolution_x = output_shape[0]
@@ -120,10 +123,17 @@ class BioMedicalScene:
         self.light_source.light_source.hide_render = True
 
         
+        for cell in self.cell_objects: 
+            cell.cell_object.hide_viewport = False
+            cell.cell_object.hide_render = False
+            mask_name = f"{cell.cell_name}.png"
+            self.scene.render.filepath = self.filepath + mask_name#"mask.png"
+            bpy.ops.render.render('EXEC_DEFAULT', write_still=True)
+
+            cell.cell_object.hide_viewport = True
+            cell.cell_object.hide_render = True
 
 
-
-        bpy.ops.render.render('EXEC_DEFAULT', write_still=True)
         self.light_source.light_source.hide_viewport = False
         self.light_source.light_source.hide_render = False
         
