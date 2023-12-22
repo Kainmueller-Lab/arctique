@@ -176,7 +176,8 @@ class BioMedicalScene:
         ph.build_instance_mask(self.filepath, cell_mask_filenames)
 
     def remove_single_masks(self): 
-        pass
+        cell_mask_filenames = [info_tuple[2] for info_tuple in self.cell_info]
+        ph.remove_single_masks(cell_mask_filenames)
 
     def export_depth(self): 
         pass
