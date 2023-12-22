@@ -19,7 +19,8 @@ import src.shading.shading as shading
 import src.scene as scene
 
 # this next part forces a reload in case you edit the source after you first start the blender session
-import imp
+#import imp
+import importlib as imp # imp module is deprecated since python 3.12
 imp.reload(arr)
 imp.reload(cells)
 imp.reload(tissue)
@@ -67,9 +68,11 @@ my_scene.cut_cells()
 my_scene.add_staining(material=my_materials.nuclei_staining)
 
 
+my_scene.hide_all_cells()
+
 
 # render scene
-my_scene.render(filepath='/renders/')
+my_scene.render(filepath='C:/Users/cwinklm/Documents/Alpacathon/rendered_HE/renders/')
 
 
 
