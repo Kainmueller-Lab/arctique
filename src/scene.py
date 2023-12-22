@@ -163,8 +163,7 @@ class BioMedicalScene:
         pass
 
     def export_obj3d(self): 
-        pass
-        #bpy.ops.export_scene.obj(filepath=f"{self.filepath}/my_scene.obj")
+        bpy.ops.export_scene.obj(filepath=f"{self.filepath}/my_scene.obj")
 
     def render(self, 
                filepath: str, 
@@ -173,7 +172,7 @@ class BioMedicalScene:
                semantic_mask: bool = False, 
                instance_mask: bool = False,
                depth_mask: bool = False, 
-               obj3d: bool = False, 
+               obj3d: bool = True, 
                keep_single_masks: bool = False, 
                output_shape = (500, 500), 
                max_samples = 10):
@@ -216,6 +215,7 @@ class BioMedicalScene:
             self.export_obj3d()
 
         bpy.app.handlers.render_complete.remove(fn_print_time_when_render_done)
+        print("rendering completed")
 
     # def add_pass_index(self):
     #     for cell in self.cell_objects:
