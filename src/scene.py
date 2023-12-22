@@ -143,7 +143,7 @@ class BioMedicalScene:
     def export_masks(self): 
 
         self.hide_everything()
-        self.mask_filenames = []
+        self.cell_info = []
         for cell in self.cell_objects: 
             # show only one cell 
             cell.cell_object.hide_viewport = False
@@ -151,21 +151,29 @@ class BioMedicalScene:
             # ssave mask for one cell 
             mask_name = f"{cell.cell_name}.png"
             self.scene.render.filepath = self.filepath + mask_name
-            self.mask_filenames.append(self.filepath + mask_name)
+            
+            cell_id = cell.cell_id   # cell.cell_object.cell_id
+            cell_type = cell.cell_attributes.cell_type
+            cell_filename = self.filepath + mask_name
+            cell_info_tuple = (cell_id, cell_type, cell_filename)
+            self.cell_info.append(cell_info_tuple)
+
             bpy.ops.render.render('EXEC_DEFAULT', write_still=True)
             # hide cell again
             cell.cell_object.hide_viewport = True
             cell.cell_object.hide_render = True
 
         self.unhide_everything()
-        ph.reduce_single_masks(self.filepath, self.mask_filenames)
+        ph.reduce_single_masks(self.filepath, [info_tuple[2] for info_tuple in self.cell_info])
 
 
     def combine_masks_semantic(self): 
-        pass
+        ph.build_semantic_mask(self.filepath, self.cell_info)
 
     def combine_masks_instance(self): 
-        pass
+        cell_mask_filenames = [info_tuple[2] for info_tuple in self.cell_info]
+        
+        ph.build_instance_mask(self.filepath, cell_mask_filenames)
 
     def remove_single_masks(self): 
         pass
