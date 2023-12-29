@@ -92,7 +92,7 @@ def build_instance_mask(source_folder, file_names):
         if file_idx == 0:
             instance_mask = np.zeros_like(mask_np) # instance_mask has same shape as the masks
     
-        instance_mask += mask_np*(file_idx/255.) # in mask the object has pixel value 255 (backgrund is 0)
+        instance_mask += mask_np*((file_idx+1)/255.) # in mask the object has pixel value 255 (backgrund is 0)
 
         np.save(str(Path(source_folder).joinpath("instance_mask.npy")), instance_mask)
 
