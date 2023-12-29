@@ -125,7 +125,6 @@ class BioMedicalScene:
 
         self.scene.render.film_transparent = True # this makes the background transparent and the alpha chanell of output will have only two pixel values
         self.scene.render.image_settings.color_mode = "RGBA"
-        
 
 
     def setup_scene_render_default(self, output_shape = (500, 500), max_samples = 1024): 
@@ -148,7 +147,7 @@ class BioMedicalScene:
             # show only one cell 
             cell.cell_object.hide_viewport = False
             cell.cell_object.hide_render = False
-            # ssave mask for one cell 
+            # save mask for one cell 
             mask_name = f"{cell.cell_name}.png"
             self.scene.render.filepath = self.filepath + mask_name
             
