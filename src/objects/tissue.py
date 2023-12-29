@@ -3,7 +3,7 @@ from src.shading.shading import Material
 
 
 class Tissue():
-    def __init__(self, material: Material, thickness=0.1, size=2, location=(0, 0, 0.5)):
+    def __init__(self, material: Material, thickness=0.2, size=2, location=(0, 0, 0.5)):
         self.material = material
 
         # create tissue mesh
