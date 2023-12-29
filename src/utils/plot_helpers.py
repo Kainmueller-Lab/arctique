@@ -2,7 +2,24 @@ import numpy as np
 from PIL import Image
 from pathlib import Path
 import matplotlib.pyplot as plt
+
 import os
+
+
+def make_color_palette(n_colors, bg_col = (0,0,0)): 
+    colors = [bg_col]
+    for i in range(n_colors): 
+        not_unique = True
+        while not_unique: # generate random RGB color and ensure no repetition
+            col = tuple(np.random.randint(0, 255, size=3)) 
+            if col not in colors: 
+                colors.append(col)
+                not_unique =False
+    palette = []
+    for color in colors:
+        palette.extend(color)
+
+    return palette
 
 def reduce_single_masks(source_folder, file_names): 
     """
@@ -26,7 +43,7 @@ def reduce_single_masks(source_folder, file_names):
 
         mask_np = mask_np[:, :, -1] # keep only alpha channel
         
-
+        
         mask_png_small = Image.fromarray(mask_np)
         mask_png_small.save(file_name)
     
@@ -62,11 +79,14 @@ def build_semantic_mask(source_folder, cell_info_tuples):
 
         np.save(str(Path(source_folder).joinpath("semantic_mask.npy")), semantic_mask)
 
-        # converting back to PIL.Image results in balck image because for few cells the pixel values are low. 
-        # we therefore plot in matplotlib such that color values are assigned automatically without changing the pixel vals. 
-        plt.imshow(semantic_mask, interpolation="none")
-        plt.axis("off")
-        plt.savefig(str(Path(source_folder).joinpath("semantic_mask.png")), bbox_inches='tight', pad_inches=0)
+        # generate unique colors for each class (background is black by default)
+        palette = make_color_palette(len(cell_type_dict.keys()))
+        # generate Image object from array, needs to be converted to uint8 to avoid aliasing
+        colored_instance_mask = Image.fromarray(semantic_mask.astype(np.uint8))
+        # assign color palette to image
+        colored_instance_mask.putpalette(palette)
+        # save to png
+        colored_instance_mask.save(str(Path(source_folder).joinpath("semantic_mask.png")))
 
 
 
@@ -94,13 +114,17 @@ def build_instance_mask(source_folder, file_names):
     
         instance_mask += mask_np*((file_idx+1)/255.) # in mask the object has pixel value 255 (backgrund is 0)
 
-        np.save(str(Path(source_folder).joinpath("instance_mask.npy")), instance_mask)
+    np.save(str(Path(source_folder).joinpath("instance_mask.npy")), instance_mask)
 
-        # converting back to PIL.Image results in balck image because for few cells the pixel values are low. 
-        # we therefore plot in matplotlib such that color values are assigned automatically without changing the pixel vals. 
-        plt.imshow(instance_mask, interpolation="none")
-        plt.axis("off")
-        plt.savefig(str(Path(source_folder).joinpath("instance_mask.png")), bbox_inches='tight', pad_inches=0)
+    # generate unique colors for each instance (background is black by default)
+    palette = make_color_palette(len(np.unique(instance_mask)))
+    # generate Image object from array, needs to be converted to uint8 to avoid aliasing
+    colored_instance_mask = Image.fromarray(instance_mask.astype(np.uint8))
+    # assign color palette to image
+    colored_instance_mask.putpalette(palette)
+    # save to png
+    colored_instance_mask.save(str(Path(source_folder).joinpath("instance_mask.png")))
+
 
 
 
