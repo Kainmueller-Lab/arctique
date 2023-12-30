@@ -88,12 +88,12 @@ class VoronoiDiagram(CellArrangement):
         Initializes a CellArrangement object with the given parameters.
 
         Parameters:
-            distribution_dict (dict): Lists number of cells to add per cell attribute type
+            distribution_dict (dict): Maps cell attribute types to a list of corresp. 3D points
             min_coords (tuple): The minimum coordinates.
             max_coords (tuple): The maximum coordinates.
         """
         self.distribution_dict = distribution_dict
-        self.cell_count = sum(distribution_dict.values())
+        #self.cell_count = sum(distribution_dict.values())
         self.min_coords = min_coords
         self.max_coords = max_coords
         # TODO: Make these parameters changeable and dependent of cell attribute type
@@ -106,7 +106,7 @@ class VoronoiDiagram(CellArrangement):
 
     def add(self):
         # Generate N random 3D vectors bewteen min and max coords
-        points = [list(map(random.uniform, self.min_coords, self.max_coords)) for _ in range(self.cell_count)]
+        #points = [list(map(random.uniform, self.min_coords, self.max_coords)) for _ in range(self.cell_count)]
         #add_point_cloud(points, radius = 0.01)
 
         # Add auxiliary boundary points to ensure that the base Voronoi regions are bounded
@@ -118,9 +118,15 @@ class VoronoiDiagram(CellArrangement):
         #add_point_cloud(auxiliary_points, radius = 0.2)
 
         # Generate the Voronoi diagram and necessary data
-        vor = Voronoi(points + auxiliary_points)
+        all_points = []
+        for point_list in self.distribution_dict.values():
+            all_points.extend(point_list)
+        vor = Voronoi(all_points + auxiliary_points)
         #print_voronoi_stats(vor)
         fr_points = finite_region_points(vor)
+        if len(fr_points)==len(all_points):
+            print("Less nuclei than expected have been generated.")
+        assert len(fr_points)==len(all_points), "Less nuclei than expected have been generated."
         #print(f"Finite region points: {fr_points}")
         ridges = compute_faces_by_seeds(vor, fr_points)
 
@@ -129,7 +135,7 @@ class VoronoiDiagram(CellArrangement):
                             faces = ridges[point_idx],
                             idx = point_idx)
             # Set the 3D cursor to the desired position
-            bpy.context.scene.cursor.location = points[point_idx]
+            bpy.context.scene.cursor.location = all_points[point_idx]
             # Set the object's origin to the 3D cursor location
             bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
             # Scale the object (adjust the scale factors as needed)
@@ -144,6 +150,35 @@ class VoronoiDiagram(CellArrangement):
         box_object = add_box(self.min_coords, self.max_coords)
         # Run the intersection function to get polytopes representing cell membranes
         cell_objects = intersect_with_object(region_objects, box_object)
+        # Collect list of attributes per cell seed
+        # NOTE: This is quite hacky. Could be done more elegantly. - ck
+        all_attributes = []
+        for attribute in self.distribution_dict.keys():
+            all_attributes.extend([attribute for _ in self.distribution_dict[attribute]])
+        assert len(all_attributes)==len(all_points), "Total number of attributes not matching with number of cell seeds."
         # Turn each polytope in a mesh representing its nucleus
-        self.objects = add_nuclei_from(cell_objects, self.nuclei_scale)
+        self.objects = self.add_nuclei_from(cell_objects, all_attributes)
         remove_objects(cell_objects)
+
+    def add_nuclei_from(self, cell_objects, attributes):
+        nucleus_objects = []
+        for cell_idx, cell_object in enumerate(cell_objects):
+            attribute = attributes[cell_idx]
+            size = attribute.size
+            scale = attribute.scale
+            cell_type = attribute.cell_type
+
+            bpy.ops.mesh.primitive_cube_add(enter_editmode=False, align='WORLD', location=cell_object.location, scale=(1, 1, 1))
+            nucleus_object = bpy.context.active_object
+            index = cell_object.name.split('_')[1]
+            nucleus_object.name = f"NucleusObject_{index}_{self.type}_Type_{cell_type}"
+            shrinkwrap = nucleus_object.modifiers.new(name="Shrinkwrap Modifier", type='SHRINKWRAP')
+            shrinkwrap.target = cell_object
+            bpy.ops.object.modifier_apply(modifier="Shrinkwrap Modifier")
+            subsurf = nucleus_object.modifiers.new("Subsurface Modifier", type='SUBSURF')
+            subsurf.levels = 2
+            bpy.ops.object.modifier_apply(modifier="Subsurface Modifier")
+            nucleus_object.scale = tuple(x * size for x in scale)
+            #nucleus_object.scale = (nuclei_scale,) * 3
+            nucleus_objects.append(nucleus_object)
+        return nucleus_objects

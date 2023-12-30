@@ -107,23 +107,6 @@ def intersect_with_object(target_objects, box_object):
         bpy.ops.object.modifier_apply({"object": target_object}, modifier="Boolean Modifier")
     bpy.data.objects.remove(box_object, do_unlink=True)
     return target_objects
-
-def add_nuclei_from(cell_objects, nuclei_scale):
-    nucleus_objects = []
-    for cell_object in cell_objects:
-        bpy.ops.mesh.primitive_cube_add(enter_editmode=False, align='WORLD', location=cell_object.location, scale=(1, 1, 1))
-        nucleus_object = bpy.context.active_object
-        index = cell_object.name.split('_')[1]
-        nucleus_object.name = f"NucleusObject_{index}"
-        shrinkwrap = nucleus_object.modifiers.new(name="Shrinkwrap Modifier", type='SHRINKWRAP')
-        shrinkwrap.target = cell_object
-        bpy.ops.object.modifier_apply(modifier="Shrinkwrap Modifier")
-        subsurf = nucleus_object.modifiers.new("Subsurface Modifier", type='SUBSURF')
-        subsurf.levels = 2
-        bpy.ops.object.modifier_apply(modifier="Subsurface Modifier")
-        nucleus_object.scale = (nuclei_scale,) * 3
-        nucleus_objects.append(nucleus_object)
-    return nucleus_objects
         
 def remove_objects(object_list):
     for obj in object_list:

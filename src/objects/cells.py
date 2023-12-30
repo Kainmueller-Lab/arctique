@@ -20,7 +20,7 @@ class CellAttribute():
         self.max_bending_strength = None
 
 class CellAttributeA(CellAttribute):
-    def __init__(self, cell_type = "A", size = 0.04, scale = (1,1,1), deformation_strength = 0.02, attribute_name = "Cell Type A", max_bending_strength = 0.2):
+    def __init__(self, cell_type = "A", size = 0.4, scale = (1,1,1), deformation_strength = 0.02, attribute_name = "Cell Type A", max_bending_strength = 0.2):
         self.cell_type = cell_type
         self.size = size
         self.scale = scale
@@ -29,7 +29,7 @@ class CellAttributeA(CellAttribute):
         self.max_bending_strength = max_bending_strength
 
 class CellAttributeB(CellAttribute):
-    def __init__(self, cell_type = "B", size = 0.07, scale = (2.3,1.3,1), deformation_strength = 0.05, attribute_name = "Cell Type B", max_bending_strength = 0.3):
+    def __init__(self, cell_type = "B", size = 0.8, scale = (1, 0.8, 0.7), deformation_strength = 0.05, attribute_name = "Cell Type B", max_bending_strength = 0.3):
         self.cell_type = cell_type
         self.size = size
         self.scale = scale

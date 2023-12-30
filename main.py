@@ -67,13 +67,22 @@ my_scene = scene.BioMedicalScene(my_light_source, my_camera)
 # Those will be distributed rndomly in a box given by min/max_coord.
 # TODO: Add cell type to nucleus object name
 # TODO: Add type specific scale to the nuclei
-distribution_dict = {}
-distribution_dict["A"] = 100
-distribution_dict["B"] = 40 
+
+# Create 3D point lists per cell attribute
+# NOTE: you can pass deterministic lists or sample points randomly
+cell_count_A = 60
+cell_count_B = 40
 min_coords = Vector([-1, -1, 0.4])
 max_coords = Vector([1, 1, 0.6])
+points_A = [list(map(random.uniform, min_coords, max_coords)) for _ in range(cell_count_A)]
+points_B = [list(map(random.uniform, min_coords, max_coords)) for _ in range(cell_count_B)]
+distribution_dict = {}
+distribution_dict[cells.CellAttributeA()] = points_A
+distribution_dict[cells.CellAttributeB()] = points_B 
+#padding = (max_coords - min_coords) * 0.1
+padding = Vector([0,0,0])
 # define cell arrangements
-voronoi_arr = arr.VoronoiDiagram(distribution_dict, min_coords, max_coords)
+voronoi_arr = arr.VoronoiDiagram(distribution_dict, min_coords-padding, max_coords+padding)
 # add cell arrangements to scene
 my_scene.add_arangement(voronoi_arr)
 
