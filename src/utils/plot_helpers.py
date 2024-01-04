@@ -47,7 +47,7 @@ def reduce_single_masks(source_folder, file_names):
         mask_png_small.save(file_name)
     
 
-def build_semantic_mask(source_folder, cell_info_tuples): 
+def build_semantic_mask(source_folder, cell_info_tuples, file_name="semantic_mask", palette = None): 
     """
     Combines individual cell masks to a semantic map of the full scene. 
  
@@ -76,16 +76,17 @@ def build_semantic_mask(source_folder, cell_info_tuples):
         # assign pixel value based on cell class
         semantic_mask += mask_np*(cell_type_dict[cell_type]/255.) # in mask the object has pixel value 255 (backgrund is 0)
 
-        np.save(str(Path(source_folder).joinpath("semantic_mask.npy")), semantic_mask)
+        np.save(str(Path(source_folder).joinpath(file_name + ".npy")), semantic_mask)
 
         # generate unique colors for each class (background is black by default)
-        palette = make_color_palette(len(cell_type_dict.keys()))
+        if palette is None: 
+            palette = make_color_palette(len(cell_type_dict.keys()))
         # generate Image object from array, needs to be converted to uint8 to avoid aliasing
         colored_instance_mask = Image.fromarray(semantic_mask.astype(np.uint8))
         # assign color palette to image
         colored_instance_mask.putpalette(palette)
         # save to png
-        colored_instance_mask.save(str(Path(source_folder).joinpath("semantic_mask.png")))
+        colored_instance_mask.save(str(Path(source_folder).joinpath(file_name + ".png")))
 
 
 
