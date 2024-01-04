@@ -68,6 +68,12 @@ class BioMedicalScene:
             boolean.operation = 'INTERSECT'
             boolean.object = self.tissue_empty
 
+    def uncut_cells(self): 
+        """ reverses the action of cut_cells"""
+        for cell in self.cell_objects:
+            mod = cell.cell_object.modifiers['Boolean Modifier']
+            cell.cell_object.modifiers.remove(mod)
+
     def cut_tissue(self):
         for cell in self.cell_objects:
             boolean = self.tissue.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
@@ -166,8 +172,8 @@ class BioMedicalScene:
         ph.reduce_single_masks(self.filepath, [info_tuple[2] for info_tuple in self.cell_info])
 
 
-    def combine_masks_semantic(self): 
-        ph.build_semantic_mask(self.filepath, self.cell_info)
+    def combine_masks_semantic(self, file_name="semantic_mask"): 
+        ph.build_semantic_mask(self.filepath, self.cell_info, file_name=file_name)
 
     def combine_masks_instance(self): 
         cell_mask_filenames = [info_tuple[2] for info_tuple in self.cell_info]
@@ -224,6 +230,46 @@ class BioMedicalScene:
 
             if not single_masks: 
                 self.remove_single_masks()
+
+        if depth_mask: 
+            self.export_depth()
+
+        if obj3d: 
+            self.export_obj3d()
+
+        bpy.app.handlers.render_complete.remove(fn_print_time_when_render_done)
+        print("rendering completed")
+
+
+
+    def render3d(self, 
+               filepath: str, 
+               scene: bool = False, 
+               semantic_mask: bool = False, 
+               instance_mask: bool = False,
+               depth_mask: bool = False, 
+               obj3d: bool = True,
+               output_shape = (500, 500), 
+               semantic_mask_name = "Semantic_mask_1.png"):
+
+
+        self.filepath = filepath
+
+        bpy.app.handlers.render_complete.append(fn_print_time_when_render_done)
+
+        if scene: 
+            pass
+
+        if semantic_mask or instance_mask:
+            self.setup_scene_render_mask(output_shape=output_shape)
+            self.export_masks()
+
+            if semantic_mask: 
+                self.combine_masks_semantic(filename = semantic_mask_name)
+            if instance_mask: 
+                self.combine_masks_instance()
+
+            self.remove_single_masks()
 
         if depth_mask: 
             self.export_depth()
