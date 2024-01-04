@@ -187,23 +187,21 @@ class BioMedicalScene:
     def render(self, 
                filepath: str, 
                scene: bool = True, 
-               masks: bool = True, 
+               single_masks: bool = True, 
                semantic_mask: bool = False, 
                instance_mask: bool = False,
                depth_mask: bool = False, 
-               obj3d: bool = True, 
-               remove_single_masks: bool = False, 
+               obj3d: bool = True,
                output_shape = (500, 500), 
                max_samples = 10):
         '''
         filepath: the folder where all outputs will be stored
         scene: if true a png of the scene will be generated
-        masks: if true individual masks for each cell will be rendered
+        single_masks: if true individual masks for each cell will be rendered
         semantic_mask: if true the individual masks will be combined to a single mask where pixel values distinguish between cell types
         instance_mask: if true the individual masks will be combined to a single mask each cell has a different pixel value
         depth_mask: if true a mask will be generated where pixel values correspond to depth values 
         obj3d: if true the entire scene will be exported in .OBJ format
-        keep_single_masks: if true the an individual mask will be generated and saved for each cell
         max_samples: number of samples for rendering. Fewer samples will render more quickly
         '''
 
@@ -215,7 +213,7 @@ class BioMedicalScene:
             self.setup_scene_render_default(output_shape=output_shape, max_samples=max_samples)
             self.export_scene()
 
-        if masks:
+        if single_masks or semantic_mask or instance_mask:
             self.setup_scene_render_mask(output_shape=output_shape)
             self.export_masks()
 
@@ -224,7 +222,7 @@ class BioMedicalScene:
             if instance_mask: 
                 self.combine_masks_instance()
 
-            if remove_single_masks: 
+            if not single_masks: 
                 self.remove_single_masks()
 
         if depth_mask: 
