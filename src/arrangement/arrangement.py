@@ -94,7 +94,7 @@ class VoronoiDiagram(CellArrangement):
         # TODO: Make these parameters changeable and dependent of cell attribute type
         self.region_scale = 1
         self.nuclei_scale = 0.5
-        self.padding_scale = 0.1 # TODO: Adapt to cellcount and box size
+        self.padding_scale = 0.1
         self.type = "VORO"
         self.id = CellArrangement.count
         CellArrangement.count += 1
@@ -113,6 +113,8 @@ class VoronoiDiagram(CellArrangement):
         max_coords = Vector((max(point[0] for point in all_points),
                                max(point[1] for point in all_points),
                                max(point[2] for point in all_points)))
+        # TODO: Check if ok, remove next line otherwise
+        self.padding_scale = 1 / len(all_points)
         padding = (max_coords - min_coords) * self.padding_scale
 
         # Add auxiliary boundary points to ensure that the base Voronoi regions are bounded
