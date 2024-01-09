@@ -63,27 +63,25 @@ my_scene = scene.BioMedicalScene(my_light_source, my_camera)
 # my_scene.add_arangement(cell_distribution_B)
 
 # OPTION 2: Voronoi diagram ############################
-# NOTE: Per cell attribute type set the number of cells you want.
-# Those will be distributed rndomly in a box given by min/max_coord.
-# TODO: Add cell type to nucleus object name
-# TODO: Add type specific scale to the nuclei
+# Given a list of 3D points (could be a randomly created list or a deterministic list of positions) per cell attribute
+# a Voronoi diagram is created with these points as seeds.
+# In each Voronoi region a nucleus object is created with size and scale corresponding to the cell attribute.
+# The Voronoi diagram ensures that the objects to not intersect.
+# TODO: Add bending if necessary
 
 # Create 3D point lists per cell attribute
-# NOTE: you can pass deterministic lists or sample points randomly
 cell_count_A = 60
 cell_count_B = 40
 min_coords = Vector([-1, -1, 0.4])
 max_coords = Vector([1, 1, 0.6])
 points_A = [list(map(random.uniform, min_coords, max_coords)) for _ in range(cell_count_A)]
 points_B = [list(map(random.uniform, min_coords, max_coords)) for _ in range(cell_count_B)]
+# Store the point lists per attribute in a dict
 distribution_dict = {}
 distribution_dict[cells.CellAttributeA()] = points_A
 distribution_dict[cells.CellAttributeB()] = points_B 
-#padding = (max_coords - min_coords) * 0.1
-padding = Vector([0,0,0])
-# define cell arrangements
-voronoi_arr = arr.VoronoiDiagram(distribution_dict, min_coords-padding, max_coords+padding)
-# add cell arrangements to scene
+# define cell arrangements and add to scene
+voronoi_arr = arr.VoronoiDiagram(distribution_dict)
 my_scene.add_arangement(voronoi_arr)
 
 my_scene.add_tissue(tissue=my_tissue.tissue)

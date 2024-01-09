@@ -184,7 +184,25 @@ class VoronoiDiagram(CellArrangement):
             subsurf = nucleus_object.modifiers.new("Subsurface Modifier", type='SUBSURF')
             subsurf.levels = 2
             bpy.ops.object.modifier_apply(modifier="Subsurface Modifier")
-            nucleus_object.scale = tuple(x * size for x in scale)
+            # Scale object to typical cell attribute size
+            mean_scale = self.compute_mean_scale(nucleus_object)
+            assert mean_scale > 0, "Nucleus object has a x, y or z-diameter of 0."
+            nucleus_object.scale = tuple(x * size / mean_scale for x in scale)
             #nucleus_object.scale = (nuclei_scale,) * 3
             nucleus_objects.append(nucleus_object)
         return nucleus_objects
+    
+    def compute_mean_scale(self, object):
+        '''
+        Given a mesh object this method returns the mean scale of the object.
+        The mean scale is defined as the geometric mean of the x, y and z-diameter of the mesh.      
+        '''
+        mesh = object.data
+        min_coords = (min(vert.co[0] for vert in mesh.vertices),
+                      min(vert.co[1] for vert in mesh.vertices),
+                      min(vert.co[2] for vert in mesh.vertices))
+        max_coords = (max(vert.co[0] for vert in mesh.vertices),
+                      max(vert.co[1] for vert in mesh.vertices),
+                      max(vert.co[2] for vert in mesh.vertices))
+        diameter = [max - min for max, min in zip(max_coords, min_coords)]
+        return (diameter[0]*diameter[1]*diameter[2]) ** (1/3)
