@@ -54,7 +54,6 @@ def compute_faces_by_seeds(vor, seeds):
                 #print(f"Boundary ridge pair: {ridge_pair} - {ridge}")
                 ridge_list.append(ridge)
         ridges[point_idx] = ridge_list
-    print(f"Created the Voronoi region faces")
     return ridges
 
 def voronoi_test():

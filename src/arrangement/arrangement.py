@@ -83,51 +83,52 @@ class CellDistribution(CellArrangement):
 
 
 class VoronoiDiagram(CellArrangement):
-    def __init__(self, distribution_dict, min_coords, max_coords):
+    def __init__(self, distribution_dict):
         """
         Initializes a CellArrangement object with the given parameters.
 
         Parameters:
             distribution_dict (dict): Maps cell attribute types to a list of corresp. 3D points
-            min_coords (tuple): The minimum coordinates.
-            max_coords (tuple): The maximum coordinates.
         """
         self.distribution_dict = distribution_dict
-        #self.cell_count = sum(distribution_dict.values())
-        self.min_coords = min_coords
-        self.max_coords = max_coords
         # TODO: Make these parameters changeable and dependent of cell attribute type
         self.region_scale = 1
         self.nuclei_scale = 0.5
+        self.padding_scale = 0.1 # TODO: Adapt to cellcount and box size
         self.type = "VORO"
         self.id = CellArrangement.count
         CellArrangement.count += 1
         self.objects = []
 
     def add(self):
-        # Generate N random 3D vectors bewteen min and max coords
-        #points = [list(map(random.uniform, self.min_coords, self.max_coords)) for _ in range(self.cell_count)]
-        #add_point_cloud(points, radius = 0.01)
-
-        # Add auxiliary boundary points to ensure that the base Voronoi regions are bounded
-        # The regions of the auxiliary points won't be.
-        # NOTE: You need to choose one of those three
-        #auxiliary_points = get_octogon_points(self.min_coords, self.max_coords, padding=0.5)
-        #auxiliary_points = get_cube_points(self.min_coords, self.max_coords, padding=0.5)
-        auxiliary_points = get_lattice_points(self.min_coords, self.max_coords)
-        #add_point_cloud(auxiliary_points, radius = 0.2)
-
-        # Generate the Voronoi diagram and necessary data
+        # Collect all nuclei center points
         all_points = []
         for point_list in self.distribution_dict.values():
             all_points.extend(point_list)
+
+        # Compute auxiliary boundary points and padding
+        min_coords = Vector((min(point[0] for point in all_points),
+                               min(point[1] for point in all_points),
+                               min(point[2] for point in all_points)))
+        max_coords = Vector((max(point[0] for point in all_points),
+                               max(point[1] for point in all_points),
+                               max(point[2] for point in all_points)))
+        padding = (max_coords - min_coords) * self.padding_scale
+
+        # Add auxiliary boundary points to ensure that the base Voronoi regions are bounded
+        # The regions of the auxiliary points won't be bounded.
+        # NOTE: You need to choose one of those three
+        #auxiliary_points = get_octogon_points(self.min_coords, self.max_coords, padding=0.5)
+        #auxiliary_points = get_cube_points(self.min_coords, self.max_coords, padding=0.5)
+        auxiliary_points = get_lattice_points(min_coords - padding, max_coords + padding)
+        #add_point_cloud(auxiliary_points, radius = 0.2)
+
+        # Generate the Voronoi diagram and necessary data
         vor = Voronoi(all_points + auxiliary_points)
-        #print_voronoi_stats(vor)
         fr_points = finite_region_points(vor)
-        if len(fr_points)==len(all_points):
+        if not len(fr_points)==len(all_points):
             print("Less nuclei than expected have been generated.")
         assert len(fr_points)==len(all_points), "Less nuclei than expected have been generated."
-        #print(f"Finite region points: {fr_points}")
         ridges = compute_faces_by_seeds(vor, fr_points)
 
         for point_idx in fr_points:
@@ -147,7 +148,7 @@ class VoronoiDiagram(CellArrangement):
         # Collect region objects in the scene
         region_objects = get_objects_with("CellObject")
         # Create bounding box of distribution
-        box_object = add_box(self.min_coords, self.max_coords)
+        box_object = add_box(min_coords-padding, max_coords+padding)
         # Run the intersection function to get polytopes representing cell membranes
         cell_objects = intersect_with_object(region_objects, box_object)
         # Collect list of attributes per cell seed
@@ -159,6 +160,9 @@ class VoronoiDiagram(CellArrangement):
         # Turn each polytope in a mesh representing its nucleus
         self.objects = self.add_nuclei_from(cell_objects, all_attributes)
         remove_objects(cell_objects)
+        print("Created Voronoi arrangement:")
+        for attribute in self.distribution_dict.keys():
+            print(f"- {len(self.distribution_dict[attribute])} nuclei of type {attribute.cell_type}")
 
     def add_nuclei_from(self, cell_objects, attributes):
         nucleus_objects = []
