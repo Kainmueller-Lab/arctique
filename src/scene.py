@@ -4,7 +4,9 @@ import src.utils.helper_methods as hm
 import src.utils.plot_helpers as ph
 #import imp
 import importlib as imp # imp module is deprecated since python 3.12
+from pathlib import Path
 import time
+import numpy as np
 imp.reload(arr)
 imp.reload(hm)
 imp.reload(ph)
@@ -172,8 +174,8 @@ class BioMedicalScene:
         ph.reduce_single_masks(self.filepath, [info_tuple[2] for info_tuple in self.cell_info])
 
 
-    def combine_masks_semantic(self, file_name="semantic_mask"): 
-        ph.build_semantic_mask(self.filepath, self.cell_info, file_name=file_name)
+    def combine_masks_semantic(self, file_name="semantic_mask", palette=None): 
+        ph.build_semantic_mask(self.filepath, self.cell_info, file_name=file_name, palette=palette)
 
     def combine_masks_instance(self): 
         cell_mask_filenames = [info_tuple[2] for info_tuple in self.cell_info]
@@ -265,7 +267,11 @@ class BioMedicalScene:
             self.export_masks()
 
             if semantic_mask: 
-                self.combine_masks_semantic(filename = semantic_mask_name)
+                unique_cell_types = set([cit[1] for cit in self.cell_info]) # identify unique cell types 
+                cell_type_dict = {uct : (i+1) for i, uct in enumerate(unique_cell_types)} # assign unique id to each cell type
+                semantic_palette = ph.make_color_palette(len(cell_type_dict.keys()))
+                
+                self.combine_masks_semantic(file_name = semantic_mask_name, palette=semantic_palette)
             if instance_mask: 
                 self.combine_masks_instance()
 
@@ -281,6 +287,43 @@ class BioMedicalScene:
         print("rendering completed")
 
 
+    def scan_through_tissue(self, filepath: str, n_slices=10, slice_thickness=None, min_z = 0.4, max_z =0.6, 
+                            output_shape=(500, 500), semantic_mask=True, semantic_mask_name=""): 
+        self.filepath = filepath
+        if slice_thickness is None: 
+            slices = np.linspace(min_z, max_z, n_slices)
+            slice_thickness = slices[1] - slices[0]
+        else: 
+            slices = np.arange(min_z, max_z, slice_thickness)
+            n_slices = len(slices)
 
+
+        self.tissue_empty.scale.z = slice_thickness
+
+        self.semantic_mask_names = []
+        bpy.app.handlers.render_complete.append(fn_print_time_when_render_done)
+        for idx, loc in enumerate(slices): 
+            self.tissue_empty.location.z = loc
+            self.cut_cells()
+
+            self.setup_scene_render_mask(output_shape=output_shape)
+            self.export_masks()
+
+            if idx == 0: 
+                unique_cell_types = set([cit[1] for cit in self.cell_info]) # identify unique cell types 
+                cell_type_dict = {uct : (i+1) for i, uct in enumerate(unique_cell_types)} # assign unique id to each cell type
+                semantic_palette = ph.make_color_palette(len(cell_type_dict.keys()))
+
+            if semantic_mask: 
+                semantic_mask_name = f"semantic_mask_{idx}"
+                self.combine_masks_semantic(file_name = semantic_mask_name, palette=semantic_palette)
+                self.semantic_mask_names.append(Path(self.filepath).joinpath(f"{semantic_mask_name}.png"))
+
+            self.remove_single_masks()
+        bpy.app.handlers.render_complete.remove(fn_print_time_when_render_done)
+        print("mask rendering completed")
         
-        
+        print("combining masks to gif")
+        ph.build_gif(self.semantic_mask_names, Path(self.filepath).joinpath("semantic_mask.gif"))
+        print("done combining masks to gif")
+
