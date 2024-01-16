@@ -73,13 +73,12 @@ my_scene.add_staining(material=my_materials.nuclei_staining)
 
 # Todo: 
 # remove all usage of + in path name generation
-# find out why matplotlib performn interpolation when generating png
 # functionality for exporting depth mask
 
 
 # render scene
-RENDER_PATH = 'C:/Users/cwinklm/Documents/Alpacathon/rendered_HE/renders/'
-#RENDER_PATH = 'renders/'
+#RENDER_PATH = 'C:/Users/cwinklm/Documents/Alpacathon/rendered_HE/renders/'
+RENDER_PATH = 'renders/'
 
 my_scene.render(filepath = RENDER_PATH,  # where to save renders
                scene = True, # if true scene is rendered
