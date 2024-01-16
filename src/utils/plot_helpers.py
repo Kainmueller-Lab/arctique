@@ -76,7 +76,7 @@ def build_semantic_mask(source_folder, cell_info_tuples, file_name="semantic_mas
         # assign pixel value based on cell class
         semantic_mask += mask_np*(cell_type_dict[cell_type]/255.) # in mask the object has pixel value 255 (backgrund is 0)
 
-        np.save(str(Path(source_folder).joinpath(file_name + ".npy")), semantic_mask)
+        np.save(str(Path(source_folder).joinpath(f"{file_name}.npy")), semantic_mask)
 
         # generate unique colors for each class (background is black by default)
         if palette is None: 
@@ -86,7 +86,7 @@ def build_semantic_mask(source_folder, cell_info_tuples, file_name="semantic_mas
         # assign color palette to image
         colored_instance_mask.putpalette(palette)
         # save to png
-        colored_instance_mask.save(str(Path(source_folder).joinpath(file_name + ".png")))
+        colored_instance_mask.save(str(Path(source_folder).joinpath(f"{file_name}.png")))
 
 
 
@@ -129,10 +129,28 @@ def build_instance_mask(source_folder, file_names):
 
 
 def remove_single_masks(file_names): 
-    '''
+    """
     Removes individual cell masks.
-    '''
+    """
 
     for file_name in file_names: 
         os.remove(file_name)
 
+
+
+def build_gif(png_file_names, gif_file_name): 
+    """
+    Combines multiple PNG images to a GIF
+    """
+
+    frames = []
+    for png_file in png_file_names: 
+        frames.append(Image.open(png_file))
+
+    frame_one = frames[0]
+    frame_one.save(gif_file_name,
+                   format="GIF", 
+                   append_images=frames[1:], #list of images to append as additional frames.
+                   save_all=True, 
+                   duration=500, #display duration of each frame, in milliseconds
+                   loop=0)#Number of times to repeat the animation'
