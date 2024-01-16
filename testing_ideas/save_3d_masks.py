@@ -50,14 +50,14 @@ my_scene = scene.BioMedicalScene(my_light_source, my_camera)
 # define cell arrangements
 cell_distribution_A = arr.CellDistribution(
     cell_attributes = cells.CellAttributeA(),
-    num_cells = 10,
+    num_cells = 30,
     #num_cells = 100,
     min_coords = Vector([-1, -1, 0.4]),
     max_coords = Vector([1, 1, 0.6])
 )
 cell_distribution_B = arr.CellDistribution(
     cell_attributes = cells.CellAttributeB(),
-    num_cells = 3,
+    num_cells = 10,
     #num_cells = 30,
     min_coords = Vector([-1, -1, 0.4]),
     max_coords = Vector([1, 1, 0.6])
@@ -70,40 +70,42 @@ my_scene.add_tissue(tissue=my_tissue.tissue)
 
 
 # loop through slices: 
-slice_thickness = 0.05
-my_scene.tissue_empty.scale.z = slice_thickness
+# slice_thickness = 0.01
+# my_scene.tissue_empty.scale.z = slice_thickness
 
 RENDER_PATH = 'C:/Users/cwinklm/Documents/Alpacathon/rendered_HE/renders3d/'
 
 
-for idx, loc in enumerate(np.arange(0.4, 0.6, slice_thickness)): 
-    my_scene.tissue_empty.location.z = loc
-    my_scene.cut_cells()
-    my_scene.add_staining(material=my_materials.nuclei_staining)
+my_scene.scan_through_tissue(RENDER_PATH, slice_thickness=0.01, min_z = 0.4, max_z =0.6, 
+                            output_shape=(500, 500), semantic_mask=True, semantic_mask_name="")
+# for idx, loc in enumerate(np.arange(0.4, 0.6, slice_thickness)): 
+#     my_scene.tissue_empty.location.z = loc
+#     my_scene.cut_cells()
+#     my_scene.add_staining(material=my_materials.nuclei_staining)
 
-    my_scene.render3d(filepath = RENDER_PATH,  # where to save renders
-                scene = False, 
-                semantic_mask = True, 
-                instance_mask = False, 
-                obj3d = False,     
-                depth_mask = True, 
-                output_shape = (500, 500), 
-                semantic_mask_name = f"Semantic_mask_{idx}") 
-    my_scene.uncut_cells()#
+#     my_scene.render3d(filepath = RENDER_PATH,  # where to save renders
+#                 scene = False, 
+#                 semantic_mask = True, 
+#                 instance_mask = False, 
+#                 obj3d = False,     
+#                 depth_mask = True, 
+#                 output_shape = (500, 500), 
+#                 semantic_mask_name = f"Semantic_mask_{idx}") 
+#     my_scene.uncut_cells()#
 
 
 
-frames = []
-for idx in range(len(np.arange(0.4, 0.6, slice_thickness))): 
-    frames.append(Image.open(Path(RENDER_PATH).joinpath(f"Semantic_mask_{idx}.png")))
+# frames = []
+# for idx in range(len(np.arange(0.4, 0.6, slice_thickness))): 
+#     frames.append(Image.open(Path(RENDER_PATH).joinpath(f"Semantic_mask_{idx}.png")))
 
-frame_one = frames[0]
-frame_one.save(Path(RENDER_PATH).joinpath("download.gif"),
-               format="GIF", 
-               append_images=frames[1:], #list of images to append as additional frames.
-               save_all=True, 
-               duration=500, #display duration of each frame, in milliseconds
-               loop=0)#Number of times to repeat the animation'
+# frame_one = frames[0]
+# frame_one.save(Path(RENDER_PATH).joinpath("download.gif"),
+#                format="GIF", 
+#                append_images=frames[1:], #list of images to append as additional frames.
+#                save_all=True, 
+#                duration=500, #display duration of each frame, in milliseconds
+#                loop=0)#Number of times to repeat the animation'
 
 
 
@@ -133,5 +135,8 @@ frame_one.save(Path(RENDER_PATH).joinpath("download.gif"),
 ##https://blender.stackexchange.com/questions/44514/how-to-remove-apply-all-modifiers-of-one-object-in-python
 
 # check depth of field option in render settings 
+
+# todo script crasehes when there are topo manay cells: try not to render masks for invisible cells
+
     
 
