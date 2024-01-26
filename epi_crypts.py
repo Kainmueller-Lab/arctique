@@ -4,7 +4,7 @@ import numpy as np
 import random
 
 from math import radians, sin, cos, pi
-from mathutils import Matrix, Vector
+from mathutils import Matrix, Vector, geometry
 from scipy.spatial import Voronoi # NOTE: You might install it directly into Blender's python using pip. - ck
 
 # NOTES about current version: - ck
@@ -164,35 +164,33 @@ def add_box(min_coords, max_coords):
     bpy.context.active_object.location = [(max_coords[i] + min_coords[i]) / 2 for i in range(3)]
     return bpy.context.active_object
 
-def intersect_with_object(target_objects, box_object):
+def intersect_with_object(target_objects, intersect_object):
     # Iterate through each target object
     for target_object in target_objects:
         boolean = target_object.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
         boolean.operation = 'INTERSECT'
-        boolean.object = box_object
+        boolean.object = intersect_object
 
         # Apply the boolean modifier and remove the cube object
         bpy.ops.object.modifier_apply({"object": target_object}, modifier="Boolean Modifier")
-    bpy.data.objects.remove(box_object, do_unlink=True)
     return target_objects
 
-def subtract_object(target_objects, box_object):
+def subtract_object(target_objects, subtract_object):
     # Iterate through each target object
     for target_object in target_objects:
         boolean = target_object.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
         boolean.operation = 'DIFFERENCE'
         boolean.use_self = True
-        boolean.object = box_object
+        boolean.object = subtract_object
 
         # Apply the boolean modifier and remove the cube object
         bpy.ops.object.modifier_apply({"object": target_object}, modifier="Boolean Modifier")
-    bpy.data.objects.remove(box_object, do_unlink=True)
     return target_objects
 
-# TODO: Here the cube scale (1,1,1) interferes with the overall nucleus scale. 
 def add_nuclei_shaped(cell_objects, nuclei_scale):
+    nucleus_objects = []
     for cell_object in cell_objects:
-        bpy.ops.mesh.primitive_cube_add(enter_editmode=False, align='WORLD', location=cell_object.location, scale=(nuclei_scale, nuclei_scale, nuclei_scale))
+        bpy.ops.mesh.primitive_cube_add(enter_editmode=False, align='WORLD', location=cell_object.location)
         nucleus_object = bpy.context.active_object
         index = cell_object.name.split('_')[1]
         nucleus_object.name = f"NucleusObject_{index}"
@@ -202,7 +200,9 @@ def add_nuclei_shaped(cell_objects, nuclei_scale):
         subsurf = nucleus_object.modifiers.new("Subsurface Modifier", type='SUBSURF')
         subsurf.levels = 2
         bpy.ops.object.modifier_apply(modifier="Subsurface Modifier")
-        #nucleus_object.scale = (nuclei_scale, nuclei_scale, nuclei_scale)
+        nucleus_object.scale = (nuclei_scale, nuclei_scale, nuclei_scale)
+        nucleus_objects.append(nucleus_object)
+    return nucleus_objects
         
 def remove_objects(object_list):
     for obj in object_list:
@@ -234,15 +234,29 @@ def compute_faces_by_seeds(vor, seeds):
     return ridges
 
 
+def is_point_inside_mesh(mesh, point):
+    # Get the mesh data
+    mesh_data = mesh.data
+    # Transform the point to the mesh's local coordinates
+    local_point = mesh.matrix_world.inverted() @ point
+    # Check if the point is inside the mesh
+    is_inside = geometry.intersect_point_triangles(local_point, mesh_data.vertices, mesh_data.polygons)
+    return is_inside
+
+
 ################# PARAMETERS ####################
 
-NUCLEI_LIMIT = 100 # If nuclei count is above this limit stop, due to long compute time
-SLICE_THICKNESS = 0.1 # Reduce this if the computation time is too long.
+NUCLEI_LIMIT = 120 # If nuclei count is above this limit stop, due to long compute time
+SLICE_THICKNESS = 0.2 # Reduce this if the computation time is too long.
+SUBDIVISION_LEVELS = 1
+TISSUE_CUT_RATIO = 1 # wrt to the slice thickness
 
 ICO_SCALE = (1, 0.6, 2)
 INNER_SCALE_COEFF = 0.9
 OUTER_SCALE_COEFF = 1.1
 
+RANDOM_TRANSLATE = True
+MAX_TRANSLATE = 0.02
 RANDOM_ROTATION = False # NOTE: True is not working for now.
 SHOW_WHOLE_SURFACE = False # NOTE: Setting this to True could lead to very large computation time
 
@@ -252,8 +266,8 @@ MAX_CUT_BOX = [8, 8, SLICE_THICKNESS]
 MIN_COORDS = [-8,-8,-2]
 MAX_COORDS = [8,8,2]
 REGION_SCALE = 1 # Scale of the Voronoi regions w.r.t. to the seed
-NUCLEI_SCALE = 1.5 # Scale of the nucleus object w.r.t. to the Voronoi region
-PADDING = 1
+NUCLEI_SCALE = 1 # Scale of the nucleus object w.r.t. to the Voronoi region
+PADDING = 0 # NOTE: Can be removed
 use_octogonal_cluster = True
 
 # Set seed for reproducibility
@@ -270,12 +284,12 @@ bpy.ops.mesh.primitive_ico_sphere_add(enter_editmode=False, align='WORLD', locat
 ico = bpy.context.active_object
 if RANDOM_ROTATION:
     # Rotate randomly
-    random_angles = tuple(random.uniform(0, 2*pi) for _ in range(3))
+    random_angles = tuple([random.uniform(0, pi*0.3), random.uniform(0, pi*0.3), random.uniform(0, 2*pi)])
     ico.rotation_euler = random_angles
 
 # NOTE: Do not apply higher level subdiv, it crashes blender.
 ico.modifiers.new(name="Subdivision", type='SUBSURF')
-ico.modifiers["Subdivision"].levels = 2
+ico.modifiers["Subdivision"].levels = SUBDIVISION_LEVELS
 bpy.ops.object.modifier_apply({"object": ico}, modifier="Subdivision")
 
 # Create inner and outer ico spheres
@@ -288,17 +302,13 @@ outer_ico.scale = tuple(x*OUTER_SCALE_COEFF for x in ico.scale)
 ico.name = "Surface_Med"
 inner_ico.name = "Surface_Inner"
 outer_ico.name = "Surface_Outer"
-inner_ico.hide_viewport = True
-outer_ico.hide_viewport = True
-inner_ico.hide_render = True
-outer_ico.hide_render = True
 
 
 # Generate seeds for Voronoi diagram
 bpy.context.view_layer.objects.active = ico
 bpy.ops.object.mode_set(mode='EDIT')
 mesh = bmesh.from_edit_mesh(ico.data)
-bmesh.ops.triangulate(mesh, faces=mesh.faces[:]) # Traingulate
+bmesh.ops.triangulate(mesh, faces=mesh.faces[:]) # Triangulate
 
 face_count = len(mesh.faces)
 print(f"Mesh has {face_count} faces and {len(mesh.verts)} vertices.")
@@ -307,10 +317,10 @@ points = []
 for face in mesh.faces:
     centroid = face.calc_center_median()
     points.append(centroid)
-#    for v in face.verts:
-#        v_loc = ico.matrix_world @ v.co
-#        p = 0.5*(centroid + v_loc)
-#        points.append(p)
+    for v in face.verts:
+        v_loc = ico.matrix_world @ v.co
+        p = 0.5*(centroid + v_loc)
+        points.append(p)
 #        q = 0.25*(centroid - v_loc) + centroid
 #        points.append(q)
 for vert in mesh.verts:
@@ -321,6 +331,8 @@ if not SHOW_WHOLE_SURFACE:
     # Retain only points that lie between min and max CUT_BOX
     points = [p for p in points if all(min_c <= val <= max_c for val, min_c, max_c in zip(p, MIN_CUT_BOX, MAX_CUT_BOX))]
 assert len(points) <= NUCLEI_LIMIT, f"About to render {len(points)} nuclei. Stopped to avoid long compute time.\nYou can reduce the slice thickness to generate less nuclei." 
+if RANDOM_TRANSLATE:
+    points = [[p[i] + random.uniform(-1, 1)*MAX_TRANSLATE for i in range(3)] for p in points]
 #add_point_cloud(points, radius = 0.01) # Render seed points
 
 
@@ -360,12 +372,28 @@ for idx, point_idx in enumerate(fr_points):
 region_objects = get_objects_with("CellObject")
 # Run the intersection function to get polytopes representing cell membranes
 region_objects = intersect_with_object(region_objects, outer_ico)
+region_objects = subtract_object(region_objects, inner_ico)
 box = add_box(MIN_CUT_BOX, MAX_CUT_BOX)
 region_objects = intersect_with_object(region_objects, box)
-region_objects = subtract_object(region_objects, inner_ico)
+
 # Turn each polytope in a mesh representing its nucleus
-add_nuclei_shaped(region_objects, NUCLEI_SCALE)
+nucleus_objects = add_nuclei_shaped(region_objects, NUCLEI_SCALE)
+# Remove too large arrtifacts
+artifacts = [] # NOTE: This lists too large regions
+for obj in nucleus_objects:
+    # Calculate bounding box
+    diameter = np.max([max(b) - min(b) for b in zip(*obj.bound_box)])
+    if diameter > 0.4:
+        artifacts.append(obj)
+nucleus_objects = [obj for obj in nucleus_objects if obj not in artifacts]
+
+# Intersect again
+box.scale = tuple(s*a for s,a in zip(box.scale, (1,1,TISSUE_CUT_RATIO)))
+nucleus_objects = intersect_with_object(nucleus_objects, box)
+# Create inner and outer hull
+inner_hull, outer_hull = intersect_with_object([inner_ico, outer_ico], box)
 
 # Remove auxiliary objects
-remove_objects([ico])
+remove_objects(artifacts)
+remove_objects([ico, box])
 remove_objects(region_objects)
