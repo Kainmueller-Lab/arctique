@@ -137,6 +137,6 @@ my_scene.scan_through_tissue(RENDER_PATH, slice_thickness=0.01, min_z = 0.4, max
 # check depth of field option in render settings 
 
 # todo script crasehes when there are topo manay cells: try not to render masks for invisible cells
-
+\
     
 
