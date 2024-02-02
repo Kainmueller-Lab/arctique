@@ -105,13 +105,28 @@ my_scene = scene.BioMedicalScene(my_light_source, my_camera)
 # - Add padding to the distribution box, which gets cut away after intersecting. This leads to "real inner" nuclei.
 
 ### PARAMETERS
-param_dict = {}
-param_dict["ico_xy_scale"] = (0.3, 0.1) # Scale of the icosphere w.r.t. to the x-y-axes.
-param_dict["z_rot_angle"] = 40  # Rotation along z-axis of crypt in degrees.
-param_dict["center_loc"] = (0,0,0.5) # Center of crypt cut in world coordinates.
-# Define cell arrangements and add to scene
-epi_arr = arr.EpithelialArrangement(param_dict)
-my_scene.add_arrangement(epi_arr)
+# TODO: Create parameters (max 4?) based on lattice
+# NOTE: Generating 4 crypts currently take about 1-2 minutes
+ico_scales = [(0.5, 0.25), (0.5, 0.2), (0.6, 0.3), (0.45, 0.15)]
+angles = [40, 60, 50, 70]
+centers = [(-0.5,-0.5,0.5), (0.5,0.5,0.5), (-0.5,0.5,0.5), (0.5,-0.5,0.5)]
+
+# outer_hulls = []
+for ico_scale, angle, center in zip(ico_scales, angles, centers):
+    param_dict = {}
+    param_dict["ico_xy_scale"] = ico_scale # Scale of the icosphere w.r.t. to the x-y-axes.
+    param_dict["z_rot_angle"] = angle # Rotation along z-axis of crypt in degrees.
+    param_dict["center_loc"] = center # Center of crypt cut in world coordinates.
+    # Define cell arrangements and add to scene
+    epi_arr = arr.EpithelialArrangement(param_dict)
+    # TODO: Hide hulls and extract them as objects to feed into distribution arrangement
+    #outer_hull = ...
+    #outer_hulls.append(outer_hull)
+    my_scene.add_arrangement(epi_arr)
+
+# TODO: Create distribution of other cell type nuclei that are only generated outside the outer hulls.
+# TODO: Name the nuclei in a reasonable way
+# TODO: Refactor the add method of EpithelialArr.
 
 # my_scene.add_tissue(tissue=my_tissue.tissue)
 # my_scene.cut_cells()
