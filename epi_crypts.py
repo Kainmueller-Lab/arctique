@@ -9,20 +9,15 @@ from scipy.spatial import Voronoi # NOTE: You might install it directly into Ble
 from scipy.spatial.transform import Rotation
 
 # NOTES about current version: - ck
-# - The nuclei are created based on Voronoi regions intersected with a box,
-# i.e. those base meshes have all the same height and have planar boundary faces on top
-# and bottom -> this is too synthetic/regular
-# - The size of nuclei can be controlled using REGION_SCALE and NUCLEI_SCALE
-# - However it is not possible to set an absoulte scale to the NUCLEI_SCALE
-# This might lead to issues when we need specific differing scales between nuclei of different types
-# - The Voronoi diagram still highly depends on the number and location of "boundary" seeds
-# We need to fix a sensible number and structure for that
-# - One option to get rid of too regular boundary nuclei is to set the
-# bounding distributio box larger than necessary. This way, when
-# cropping to camera we only have visible "real inner" nuclei.
-# - Find out which of the auxiliary points (cube, octogon, lattice) is best suited
-# So far it seems they affect the digram structure but not substantially the regions after intersection.
-# - Add padding to the distribution box, which gets cut away after intersecting. This leads to "real inner" nuclei.
+# - This script models tissue cuts through epithelial crypts.
+# - The nuclei are created from a Voronoi diagram whose seeds are placed onto the mesh of a scaled icosphere.
+# - The seed points are not chosen randomly but set as the vertices and face centers of the mesh.
+# - The resulting Voronoi regions are intersected with an inner and outer icosphere to create small nuclei objects along the surface.
+# - In order to reduce the computing time not the whole surface and nuclei are rendered but only a slice of changeable thickness.
+# - The resulting objects form a cut though such a crypt with nuclei at its boundary.
+# - In addition two hull objects a re created that can be used to define the inside and outside of the crypt.
+# - It is possible to manually set the scale, location and rotation in xy-plane of the resulting crypt cut.
+
 
 
 ################ HELPERS ####################
