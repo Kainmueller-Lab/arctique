@@ -111,7 +111,8 @@ ico_scales = [(0.5, 0.25), (0.5, 0.2), (0.6, 0.3), (0.45, 0.15)]
 angles = [40, 60, 50, 70]
 centers = [(-0.5,-0.5,0.5), (0.5,0.5,0.5), (-0.5,0.5,0.5), (0.5,-0.5,0.5)]
 
-# outer_hulls = []
+outer_hulls = []
+count = 0
 for ico_scale, angle, center in zip(ico_scales, angles, centers):
     param_dict = {}
     param_dict["ico_xy_scale"] = ico_scale # Scale of the icosphere w.r.t. to the x-y-axes.
@@ -120,11 +121,25 @@ for ico_scale, angle, center in zip(ico_scales, angles, centers):
     # Define cell arrangements and add to scene
     epi_arr = arr.EpithelialArrangement(param_dict)
     # TODO: Hide hulls and extract them as objects to feed into distribution arrangement
-    #outer_hull = ...
-    #outer_hulls.append(outer_hull)
     my_scene.add_arrangement(epi_arr)
+    outer_hulls.append(epi_arr.outer_hull)
+    count += 1
+    if count>1:
+        break
 
-# TODO: Create distribution of other cell type nuclei that are only generated outside the outer hulls.
+# Add nuclei distribution
+# Create 3D point lists per cell attribute
+cell_count_A = 200
+min_coords = Vector([-1, -1, 0.45])
+max_coords = Vector([1, 1, 0.55])
+points_A = [list(map(random.uniform, min_coords, max_coords)) for _ in range(cell_count_A)]
+distribution_dict = {}
+distribution_dict[cells.CellAttributeA()] = points_A
+voronoi_arr = arr.VoronoiDiagram(distribution_dict)
+# Define which regon should not be populated by the distribution
+voronoi_arr.empty_regions = outer_hulls
+my_scene.add_arrangement(voronoi_arr)
+
 # TODO: Name the nuclei in a reasonable way
 # TODO: Refactor the add method of EpithelialArr.
 

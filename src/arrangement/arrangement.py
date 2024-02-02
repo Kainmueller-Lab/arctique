@@ -99,6 +99,7 @@ class VoronoiDiagram(CellArrangement):
         self.id = CellArrangement.count
         CellArrangement.count += 1
         self.objects = []
+        self.empty_regions = [] # Contains regions (=meshes) that should not be populated by random nuclei.
 
     def add(self):
         # Collect all nuclei center points
@@ -161,7 +162,9 @@ class VoronoiDiagram(CellArrangement):
         assert len(all_attributes)==len(all_points), "Total number of attributes not matching with number of cell seeds."
         # Turn each polytope in a mesh representing its nucleus
         self.objects = self.add_nuclei_from(cell_objects, all_attributes)
-        remove_objects(cell_objects)
+        remove_objects(cell_objects + [box_object])
+        # Remove nuclei that intersect or lie within the outer hulls
+        self.remove_nuclei_from_empty_regions()
         print("Created Voronoi arrangement:")
         for attribute in self.distribution_dict.keys():
             print(f"- {len(self.distribution_dict[attribute])} nuclei of type {attribute.cell_type}")
@@ -208,6 +211,21 @@ class VoronoiDiagram(CellArrangement):
         diameter = [max - min for max, min in zip(max_coords, min_coords)]
         return (diameter[0]*diameter[1]*diameter[2]) ** (1/3)
     
+    def remove_nuclei_from_empty_regions(self):
+        nuclei_to_remove = []
+        nuclei_to_keep = []
+        for nucleus_object in self.objects:
+            for region in self.empty_regions:
+                if is_point_inside_mesh(region, nucleus_object.location):
+                    print(f"Removing nucleus {nucleus_object.name}")
+                    nuclei_to_remove.append(nucleus_object)
+                else:
+                    nuclei_to_keep.append(nucleus_object)
+        remove_objects(nuclei_to_remove)
+        self.objects = nuclei_to_keep
+
+
+    
 
 
 class EpithelialArrangement(CellArrangement):
@@ -247,6 +265,8 @@ class EpithelialArrangement(CellArrangement):
         self.id = CellArrangement.count
         CellArrangement.count += 1
         self.objects = []
+        self.inner_hull = None
+        self.outer_hull = None
 
     def add(self):
         # Create icosphere and subdivide it to desired level
@@ -348,10 +368,10 @@ class EpithelialArrangement(CellArrangement):
 
         # Intersect again
         box.scale = tuple(s*a for s,a in zip(box.scale, (1,1,self.tissue_cut_ratio)))
-        nucleus_objects = intersect_with_object(nucleus_objects, box)
+        self.objects = intersect_with_object(nucleus_objects, box)
         # Create inner and outer hull
-        inner_hull, outer_hull = intersect_with_object([inner_ico, outer_ico], box)
-        crypt_objects = nucleus_objects + [inner_hull, outer_hull]
+        self.inner_hull, self.outer_hull = intersect_with_object([inner_ico, outer_ico], box)
+        crypt_objects = self.objects + [self.inner_hull, self.outer_hull]
         # Transform crypt objects
         rotate_objects(crypt_objects, self.z_rot_angle)
         translate_objects(crypt_objects, self.center_loc)

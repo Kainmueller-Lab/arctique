@@ -226,13 +226,32 @@ def translate_objects(objects, location):
     return  
 
 def is_point_inside_mesh(mesh, point):
-    # Get the mesh data
-    mesh_data = mesh.data
     # Transform the point to the mesh's local coordinates
     local_point = mesh.matrix_world.inverted() @ point
-    # Check if the point is inside the mesh
-    is_inside = geometry.intersect_point_triangles(local_point, mesh_data.vertices, mesh_data.polygons)
-    return is_inside
+    # Calculate the normalized direction vector from the point to the reference position
+    ray_direction = Vector([0.0, 0.0, 1.0])
+    # Set up the ray casting parameters
+    do_intersect, _, _, _ = mesh.ray_cast(local_point, local_point + 100 * ray_direction)
+    return do_intersect
+
+
+def do_intersect(obj1, obj2):
+    # Set the active object for the boolean operation
+    bpy.context.view_layer.objects.active = obj1
+    # Apply the Boolean modifier with INTERSECT operation
+    bpy.ops.object.modifier_add(type='BOOLEAN')
+    bpy.context.object.modifiers["Boolean"].operation = 'INTERSECT'
+    bpy.context.object.modifiers["Boolean"].use_self = False
+    bpy.context.object.modifiers["Boolean"].object = obj2
+    # Execute the Boolean operation
+    bpy.ops.object.modifier_apply({"object": obj1}, modifier="Boolean")
+    # Check if the result has geometry (intersection occurred)
+    if len(obj1.data.vertices) > 0: 
+        print(f"Intersecting verts: {len(obj1.data.vertices)}")
+    intersection_exists = bool(obj1.data.vertices)
+    # Remove the boolean modifier
+    bpy.ops.object.modifier_remove({"object": obj1}, modifier="Boolean")
+    return intersection_exists
 
 def get_objects_with(string):
     # Create a list to store matching objects
