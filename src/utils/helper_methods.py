@@ -1,7 +1,8 @@
 import bmesh
 import bpy
+import math
 import numpy as np
-from mathutils import Matrix, Vector
+from mathutils import Matrix, Vector, geometry
 
 
 def move_selection(offset_vector):
@@ -105,8 +106,36 @@ def intersect_with_object(target_objects, box_object):
 
         # Apply the boolean modifier and remove the cube object
         bpy.ops.object.modifier_apply({"object": target_object}, modifier="Boolean Modifier")
-    bpy.data.objects.remove(box_object, do_unlink=True)
     return target_objects
+
+def subtract_object(target_objects, subtract_object):
+    # Iterate through each target object
+    for target_object in target_objects:
+        boolean = target_object.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
+        boolean.operation = 'DIFFERENCE'
+        boolean.use_self = True
+        boolean.object = subtract_object
+
+        # Apply the boolean modifier and remove the cube object
+        bpy.ops.object.modifier_apply({"object": target_object}, modifier="Boolean Modifier")
+    return target_objects
+
+def add_nuclei_shaped(cell_objects, nuclei_scale):
+    nucleus_objects = []
+    for cell_object in cell_objects:
+        bpy.ops.mesh.primitive_cube_add(enter_editmode=False, align='WORLD', location=cell_object.location)
+        nucleus_object = bpy.context.active_object
+        index = cell_object.name.split('_')[1]
+        nucleus_object.name = f"NucleusObject_{index}"
+        shrinkwrap = nucleus_object.modifiers.new(name="Shrinkwrap Modifier", type='SHRINKWRAP')
+        shrinkwrap.target = cell_object
+        bpy.ops.object.modifier_apply(modifier="Shrinkwrap Modifier")
+        subsurf = nucleus_object.modifiers.new("Subsurface Modifier", type='SUBSURF')
+        subsurf.levels = 2
+        bpy.ops.object.modifier_apply(modifier="Subsurface Modifier")
+        nucleus_object.scale = (nuclei_scale, nuclei_scale, nuclei_scale)
+        nucleus_objects.append(nucleus_object)
+    return nucleus_objects
         
 def remove_objects(object_list):
     for obj in object_list:
@@ -159,3 +188,58 @@ def random_unit_vector():
     unit_vector = vector / np.linalg.norm(vector)
 
     return unit_vector
+
+def rotate_objects(objects, alpha):
+    # Convert angle to radians
+    alpha_rad = math.radians(alpha)
+    # Select the objects and activate the context
+    bpy.context.view_layer.objects.active = objects[0]
+    bpy.ops.object.select_all(action='DESELECT')
+    for obj in objects:
+        obj.select_set(True)
+    # Apply the rotation using bpy.ops.transform.rotate
+    bpy.ops.transform.rotate(value=alpha_rad, orient_axis='Z', orient_type='GLOBAL',
+                             orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)),
+                             orient_matrix_type='GLOBAL', constraint_axis=(False, False, True),
+                             mirror=False, use_proportional_edit=False, proportional_edit_falloff='SMOOTH',
+                             proportional_size=1, use_proportional_connected=False, use_proportional_projected=False,
+                             snap=False, snap_elements={'INCREMENT'}, use_snap_project=False, snap_target='CLOSEST',
+                             use_snap_self=True, use_snap_edit=True, use_snap_nonedit=True, use_snap_selectable=False)
+    bpy.ops.object.select_all(action='DESELECT')
+    return  
+
+def translate_objects(objects, location):
+    # Select the objects and activate the context
+    bpy.context.view_layer.objects.active = objects[0]
+    bpy.ops.object.select_all(action='DESELECT')
+    for obj in objects:
+        obj.select_set(True)
+    # Apply translation using bpy.ops.transform.translate
+    bpy.ops.transform.translate(value=location, orient_type='GLOBAL', orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)),
+                                orient_matrix_type='GLOBAL', constraint_axis=(False, False, True),
+                                mirror=False, use_proportional_edit=False, proportional_edit_falloff='SMOOTH',
+                                proportional_size=1, use_proportional_connected=False, use_proportional_projected=False,
+                                snap=False, snap_elements={'INCREMENT'}, use_snap_project=False, snap_target='CLOSEST',
+                                use_snap_self=True, use_snap_edit=True, use_snap_nonedit=True, use_snap_selectable=False)
+    # Deselect all objects
+    bpy.ops.object.select_all(action='DESELECT')
+    return  
+
+def is_point_inside_mesh(mesh, point):
+    # Get the mesh data
+    mesh_data = mesh.data
+    # Transform the point to the mesh's local coordinates
+    local_point = mesh.matrix_world.inverted() @ point
+    # Check if the point is inside the mesh
+    is_inside = geometry.intersect_point_triangles(local_point, mesh_data.vertices, mesh_data.polygons)
+    return is_inside
+
+def get_objects_with(string):
+    # Create a list to store matching objects
+    object_list = []
+    # Iterate through all objects
+    for obj in bpy.data.objects:
+        # Check if the object name starts with the defined pattern
+        if obj.name.startswith(string):
+            object_list.append(obj)
+    return object_list

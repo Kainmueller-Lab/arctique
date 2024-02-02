@@ -71,7 +71,7 @@ class BioMedicalScene:
             cell.cell_object.data.materials.append(material)
             cell.cell_object.active_material = material
     
-    def add_arangement(self, cell_arrangement: arr.CellArrangement):
+    def add_arrangement(self, cell_arrangement: arr.CellArrangement):
         cell_arrangement.add()
         self.cell_objects = self.cell_objects + cell_arrangement.objects
 

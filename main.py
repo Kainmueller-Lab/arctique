@@ -4,7 +4,7 @@ import random
 import sys
 import os
 from math import radians, sin, cos, pi
-from mathutils import Matrix, Vector
+from mathutils import Matrix, Vector, geometry
 from pathlib import Path
 
 # IMPORT SOURCES
@@ -59,10 +59,12 @@ my_scene = scene.BioMedicalScene(my_light_source, my_camera)
 #     max_coords = Vector([1, 1, 0.6])
 # )
 # # add cell arrangements to scene
-# my_scene.add_arangement(cell_distribution_A)
-# my_scene.add_arangement(cell_distribution_B)
+# my_scene.add_arrangement(cell_distribution_A)
+# my_scene.add_arrangement(cell_distribution_B)
 
-# OPTION 2: Voronoi diagram ############################
+
+
+# OPTION 2: Voronoi cell distributions ############################
 # Given a list of 3D points (could be a randomly created list or a deterministic list of positions) per cell attribute
 # a Voronoi diagram is created with these points as seeds.
 # In each Voronoi region a nucleus object is created with size and scale corresponding to the cell attribute.
@@ -70,40 +72,67 @@ my_scene = scene.BioMedicalScene(my_light_source, my_camera)
 # TODO: Add bending if necessary
 
 # Create 3D point lists per cell attribute
-cell_count_A = 60
-cell_count_B = 40
-min_coords = Vector([-1, -1, 0.4])
-max_coords = Vector([1, 1, 0.6])
-points_A = [list(map(random.uniform, min_coords, max_coords)) for _ in range(cell_count_A)]
-points_B = [list(map(random.uniform, min_coords, max_coords)) for _ in range(cell_count_B)]
-# Store the point lists per attribute in a dict
-distribution_dict = {}
-distribution_dict[cells.CellAttributeA()] = points_A
-distribution_dict[cells.CellAttributeB()] = points_B 
-# define cell arrangements and add to scene
-voronoi_arr = arr.VoronoiDiagram(distribution_dict)
-my_scene.add_arangement(voronoi_arr)
-
-my_scene.add_tissue(tissue=my_tissue.tissue)
-my_scene.cut_cells()
-my_scene.add_staining(material=my_materials.nuclei_staining)
+# cell_count_A = 60
+# cell_count_B = 40
+# min_coords = Vector([-1, -1, 0.4])
+# max_coords = Vector([1, 1, 0.6])
+# points_A = [list(map(random.uniform, min_coords, max_coords)) for _ in range(cell_count_A)]
+# points_B = [list(map(random.uniform, min_coords, max_coords)) for _ in range(cell_count_B)]
+# # Store the point lists per attribute in a dict
+# distribution_dict = {}
+# distribution_dict[cells.CellAttributeA()] = points_A
+# distribution_dict[cells.CellAttributeB()] = points_B 
+# # define cell arrangements and add to scene
+# voronoi_arr = arr.VoronoiDiagram(distribution_dict)
+# my_scene.add_arrangement(voronoi_arr)
 
 
+# OPTION 3: Epithelial crypts ############################
+# TODO: Shorten this:
+# - The nuclei are created based on Voronoi regions intersected with a box,
+# i.e. those base meshes have all the same height and have planar boundary faces on top
+# and bottom -> this is too synthetic/regular
+# - The size of nuclei can be controlled using REGION_SCALE and NUCLEI_SCALE
+# - However it is not possible to set an absoulte scale to the NUCLEI_SCALE
+# This might lead to issues when we need specific differing scales between nuclei of different types
+# - The Voronoi diagram still highly depends on the number and location of "boundary" seeds
+# We need to fix a sensible number and structure for that
+# - One option to get rid of too regular boundary nuclei is to set the
+# bounding distributio box larger than necessary. This way, when
+# cropping to camera we only have visible "real inner" nuclei.
+# - Find out which of the auxiliary points (cube, octogon, lattice) is best suited
+# So far it seems they affect the digram structure but not substantially the regions after intersection.
+# - Add padding to the distribution box, which gets cut away after intersecting. This leads to "real inner" nuclei.
 
-# render scene
-my_scene.render(filepath='renders/')
+### PARAMETERS
+param_dict = {}
+param_dict["ico_xy_scale"] = (0.3, 0.1) # Scale of the icosphere w.r.t. to the x-y-axes.
+param_dict["z_rot_angle"] = 40  # Rotation along z-axis of crypt in degrees.
+param_dict["center_loc"] = (0,0,0.5) # Center of crypt cut in world coordinates.
+# Define cell arrangements and add to scene
+epi_arr = arr.EpithelialArrangement(param_dict)
+my_scene.add_arrangement(epi_arr)
+
+# my_scene.add_tissue(tissue=my_tissue.tissue)
+# my_scene.cut_cells()
+# my_scene.add_staining(material=my_materials.nuclei_staining)
 
 
 
-# Setup a folder called 3d_outputs and export scene as obj 
-# current_folder = os.path.dirname(os.path.realpath(__file__))
-FOLDER = Path(dir).joinpath("Images")#Path(current_folder).joinpath("Images")
-FOLDER = str(FOLDER)
-try:
-    if not os.path.exists(FOLDER):
-        os.makedirs(FOLDER)
-except OSError as error:
-    print("Directory '%s' can not be created")
+# # render scene
+# my_scene.render(filepath='renders/')
 
 
-bpy.ops.export_scene.obj(filepath=FOLDER+"//my_scene.obj")
+
+# # Setup a folder called 3d_outputs and export scene as obj 
+# # current_folder = os.path.dirname(os.path.realpath(__file__))
+# FOLDER = Path(dir).joinpath("Images")#Path(current_folder).joinpath("Images")
+# FOLDER = str(FOLDER)
+# try:
+#     if not os.path.exists(FOLDER):
+#         os.makedirs(FOLDER)
+# except OSError as error:
+#     print("Directory '%s' can not be created")
+
+
+# bpy.ops.export_scene.obj(filepath=FOLDER+"//my_scene.obj")
