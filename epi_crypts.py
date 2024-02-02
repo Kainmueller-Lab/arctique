@@ -4,8 +4,9 @@ import numpy as np
 import random
 
 from math import radians, sin, cos, pi
-from mathutils import Matrix, Vector, geometry
+from mathutils import Matrix, Vector, geometry, Quaternion
 from scipy.spatial import Voronoi # NOTE: You might install it directly into Blender's python using pip. - ck
+from scipy.spatial.transform import Rotation
 
 # NOTES about current version: - ck
 # - The nuclei are created based on Voronoi regions intersected with a box,
@@ -244,21 +245,72 @@ def is_point_inside_mesh(mesh, point):
     return is_inside
 
 
+
+
+def rotate_3d_points_(points, alpha):
+    # Convert angle to radians
+    alpha_rad = np.radians(alpha)
+    # Create a Rotation object for the z-axis rotation
+    rotation = Rotation.from_euler('z', alpha_rad)
+    # Apply the rotation to all points
+    rotated_points_array = rotation.apply(points)
+    # Convert back to a list of tuples
+    rotated_points = [list(p) for p in rotated_points_array]
+    return rotated_points
+
+def rotate_objects(objects, alpha):
+    # Convert angle to radians
+    alpha_rad = radians(alpha)
+    # Select the objects and activate the context
+    bpy.context.view_layer.objects.active = objects[0]
+    bpy.ops.object.select_all(action='DESELECT')
+    for obj in objects:
+        obj.select_set(True)
+    # Apply the rotation using bpy.ops.transform.rotate
+    bpy.ops.transform.rotate(value=alpha_rad, orient_axis='Z', orient_type='GLOBAL',
+                             orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)),
+                             orient_matrix_type='GLOBAL', constraint_axis=(False, False, True),
+                             mirror=False, use_proportional_edit=False, proportional_edit_falloff='SMOOTH',
+                             proportional_size=1, use_proportional_connected=False, use_proportional_projected=False,
+                             snap=False, snap_elements={'INCREMENT'}, use_snap_project=False, snap_target='CLOSEST',
+                             use_snap_self=True, use_snap_edit=True, use_snap_nonedit=True, use_snap_selectable=False)
+    bpy.ops.object.select_all(action='DESELECT')
+    return  
+
+def translate_objects(objects, location):
+    # Select the objects and activate the context
+    bpy.context.view_layer.objects.active = objects[0]
+    bpy.ops.object.select_all(action='DESELECT')
+    for obj in objects:
+        obj.select_set(True)
+    # Apply translation using bpy.ops.transform.translate
+    bpy.ops.transform.translate(value=location, orient_type='GLOBAL', orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)),
+                                orient_matrix_type='GLOBAL', constraint_axis=(False, False, True),
+                                mirror=False, use_proportional_edit=False, proportional_edit_falloff='SMOOTH',
+                                proportional_size=1, use_proportional_connected=False, use_proportional_projected=False,
+                                snap=False, snap_elements={'INCREMENT'}, use_snap_project=False, snap_target='CLOSEST',
+                                use_snap_self=True, use_snap_edit=True, use_snap_nonedit=True, use_snap_selectable=False)
+    # Deselect all objects
+    bpy.ops.object.select_all(action='DESELECT')
+    return                 
+
+
 ################# PARAMETERS ####################
 
 NUCLEI_LIMIT = 120 # If nuclei count is above this limit stop, due to long compute time
-SLICE_THICKNESS = 0.2 # Reduce this if the computation time is too long.
+SLICE_THICKNESS = 0.1 # Reduce this if the computation time is too long.
 SUBDIVISION_LEVELS = 1
-TISSUE_CUT_RATIO = 1 # wrt to the slice thickness
+TISSUE_CUT_RATIO = 1 # Determines which part of the slice should be cut by tissue. If this is less than 1 you get cut nuclei objects.
 
-ICO_SCALE = (1, 0.6, 2)
+ICO_SCALE = (0.3, 0.1, 1)
 INNER_SCALE_COEFF = 0.9
 OUTER_SCALE_COEFF = 1.1
 
 RANDOM_TRANSLATE = True
 MAX_TRANSLATE = 0.02
-RANDOM_ROTATION = False # NOTE: True is not working for now.
-SHOW_WHOLE_SURFACE = False # NOTE: Setting this to True could lead to very large computation time
+Z_ROT_ANGLE = 40 # Rotation along z-axis of crypt in degrees
+CENTER_LOC = (0,1,0)
+
 
 MIN_CUT_BOX = [-8, -8, 0]
 MAX_CUT_BOX = [8, 8, SLICE_THICKNESS]
@@ -268,10 +320,9 @@ MAX_COORDS = [8,8,2]
 REGION_SCALE = 1 # Scale of the Voronoi regions w.r.t. to the seed
 NUCLEI_SCALE = 1 # Scale of the nucleus object w.r.t. to the Voronoi region
 PADDING = 0 # NOTE: Can be removed
-use_octogonal_cluster = True
 
 # Set seed for reproducibility
-np.random.seed(42)
+#np.random.seed(42)
 
 
 ################# MAIN METHOD ####################
@@ -279,15 +330,10 @@ np.random.seed(42)
 clear_scene()
 voronoi_test()
 
-# Create icosphere and subdivide 2 times
+# Create icosphere and subdivide it to desired level
+# NOTE: Do not apply higher level subdiv than 2, it crashes blender.
 bpy.ops.mesh.primitive_ico_sphere_add(enter_editmode=False, align='WORLD', location=(0,0,0), scale=ICO_SCALE)
 ico = bpy.context.active_object
-if RANDOM_ROTATION:
-    # Rotate randomly
-    random_angles = tuple([random.uniform(0, pi*0.3), random.uniform(0, pi*0.3), random.uniform(0, 2*pi)])
-    ico.rotation_euler = random_angles
-
-# NOTE: Do not apply higher level subdiv, it crashes blender.
 ico.modifiers.new(name="Subdivision", type='SUBSURF')
 ico.modifiers["Subdivision"].levels = SUBDIVISION_LEVELS
 bpy.ops.object.modifier_apply({"object": ico}, modifier="Subdivision")
@@ -309,9 +355,8 @@ bpy.context.view_layer.objects.active = ico
 bpy.ops.object.mode_set(mode='EDIT')
 mesh = bmesh.from_edit_mesh(ico.data)
 bmesh.ops.triangulate(mesh, faces=mesh.faces[:]) # Triangulate
-
 face_count = len(mesh.faces)
-print(f"Mesh has {face_count} faces and {len(mesh.verts)} vertices.")
+#print(f"Mesh has {face_count} faces and {len(mesh.verts)} vertices.")
 
 points = []
 for face in mesh.faces:
@@ -321,37 +366,32 @@ for face in mesh.faces:
         v_loc = ico.matrix_world @ v.co
         p = 0.5*(centroid + v_loc)
         points.append(p)
-#        q = 0.25*(centroid - v_loc) + centroid
+#        q = 0.25*(centroid - v_loc) + centroid # Can be used in case the nuclei are not dense enough. - ck
 #        points.append(q)
 for vert in mesh.verts:
     v_loc = ico.matrix_world @ vert.co
     points.append(v_loc)
 bpy.ops.object.mode_set(mode='OBJECT')
-if not SHOW_WHOLE_SURFACE:
-    # Retain only points that lie between min and max CUT_BOX
-    points = [p for p in points if all(min_c <= val <= max_c for val, min_c, max_c in zip(p, MIN_CUT_BOX, MAX_CUT_BOX))]
+# Retain only points that lie between min and max CUT_BOX
+# NOTE: Comment this line out if you want to get Voronoi cells on the whole surface.
+# WARNING: This could lead to very long computation times.
+points = [p for p in points if all(min_c <= val <= max_c for val, min_c, max_c in zip(p, MIN_CUT_BOX, MAX_CUT_BOX))]
 assert len(points) <= NUCLEI_LIMIT, f"About to render {len(points)} nuclei. Stopped to avoid long compute time.\nYou can reduce the slice thickness to generate less nuclei." 
 if RANDOM_TRANSLATE:
     points = [[p[i] + random.uniform(-1, 1)*MAX_TRANSLATE for i in range(3)] for p in points]
 #add_point_cloud(points, radius = 0.01) # Render seed points
 
 
-# Add auxiliary boundary points to ensure that the base Voronoi regions are bounded
+# Add auxiliary boundary points to ensure that the base Voronoi regions are bounded.
 # The regions of the auxiliary points won't be.
-# NOTE: You need to choose one of those three
-# TODO: Fix auxiliary points based on obejct diameter. - ck
-#auxiliary_points = get_octogon_points(MIN_COORDS, MAX_COORDS, PADDING)
-#auxiliary_points = get_cube_points(MIN_COORDS, MAX_COORDS, PADDING)
 auxiliary_points = get_lattice_points(MIN_COORDS, MAX_COORDS, PADDING)
 #add_point_cloud(auxiliary_points, radius = 0.2)
 
 # Generate the Voronoi diagram
 vor = Voronoi(points + auxiliary_points)
 #print_voronoi_stats(vor)
-
 fr_points = finite_region_points(vor)
 #print(f"Finite region points: {fr_points}")
-
 ridges = compute_faces_by_seeds(vor, fr_points)
 
 for idx, point_idx in enumerate(fr_points):
@@ -383,7 +423,7 @@ artifacts = [] # NOTE: This lists too large regions
 for obj in nucleus_objects:
     # Calculate bounding box
     diameter = np.max([max(b) - min(b) for b in zip(*obj.bound_box)])
-    if diameter > 0.4:
+    if diameter > min(ICO_SCALE): # NOTE: Maybe there is a better threshold. - ck
         artifacts.append(obj)
 nucleus_objects = [obj for obj in nucleus_objects if obj not in artifacts]
 
@@ -392,7 +432,10 @@ box.scale = tuple(s*a for s,a in zip(box.scale, (1,1,TISSUE_CUT_RATIO)))
 nucleus_objects = intersect_with_object(nucleus_objects, box)
 # Create inner and outer hull
 inner_hull, outer_hull = intersect_with_object([inner_ico, outer_ico], box)
-
+crypt_objects = nucleus_objects + [inner_hull, outer_hull]
+# Transform crypt objects
+rotate_objects(crypt_objects, Z_ROT_ANGLE)
+translate_objects(crypt_objects, CENTER_LOC)
 # Remove auxiliary objects
 remove_objects(artifacts)
 remove_objects([ico, box])
