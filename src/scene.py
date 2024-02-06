@@ -31,6 +31,7 @@ class BioMedicalScene:
     def __init__(self, light_source: LightSource, camera: Camera):
         self.light_source = light_source
         self.camera = camera
+        self.arrangements = []
         self.cell_objects = []
         self.scene = bpy.context.scene#camera.scene 
         self._clear_compositor()
@@ -72,6 +73,7 @@ class BioMedicalScene:
             cell.cell_object.active_material = material
     
     def add_arrangement(self, cell_arrangement: arr.CellArrangement):
+        self.arrangements.append(cell_arrangement)
         cell_arrangement.add()
         self.cell_objects = self.cell_objects + cell_arrangement.objects
 
@@ -109,6 +111,11 @@ class BioMedicalScene:
             self.mask_objects(index)
             bpy.ops.render.render('INVOKE_DEFAULT', write_still=True)
 
+    def hide_auxiliary_objects(self):
+        for arr in self.arrangements:
+            for obj in arr.auxiliary_objects:
+                obj.hide_render = True
+                obj.hide_viewport = True
 
         
         

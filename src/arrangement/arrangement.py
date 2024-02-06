@@ -9,7 +9,10 @@ class CellArrangement:
     count = 0
 
     def __init__(self):
-        pass
+        self.objects = [] # Contains the nuclei objects
+        self.auxiliary_objects = [] # These will be hidden in viewport and rendering but can be used for further computing.
+        self.id = CellArrangement.count
+        CellArrangement.count += 1
 
     def add(self):
         pass
@@ -23,12 +26,10 @@ class CellList(CellArrangement):
             cell_attributes (dict): A dictionary representing the cell attributes.
             locations (list): A list of locations.
         """
+        super().__init__()
         self.cell_attributes = cell_attributes
         self.locations = locations
         self.type = "LIST"
-        self.id = CellArrangement.count
-        CellArrangement.count += 1
-        self.objects = []
 
     def add(self):
         for location in self.locations:
@@ -52,14 +53,12 @@ class CellDistribution(CellArrangement):
             min_coords (tuple): The minimum coordinates.
             max_coords (tuple): The maximum coordinates.
         """
+        super().__init__()
         self.cell_attributes = cell_attributes
         self.num_cells = num_cells
         self.min_coords = min_coords
         self.max_coords = max_coords
         self.type = "DIST"
-        self.id = CellArrangement.count
-        CellArrangement.count += 1
-        self.objects = []
 
     def add(self):
         """
@@ -90,15 +89,13 @@ class VoronoiDiagram(CellArrangement):
         Parameters:
             distribution_dict (dict): Maps cell attribute types to a list of corresp. 3D points
         """
+        super().__init__()
         self.distribution_dict = distribution_dict
         # TODO: Make these parameters changeable and dependent of cell attribute type
         self.region_scale = 1
         self.nuclei_scale = 0.5
         self.padding_scale = 0.1
         self.type = "VORO"
-        self.id = CellArrangement.count
-        CellArrangement.count += 1
-        self.objects = []
         self.empty_regions = [] # Contains regions (=meshes) that should not be populated by random nuclei.
 
     def add(self):
@@ -227,7 +224,6 @@ class VoronoiDiagram(CellArrangement):
 
     
 
-
 class EpithelialArrangement(CellArrangement):
     def __init__(self, param_dict):
         """
@@ -239,6 +235,7 @@ class EpithelialArrangement(CellArrangement):
                 - z_rot_angle (float): The rotation along the z-axis of the crypt in degrees.
                 - center_loc (tuple): The center of the crypt cut in world coordinates.
         """
+        super().__init__()
         self.ico_xy_scale = param_dict["ico_xy_scale"] # Scale of the icosphere w.r.t. to the x-y-axes.
         self.z_rot_angle = param_dict["z_rot_angle"]  # Rotation along z-axis of crypt in degrees.
         self.center_loc = param_dict["center_loc"] # Center of crypt cut in world coordinates.
@@ -262,9 +259,6 @@ class EpithelialArrangement(CellArrangement):
         self.nuclei_scale = 1  # Scale of the nucleus object w.r.t. to the Voronoi region
 
         self.type = "EPIT"
-        self.id = CellArrangement.count
-        CellArrangement.count += 1
-        self.objects = []
         self.inner_hull = None
         self.outer_hull = None
 
@@ -371,7 +365,8 @@ class EpithelialArrangement(CellArrangement):
         self.objects = intersect_with_object(nucleus_objects, box)
         # Create inner and outer hull
         self.inner_hull, self.outer_hull = intersect_with_object([inner_ico, outer_ico], box)
-        crypt_objects = self.objects + [self.inner_hull, self.outer_hull]
+        self.auxiliary_objects = [self.inner_hull, self.outer_hull]
+        crypt_objects = self.objects + self.auxiliary_objects
         # Transform crypt objects
         rotate_objects(crypt_objects, self.z_rot_angle)
         translate_objects(crypt_objects, self.center_loc)
