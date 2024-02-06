@@ -50,7 +50,7 @@ my_scene = scene.BioMedicalScene(my_light_source, my_camera)
 # define cell arrangements
 cell_distribution_A = arr.CellDistribution(
     cell_attributes = cells.CellAttributeA(),
-    num_cells = 30,
+    num_cells = 7,
     #num_cells = 100,
     min_coords = Vector([-1, -1, 0.4]),
     max_coords = Vector([1, 1, 0.6])
@@ -77,7 +77,25 @@ RENDER_PATH = 'C:/Users/cwinklm/Documents/Alpacathon/rendered_HE/renders3d/'
 
 
 my_scene.scan_through_tissue(RENDER_PATH, slice_thickness=0.01, min_z = 0.4, max_z =0.6, 
-                            output_shape=(500, 500), semantic_mask=True, semantic_mask_name="")
+                            output_shape=(500, 500), semantic_mask=True, semantic_mask_label="creative_name_semantic", 
+                            instance_mask=True, instance_mask_label="creative_name_instance")
+
+
+
+
+
+##### remove and apply modifiers: 
+##https://blender.stackexchange.com/questions/44514/how-to-remove-apply-all-modifiers-of-one-object-in-python
+
+# check depth of field option in render settings 
+
+# todo script crasehes when there are topo manay cells: try not to render masks for invisible cells
+    
+
+
+
+
+
 # for idx, loc in enumerate(np.arange(0.4, 0.6, slice_thickness)): 
 #     my_scene.tissue_empty.location.z = loc
 #     my_scene.cut_cells()
@@ -130,13 +148,4 @@ my_scene.scan_through_tissue(RENDER_PATH, slice_thickness=0.01, min_z = 0.4, max
 
 
 
-
-##### remove and apply modifiers: 
-##https://blender.stackexchange.com/questions/44514/how-to-remove-apply-all-modifiers-of-one-object-in-python
-
-# check depth of field option in render settings 
-
-# todo script crasehes when there are topo manay cells: try not to render masks for invisible cells
-\
-    
 
