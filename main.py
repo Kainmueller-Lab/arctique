@@ -17,6 +17,7 @@ import src.objects.cells as cells
 import src.objects.tissue as tissue
 import src.shading.shading as shading
 import src.scene as scene
+import src.utils as utils
 
 # this next part forces a reload in case you edit the source after you first start the blender session
 import imp
@@ -25,6 +26,7 @@ imp.reload(cells)
 imp.reload(tissue)
 imp.reload(shading)
 imp.reload(scene)
+imp.reload(utils)
 
 ###################  PARAMETER  #####################
 # args_camera = {'pos'}
@@ -132,10 +134,6 @@ voronoi_arr = arr.VoronoiDiagram(distribution_dict)
 # Define which regon should not be populated by the distribution
 voronoi_arr.empty_regions = outer_hulls
 my_scene.add_arrangement(voronoi_arr)
-
-# TODO: Name the nuclei in a reasonable way
-# TODO: Refactor the add method of EpithelialArr.
-# TODO: Refactor the optional examples in main.py
 
 # my_scene.add_tissue(tissue=my_tissue.tissue)
 # my_scene.cut_cells()

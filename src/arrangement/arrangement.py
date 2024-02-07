@@ -1,8 +1,9 @@
+import bmesh
 import random
 from mathutils import Vector
 from src.objects.cells import Cell
+from src.utils.geometry import *
 from src.utils.helper_methods import *
-from src.utils.geometry import * 
 
 class CellArrangement:
     # Class variable to keep track of the count
@@ -99,129 +100,60 @@ class VoronoiDiagram(CellArrangement):
         self.empty_regions = [] # Contains regions (=meshes) that should not be populated by random nuclei.
 
     def add(self):
-        # Collect all nuclei center points
+        # Generate seed points and auxiliary points for Voronoi regions
+        # Auxiliary boundary points ensure that the base Voronoi regions are bounded.
+        # The regions of the auxiliary points won't be bounded.
         all_points = []
         for point_list in self.distribution_dict.values():
             all_points.extend(point_list)
-
-        # Compute auxiliary boundary points and padding
         min_coords = Vector((min(point[0] for point in all_points),
                                min(point[1] for point in all_points),
                                min(point[2] for point in all_points)))
         max_coords = Vector((max(point[0] for point in all_points),
                                max(point[1] for point in all_points),
                                max(point[2] for point in all_points)))
-        # TODO: Check if ok, remove next line otherwise
-        self.padding_scale = 1 / len(all_points)
+        self.padding_scale = 1 / len(all_points) # TODO: Check if ok, remove next line otherwise
         padding = (max_coords - min_coords) * self.padding_scale
-
-        # Add auxiliary boundary points to ensure that the base Voronoi regions are bounded
-        # The regions of the auxiliary points won't be bounded.
-        # NOTE: You need to choose one of those three
-        #auxiliary_points = get_octogon_points(self.min_coords, self.max_coords, padding=0.5)
-        #auxiliary_points = get_cube_points(self.min_coords, self.max_coords, padding=0.5)
         auxiliary_points = get_lattice_points(min_coords - padding, max_coords + padding)
-        #add_point_cloud(auxiliary_points, radius = 0.2)
+        #add_point_cloud(auxiliary_points, radius = 0.2) # NOTE: Only for visualization
 
-        # Generate the Voronoi diagram and necessary data
-        vor = Voronoi(all_points + auxiliary_points)
-        fr_points = finite_region_points(vor)
-        if not len(fr_points)==len(all_points):
-            print("Less nuclei than expected have been generated.")
-        assert len(fr_points)==len(all_points), "Less nuclei than expected have been generated."
-        ridges = compute_faces_by_seeds(vor, fr_points)
-
-        for point_idx in fr_points:
-            add_region(vertices = vor.vertices,
-                            faces = ridges[point_idx],
-                            idx = point_idx)
-            # Set the 3D cursor to the desired position
-            bpy.context.scene.cursor.location = all_points[point_idx]
-            # Set the object's origin to the 3D cursor location
-            bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
-            # Scale the object (adjust the scale factors as needed)
-            scale = self.region_scale
-            bpy.ops.transform.resize(value=(scale, scale, scale), orient_type='LOCAL')
-            obj = bpy.context.active_object
-            obj.select_set(False)
-
-        # Collect region objects in the scene
+        # Add Voronoi regions and shape them via intersection
+        generate_voronoi_regions(all_points, auxiliary_points, self.region_scale)
         region_objects = get_objects_with("CellObject")
-        # Create bounding box of distribution
         box_object = add_box(min_coords-padding, max_coords+padding)
-        # Run the intersection function to get polytopes representing cell membranes
-        cell_objects = intersect_with_object(region_objects, box_object)
+        region_objects = intersect_with_object(region_objects, box_object)
+
+        # Add nuclei objects based on the finite Voronoi regions
+        all_attributes = []
         # Collect list of attributes per cell seed
         # NOTE: This is quite hacky. Could be done more elegantly. - ck
-        all_attributes = []
         for attribute in self.distribution_dict.keys():
             all_attributes.extend([attribute for _ in self.distribution_dict[attribute]])
         assert len(all_attributes)==len(all_points), "Total number of attributes not matching with number of cell seeds."
-        # Turn each polytope in a mesh representing its nucleus
-        self.objects = self.add_nuclei_from(cell_objects, all_attributes)
-        remove_objects(cell_objects + [box_object])
-        # Remove nuclei that intersect or lie within the outer hulls
-        self.remove_nuclei_from_empty_regions()
-        print("Created Voronoi arrangement:")
-        for attribute in self.distribution_dict.keys():
-            print(f"- {len(self.distribution_dict[attribute])} nuclei of type {attribute.cell_type}")
+        self.objects = self.generate_nucleus_objects(region_objects, all_attributes)
 
-    # TODO: Fusion this one with helper method add_nuclei_shaped(). - ck
-    def add_nuclei_from(self, cell_objects, attributes):
-        nucleus_objects = []
-        for cell_idx, cell_object in enumerate(cell_objects):
-            attribute = attributes[cell_idx]
+        # Remove auxiliary objects
+        remove_objects(region_objects + [box_object])
+        # Remove nuclei that intersect or lie within the outer hulls
+        self.objects = remove_objects_inside_mesh(self.objects, self.empty_regions)
+        # print("Created Voronoi arrangement:")
+        # for attribute in self.distribution_dict.keys():
+        #     print(f"- {len(self.distribution_dict[attribute])} nuclei of type {attribute.cell_type}")
+
+    def generate_nucleus_objects(self, region_objects, attributes):
+        nucleus_objects = shrinkwrap(region_objects)
+        for index, nucleus_object in enumerate(nucleus_objects):
+            attribute = attributes[index]
             size = attribute.size
             scale = attribute.scale
             cell_type = attribute.cell_type
-
-            bpy.ops.mesh.primitive_cube_add(enter_editmode=False, align='WORLD', location=cell_object.location, scale=(1, 1, 1))
-            nucleus_object = bpy.context.active_object
-            index = cell_object.name.split('_')[1]
-            nucleus_object.name = f"NucleusObject_{index}_{self.type}_Type_{cell_type}"
-            shrinkwrap = nucleus_object.modifiers.new(name="Shrinkwrap Modifier", type='SHRINKWRAP')
-            shrinkwrap.target = cell_object
-            bpy.ops.object.modifier_apply(modifier="Shrinkwrap Modifier")
-            subsurf = nucleus_object.modifiers.new("Subsurface Modifier", type='SUBSURF')
-            subsurf.levels = 2
-            bpy.ops.object.modifier_apply(modifier="Subsurface Modifier")
+            nucleus_object.name = f"NucleusObject_{index}_{self.type}_{self.count}_Type_{cell_type}"
             # Scale object to typical cell attribute size
-            mean_scale = self.compute_mean_scale(nucleus_object)
+            mean_scale = compute_mean_scale(nucleus_object)
             assert mean_scale > 0, "Nucleus object has a x, y or z-diameter of 0."
             nucleus_object.scale = tuple(x * size / mean_scale for x in scale)
-            #nucleus_object.scale = (nuclei_scale,) * 3
-            nucleus_objects.append(nucleus_object)
         return nucleus_objects
-    
-    def compute_mean_scale(self, object):
-        '''
-        Given a mesh object this method returns the mean scale of the object.
-        The mean scale is defined as the geometric mean of the x, y and z-diameter of the mesh.      
-        '''
-        mesh = object.data
-        min_coords = (min(vert.co[0] for vert in mesh.vertices),
-                      min(vert.co[1] for vert in mesh.vertices),
-                      min(vert.co[2] for vert in mesh.vertices))
-        max_coords = (max(vert.co[0] for vert in mesh.vertices),
-                      max(vert.co[1] for vert in mesh.vertices),
-                      max(vert.co[2] for vert in mesh.vertices))
-        diameter = [max - min for max, min in zip(max_coords, min_coords)]
-        return (diameter[0]*diameter[1]*diameter[2]) ** (1/3)
-    
-    def remove_nuclei_from_empty_regions(self):
-        nuclei_to_remove = []
-        nuclei_to_keep = []
-        for nucleus_object in self.objects:
-            for region in self.empty_regions:
-                if is_point_inside_mesh(region, nucleus_object.location):
-                    print(f"Removing nucleus {nucleus_object.name}")
-                    nuclei_to_remove.append(nucleus_object)
-                else:
-                    nuclei_to_keep.append(nucleus_object)
-        remove_objects(nuclei_to_remove)
-        self.objects = nuclei_to_keep
-
-
+        
     
 
 class EpithelialArrangement(CellArrangement):
@@ -248,8 +180,7 @@ class EpithelialArrangement(CellArrangement):
         self.tissue_cut_ratio = 1  # Determines which part of the slice should be cut by tissue. If this is less than 1, you get cut nuclei objects.
         self.inner_scale_coeff = 0.9 # Determines the size of the outer hull.
         self.outer_scale_coeff = 1.1 # Determines the size of the inner hull.
-        self.random_translate = True # Enable or disable random displacement of nuclei centroids; True leads to more realistic results.
-        self.max_translate = 0.02 # Maximal displacement of nuclei centroids.
+        self.max_translate = 0.02 # Maximal displacement of nuclei centroids. Set to None if you want no random translation
         self.min_cut_box = [-8, -8, -self.slice_thickness/2] # Minimal coordinates of the slice cut box
         self.max_cut_box = [8, 8, self.slice_thickness/2] # Maximal coordinates of the slice cut box
         self.min_coords = [-8, -8, -2] # Minimal coordinates for auxiliary points.
@@ -263,6 +194,42 @@ class EpithelialArrangement(CellArrangement):
         self.outer_hull = None
 
     def add(self):
+        # Add icospheres whose surface will be used for the nuclei distribution
+        ico, inner_ico, outer_ico = self.add_spheres()
+        # Sample seeds for Voronoi regions on the median icosphere
+        cut_box = (self.min_cut_box, self.max_cut_box)
+        points = sample_points_on_mesh(ico, self.nuclei_limit, cut_box, self.max_translate)
+        # add_point_cloud(points, radius = 0.01) # Render seed points
+        # Add auxiliary boundary points to ensure that the base Voronoi regions are bounded. The regions of the auxiliary points won't be.
+        # TODO: Refactor get_lattice_points if padding is not needed - ck
+        auxiliary_points = get_lattice_points(self.min_coords, self.max_coords)
+        #add_point_cloud(auxiliary_points, radius = 0.2)
+
+        # Generate Voronoi regions and add nucleus objects
+        generate_voronoi_regions(points, auxiliary_points, self.region_scale)
+        region_objects = get_objects_with("CellObject")
+        region_objects = intersect_with_object(region_objects, outer_ico)
+        region_objects = subtract_object(region_objects, inner_ico)
+        box = add_box(self.min_cut_box, self.max_cut_box)
+        region_objects = intersect_with_object(region_objects, box)
+        nucleus_objects, artifacts = self.generate_nucleus_objects(region_objects)
+        box.scale = tuple(s*a for s,a in zip(box.scale, (1,1,self.tissue_cut_ratio)))
+        self.objects = intersect_with_object(nucleus_objects, box)
+        # Create inner and outer hull
+        self.inner_hull, self.outer_hull = intersect_with_object([inner_ico, outer_ico], box)
+        self.inner_hull.name = f"HullObject_Inner_{self.type}_{self.count}"
+        self.outer_hull.name = f"HullObject_Outer_{self.type}_{self.count}"
+        self.auxiliary_objects = [self.inner_hull, self.outer_hull]
+        crypt_objects = self.objects + self.auxiliary_objects
+        # Transform crypt objects
+        rotate_objects(crypt_objects, self.z_rot_angle)
+        translate_objects(crypt_objects, self.center_loc)
+        # Remove auxiliary objects
+        remove_objects(artifacts)
+        remove_objects([ico, box])
+        remove_objects(region_objects)
+
+    def add_spheres(self):
         # Create icosphere and subdivide it to desired level
         # NOTE: Do not apply higher level subdiv than 2, it crashes blender.
         bpy.ops.mesh.primitive_ico_sphere_add(enter_editmode=False, align='WORLD', location=(0,0,0), scale=self.ico_scale)
@@ -278,79 +245,13 @@ class EpithelialArrangement(CellArrangement):
         outer_ico = bpy.context.active_object
         inner_ico.scale = tuple(x*self.inner_scale_coeff for x in ico.scale)
         outer_ico.scale = tuple(x*self.outer_scale_coeff for x in ico.scale)
-        ico.name = "Surface_Med"
-        inner_ico.name = "Surface_Inner"
-        outer_ico.name = "Surface_Outer"
+        return ico, inner_ico, outer_ico
 
-
-        # Generate seeds for Voronoi diagram
-        bpy.context.view_layer.objects.active = ico
-        bpy.ops.object.mode_set(mode='EDIT')
-        mesh = bmesh.from_edit_mesh(ico.data)
-        bmesh.ops.triangulate(mesh, faces=mesh.faces[:]) # Triangulate # NOTE: Check if this is truly necessary. - ck
-        #print(f"Mesh has {len(mesh.faces)} faces and {len(mesh.verts)} vertices.")
-
-        points = []
-        for face in mesh.faces:
-            centroid = face.calc_center_median()
-            points.append(centroid)
-            for v in face.verts:
-                v_loc = ico.matrix_world @ v.co
-                p = 0.5*(centroid + v_loc)
-                points.append(p)
-        #        q = 0.25*(centroid - v_loc) + centroid # NOTE: Can be used in case the nuclei are not dense enough. - ck
-        #        points.append(q)
-        for vert in mesh.verts:
-            v_loc = ico.matrix_world @ vert.co
-            points.append(v_loc)
-        bpy.ops.object.mode_set(mode='OBJECT')
-        # Retain only points that lie between min and max CUT_BOX
-        # NOTE: Comment this line out if you want to get Voronoi cells on the whole surface.
-        # WARNING: This could lead to very long computation times.
-        points = [p for p in points if all(min_c <= val <= max_c for val, min_c, max_c in zip(p, self.min_cut_box, self.max_cut_box))]
-        assert len(points) <= self.nuclei_limit, f"About to render {len(points)} nuclei. Stopped to avoid long compute time.\nYou can reduce the slice thickness to generate less nuclei." 
-        if self.random_translate:
-            points = [[p[i] + random.uniform(-1, 1)*self.max_translate for i in range(3)] for p in points]
-        #add_point_cloud(points, radius = 0.01) # Render seed points
-
-
-        # Add auxiliary boundary points to ensure that the base Voronoi regions are bounded.
-        # The regions of the auxiliary points won't be.
-        # TODO: Refactor get_lattice_points if padding is not needed - ck
-        auxiliary_points = get_lattice_points(self.min_coords, self.max_coords)
-        #add_point_cloud(auxiliary_points, radius = 0.2)
-
-        # Generate the Voronoi diagram
-        vor = Voronoi(points + auxiliary_points)
-        #print_voronoi_stats(vor)
-        fr_points = finite_region_points(vor)
-        #print(f"Finite region points: {fr_points}")
-        ridges = compute_faces_by_seeds(vor, fr_points)
-
-        for _, point_idx in enumerate(fr_points):
-            add_region(vertices = vor.vertices,
-                            faces = ridges[point_idx],
-                            idx = point_idx)
-            # Set the 3D cursor to the desired position
-            bpy.context.scene.cursor.location = points[point_idx]
-            # Set the object's origin to the 3D cursor location
-            bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
-            # Scale the object (adjust the scale factors as needed)
-            scale = self.region_scale
-            bpy.ops.transform.resize(value=(scale, scale, scale), orient_type='LOCAL')
-            obj = bpy.context.active_object
-            obj.select_set(False)
-
-        # Collect region objects in the scene
-        region_objects = get_objects_with("CellObject")
-        # Run the intersection function to get polytopes representing cell membranes
-        region_objects = intersect_with_object(region_objects, outer_ico)
-        region_objects = subtract_object(region_objects, inner_ico)
-        box = add_box(self.min_cut_box, self.max_cut_box)
-        region_objects = intersect_with_object(region_objects, box)
-
+    def generate_nucleus_objects(self, region_objects):
         # Turn each polytope in a mesh representing its nucleus
-        nucleus_objects = add_nuclei_shaped(region_objects, self.nuclei_scale)
+        nucleus_objects = shrinkwrap(region_objects, self.nuclei_scale)
+        for idx, obj in enumerate(nucleus_objects):
+            obj.name = f"NucleusObject_{idx}_{self.type}_{self.count}"
         # Remove too large arrtifacts
         artifacts = [] # NOTE: This lists too large regions
         for obj in nucleus_objects:
@@ -359,19 +260,5 @@ class EpithelialArrangement(CellArrangement):
             if diameter > min(self.ico_scale): # NOTE: Maybe there is a better threshold. - ck
                 artifacts.append(obj)
         nucleus_objects = [obj for obj in nucleus_objects if obj not in artifacts]
-
-        # Intersect again
-        box.scale = tuple(s*a for s,a in zip(box.scale, (1,1,self.tissue_cut_ratio)))
-        self.objects = intersect_with_object(nucleus_objects, box)
-        # Create inner and outer hull
-        self.inner_hull, self.outer_hull = intersect_with_object([inner_ico, outer_ico], box)
-        self.auxiliary_objects = [self.inner_hull, self.outer_hull]
-        crypt_objects = self.objects + self.auxiliary_objects
-        # Transform crypt objects
-        rotate_objects(crypt_objects, self.z_rot_angle)
-        translate_objects(crypt_objects, self.center_loc)
-        # Remove auxiliary objects
-        remove_objects(artifacts)
-        remove_objects([ico, box])
-        remove_objects(region_objects)
+        return nucleus_objects, artifacts
 
