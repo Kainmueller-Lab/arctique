@@ -148,37 +148,36 @@ class BioMedicalScene:
         bpy.ops.render.render('EXEC_DEFAULT', write_still=True)
     
     def export_masks(self): 
-
+        ''''
+        create a binary mask for each individuals cell object
+        '''
         self.hide_everything()
-        self.cell_info = []
-        for cell in self.cell_objects: 
-            # show only one cell 
-            cell.cell_object.hide_viewport = False
-            cell.cell_object.hide_render = False
-            # save mask for one cell 
-            mask_name = f"{cell.cell_name}.png"
-            self.scene.render.filepath = self.filepath + mask_name
-            
-            cell_id = cell.cell_id   # cell.cell_object.cell_id
-            cell_type = cell.cell_attributes.cell_type
-            cell_filename = self.filepath + mask_name
-            cell_info_tuple = (cell_id, cell_type, cell_filename)
-            self.cell_info.append(cell_info_tuple)
+        for cell_info_dict in self.cell_info: 
 
-            bpy.ops.render.render('EXEC_DEFAULT', write_still=True)
-            # hide cell again
-            cell.cell_object.hide_viewport = True
-            cell.cell_object.hide_render = True
+            cell_object = bpy.data.objects[cell_info_dict["ID"]] # get cell object
+            cell_object.hide_viewport = False # unhide cell from viewport
+            cell_object.hide_render = False # unhide cell from render
+            self.scene.render.filepath = cell_info_dict["Filename"] #self.filepath + mask_nam
+            bpy.ops.render.render('EXEC_DEFAULT', write_still=True) # render single cell mask
+            cell_object.hide_viewport = True # hide cell from viewport
+            cell_object.hide_render = True # hide cell from render
 
         self.unhide_everything()
-        ph.reduce_single_masks(self.filepath, [info_tuple[2] for info_tuple in self.cell_info])
+        
+        ph.reduce_single_masks(self.filepath, [cell_info_dict["Filename"] for cell_info_dict in self.cell_info])# reduce RGBA image to only alpha channel
 
-    # def create_cell_info(self):    
-    #     ''''
-    #     create a list of tuples wich contains for each cell its type and ID 
-    #     ''' 
-
-    #     for cell in self.cell_objects: 
+    def create_cell_info(self):    
+        ''''
+        create a list of dictionaries wich contains for each cell its type and ID 
+        ''' 
+        self.cell_info = []
+        for cell in self.cell_objects: 
+            cell_id = cell.cell_id   # cell.cell_object.cell_id
+            cell_type = cell.cell_attributes.cell_type
+            mask_name = f"{cell.cell_name}.png"
+            cell_filename = self.filepath + mask_name
+            cell_info_tuple = {"ID": cell_id, "Type": cell_type, "Filename": cell_filename}
+            self.cell_info.append(cell_info_tuple)
 
 
     def combine_masks_semantic(self, file_name="semantic_mask", palette=None): 
@@ -191,7 +190,7 @@ class BioMedicalScene:
         #ph.build_instance_mask(self.filepath, cell_mask_filenames)
 
     def remove_single_masks(self): 
-        cell_mask_filenames = [info_tuple[2] for info_tuple in self.cell_info]
+        cell_mask_filenames = [info_tuple["Filename"] for info_tuple in self.cell_info]
         ph.remove_single_masks(cell_mask_filenames)
 
     def export_depth(self): 
@@ -222,6 +221,7 @@ class BioMedicalScene:
         '''
 
         self.filepath = filepath
+        self.create_cell_info()
 
         bpy.app.handlers.render_complete.append(fn_print_time_when_render_done)
 
@@ -238,12 +238,12 @@ class BioMedicalScene:
             if semantic_mask: 
                 self.semantic_mask_names = []
                 #TODO here we could select only the visible cells 
-                unique_cell_types = set([cit[1] for cit in self.cell_info]) # identify unique cell types 
+                unique_cell_types = set([c["Type"] for c in self.cell_info]) # identify unique cell types 
                 cell_type_dict = {uct : (i+1) for i, uct in enumerate(unique_cell_types)} # assign unique id to each cell type
                 semantic_palette = ph.make_color_palette(len(cell_type_dict.keys())) # create color palette with one color per cell type 
             if instance_mask: 
                 self.instance_mask_names = []
-                unique_cell_IDs = [cit[0] for cit in self.cell_info] # get individual cell ids 
+                unique_cell_IDs = [c["ID"] for c in self.cell_info] # get individual cell ids 
                 cell_ID_dict = {cid : (i+1) for i, cid in enumerate(unique_cell_IDs)} # assign unique id to each cell type
                 instance_palette = ph.make_color_palette(len(cell_ID_dict.keys())) # create color palette with one color per cell type 
 
@@ -336,7 +336,7 @@ class BioMedicalScene:
         # scale the moving slice to desired thickness 
         self.tissue_empty.scale.z = slice_thickness 
 
-
+        self.create_cell_info()
 
         
         bpy.app.handlers.render_complete.append(fn_print_time_when_render_done)
@@ -351,18 +351,18 @@ class BioMedicalScene:
             # export individual cell masks 
             #TODO the cell info list is created here, should be done at the scene setup
             self.export_masks()
-
+             #cell_info_tuple = {"ID": cell_id, "Type": cell_type, "Filename": cell_filename}
             # save info about individual cells (id and type) and make palettes
             if idx ==0 : 
                 if semantic_mask: 
                     self.semantic_mask_names = []
                     #TODO here we could select only the visible cells 
-                    unique_cell_types = set([cit[1] for cit in self.cell_info]) # identify unique cell types 
+                    unique_cell_types = set([c["Type"] for c in self.cell_info]) # identify unique cell types 
                     cell_type_dict = {uct : (i+1) for i, uct in enumerate(unique_cell_types)} # assign unique id to each cell type
                     semantic_palette = ph.make_color_palette(len(cell_type_dict.keys())) # create color palette with one color per cell type 
                 if instance_mask: 
                     self.instance_mask_names = []
-                    unique_cell_IDs = [cit[0] for cit in self.cell_info] # get individual cell ids 
+                    unique_cell_IDs = [c["ID"] for c in self.cell_info] # get individual cell ids 
                     cell_ID_dict = {cid : (i+1) for i, cid in enumerate(unique_cell_IDs)} # assign unique id to each cell type
                     instance_palette = ph.make_color_palette(len(cell_ID_dict.keys())) # create color palette with one color per cell type 
 
