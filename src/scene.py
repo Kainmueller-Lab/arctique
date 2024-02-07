@@ -173,6 +173,13 @@ class BioMedicalScene:
         self.unhide_everything()
         ph.reduce_single_masks(self.filepath, [info_tuple[2] for info_tuple in self.cell_info])
 
+    # def create_cell_info(self):    
+    #     ''''
+    #     create a list of tuples wich contains for each cell its type and ID 
+    #     ''' 
+
+    #     for cell in self.cell_objects: 
+
 
     def combine_masks_semantic(self, file_name="semantic_mask", palette=None): 
         ph.build_semantic_mask(self.filepath, self.cell_info, file_name=file_name, palette=palette)
@@ -226,10 +233,24 @@ class BioMedicalScene:
             self.setup_scene_render_mask(output_shape=output_shape)
             self.export_masks()
 
+                        # save info about individual cells (id and type) and make palettes
+        # if idx ==0 : 
             if semantic_mask: 
-                self.combine_masks_semantic()
+                self.semantic_mask_names = []
+                #TODO here we could select only the visible cells 
+                unique_cell_types = set([cit[1] for cit in self.cell_info]) # identify unique cell types 
+                cell_type_dict = {uct : (i+1) for i, uct in enumerate(unique_cell_types)} # assign unique id to each cell type
+                semantic_palette = ph.make_color_palette(len(cell_type_dict.keys())) # create color palette with one color per cell type 
             if instance_mask: 
-                self.combine_masks_instance()
+                self.instance_mask_names = []
+                unique_cell_IDs = [cit[0] for cit in self.cell_info] # get individual cell ids 
+                cell_ID_dict = {cid : (i+1) for i, cid in enumerate(unique_cell_IDs)} # assign unique id to each cell type
+                instance_palette = ph.make_color_palette(len(cell_ID_dict.keys())) # create color palette with one color per cell type 
+
+            if semantic_mask: 
+                self.combine_masks_semantic(palette=semantic_palette)
+            if instance_mask: 
+                self.combine_masks_instance(palette=instance_palette)
 
             if not single_masks: 
                 self.remove_single_masks()
