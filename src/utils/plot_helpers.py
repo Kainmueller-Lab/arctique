@@ -47,7 +47,7 @@ def reduce_single_masks(source_folder, file_names):
         mask_png_small.save(file_name)
     
 
-def build_semantic_mask(source_folder, cell_info_tuples, file_name="semantic_mask", palette = None): 
+def build_semantic_mask(source_folder, cell_info_dicts, file_name="semantic_mask", palette = None): 
     """
     Combines individual cell masks to a semantic map of the full scene. 
  
@@ -60,13 +60,13 @@ def build_semantic_mask(source_folder, cell_info_tuples, file_name="semantic_mas
         semantic_map: A png file where cells of the same type have the same pixel value
     """
 
-    unique_cell_types = set([cit[1] for cit in cell_info_tuples]) # identify unique cell types 
+    unique_cell_types = set([cit["Type"] for cit in cell_info_dicts]) # identify unique cell types 
     cell_type_dict = {uct : (i+1) for i, uct in enumerate(unique_cell_types)} # assign unique id to each cell type
 
 
-    for cell_counter, cell_info_tuple in enumerate(cell_info_tuples): 
-        cell_mask_file = cell_info_tuple[2]
-        cell_type = cell_info_tuple[1]
+    for cell_counter, cell_info_tuple in enumerate(cell_info_dicts): 
+        cell_mask_file = cell_info_tuple["Filename"]
+        cell_type = cell_info_tuple["Type"]
         mask_png = Image.open(cell_mask_file)
         mask_np = np.array(mask_png).astype(np.float64)
 
@@ -126,7 +126,7 @@ def build_semantic_mask(source_folder, cell_info_tuples, file_name="semantic_mas
 #     colored_instance_mask.save(str(Path(source_folder).joinpath("instance_mask.png")))
         
 
-def build_instance_mask(source_folder, cell_info_tuples, file_name="semantic_mask", palette=None): 
+def build_instance_mask(source_folder, cell_info_dicts, file_name="semantic_mask", palette=None): 
    # source_folder, cell_info_tuples, file_name="semantic_mask", palette = None): 
     """
     Combines individual cell masks to an instance map of the full scene. 
@@ -140,13 +140,14 @@ def build_instance_mask(source_folder, cell_info_tuples, file_name="semantic_mas
     Returns:
         instance_mask: A png file where each cell object has a different pixel value
     """
-    cell_ID_list = [c[0] for c in cell_info_tuples] # make list of all cell ids 
+
+    cell_ID_list = [c["ID"] for c in cell_info_dicts] # make list of all cell ids 
     cell_ID_dict = {cid : (i+1) for i, cid in enumerate(cell_ID_list)} # assign unique integer to each cell id
 
     #for file_idx, file_name in enumerate(file_names):   ´
-    for cell_counter, cell_info_tuple in enumerate(cell_info_tuples): 
-        cell_id = cell_info_tuple[0]
-        cell_mask_file = cell_info_tuple[2]
+    for cell_counter, cell_info_tuple in enumerate(cell_info_dicts): 
+        cell_id = cell_info_tuple["ID"]
+        cell_mask_file = cell_info_tuple["Filename"]
         mask_png = Image.open(cell_mask_file) # open mask png
         mask_np = np.array(mask_png).astype(np.float64) # convert to numpy
 
