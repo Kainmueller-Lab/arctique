@@ -76,11 +76,38 @@ my_scene.add_tissue(tissue=my_tissue.tissue)
 RENDER_PATH = 'C:/Users/cwinklm/Documents/Alpacathon/rendered_HE/renders3d/'
 
 
-my_scene.scan_through_tissue(RENDER_PATH, slice_thickness=0.01, min_z = 0.4, max_z =0.6, 
-                            output_shape=(500, 500), semantic_mask=True, semantic_mask_label="creative_name_semantic", 
-                            instance_mask=True, instance_mask_label="creative_name_instance")
+# my_scene.scan_through_tissue(RENDER_PATH, slice_thickness=0.05, min_z = 0.4, max_z =0.6, 
+#                             output_shape=(500, 500), semantic_mask=True, semantic_mask_label="creative_name_semantic", 
+#                             instance_mask=True, instance_mask_label="creative_name_instance")
 
 
+my_scene.render3d(RENDER_PATH, 
+                  scene=True,
+                  semantic_mask=True,
+                  instance_mask=True,
+                  depth_mask=True,
+                  obj3d=True,
+                  output_shape=(500, 500), 
+                  n_slices=None,
+                  slice_thickness=0.05, 
+                  min_z = 0.4, 
+                  max_z =0.6, 
+                  semantic_mask_label="creative_name_semantic", 
+                  instance_mask_label="creative_name_instance", 
+                  max_samples = 100)
+
+
+
+# RENDER_PATH = 'C:/Users/cwinklm/Documents/Alpacathon/rendered_HE/renders2d/'
+# my_scene.render(filepath = RENDER_PATH,  # where to save renders
+#                scene = True, # if true scene is rendered
+#                single_masks = True, # if true singel cell masks are rendered
+#                semantic_mask = True, # if true semantic mask is generated
+#                instance_mask = True, # if true instance mask is generated
+#                depth_mask = True, # if true depth mask is generated
+#                obj3d = True, # if true scene is saved as 3d object
+#                output_shape = (500, 500), # dimensions of output
+#                max_samples = 10) # number of samples for rendering. Fewer samples will render more quickly. Default is 1024
 
 
 
