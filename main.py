@@ -18,6 +18,7 @@ import src.objects.tissue as tissue
 import src.shading.shading as shading
 import src.scene as scene
 import src.utils as utils
+from src.utils.helper_methods import generate_lattice_parameters
 
 # this next part forces a reload in case you edit the source after you first start the blender session
 import imp
@@ -100,36 +101,26 @@ my_scene = scene.BioMedicalScene(my_light_source, my_camera)
 # - It is possible to manually set the scale, location and rotation in xy-plane of the resulting crypt cut.
 # NOTE: Generating 4 crypts currently take about 1-2 minutes
 
-### PARAMETERS
-# TODO: Create parameters (max 4?) based on lattice
-ico_scales = [(0.5, 0.22), (0.4, 0.17), (0.45, 0.2), (0.45, 0.15)]
-angles = [40, 60, 70, 70]
-centers = [(-0.5,-0.5,0.5), (0.5,0.5,0.5), (-0.5,0.5,0.5), (0.5,-0.5,0.5)]
-
+# Add epithelial crypts
+theta = 60
+ico_scales, angles, centers = generate_lattice_parameters(theta)
 outer_hulls = []
-count = 0
 for ico_scale, angle, center in zip(ico_scales, angles, centers):
     param_dict = {}
     param_dict["ico_xy_scale"] = ico_scale # Scale of the icosphere w.r.t. to the x-y-axes.
     param_dict["z_rot_angle"] = angle # Rotation along z-axis of crypt in degrees.
     param_dict["center_loc"] = center # Center of crypt cut in world coordinates.
-    # Define cell arrangements and add to scene
     epi_arr = arr.EpithelialArrangement(param_dict)
-    # TODO: Hide hulls and extract them as objects to feed into distribution arrangement
     my_scene.add_arrangement(epi_arr)
     outer_hulls.append(epi_arr.outer_hull)
-    count += 1
-    if count>2:
-        break
 
 # Add nuclei distribution
-# Create 3D point lists per cell attribute
-cell_count_A = 200
+cell_count_A = 300
 min_coords = Vector([-1, -1, 0.45])
 max_coords = Vector([1, 1, 0.55])
 points_A = [list(map(random.uniform, min_coords, max_coords)) for _ in range(cell_count_A)]
 distribution_dict = {}
-distribution_dict[cells.CellAttributeA()] = points_A
+distribution_dict[cells.CellAttributeA()] = points_A # Create 3D point lists per cell attribute
 voronoi_arr = arr.VoronoiDiagram(distribution_dict)
 # Define which regon should not be populated by the distribution
 voronoi_arr.empty_regions = outer_hulls

@@ -1,6 +1,7 @@
 import bpy
 import math
 import numpy as np
+import random
 from mathutils import Matrix, Vector
 
 
@@ -233,3 +234,24 @@ def get_objects_with(string):
         if obj.name.startswith(string):
             object_list.append(obj)
     return object_list
+
+def generate_lattice_parameters(theta):
+   '''
+   Theta defines a lattice of 4 isosceles parallelograms of area 1.
+   Each such parallelogram defines a rotated ellipsoid fitting into it.
+   '''
+   theta = np.radians(theta)
+   length = 1 / np.sin(theta)
+   mu = 0.6 # NOTE: This is handpicked and steers the distance between crypts in the lattice. - ck
+   x_axis = mu * length * np.cos(theta/2)
+   y_axis = mu * length * np.sin(theta/2)
+   v = Vector([length,0,0])
+   w = Vector([length*np.cos(theta), length*np.sin(theta), 0])
+   max_delta_scale = 0.05
+   max_delta_angle = 10
+   ico_scales = [(x_axis + max_delta_scale*random.uniform(-1,1), y_axis + max_delta_scale*random.uniform(-1,1)) for _ in range(4)]
+   angles = [np.degrees(theta)/2 + max_delta_angle*random.uniform(-1,1) for _ in range(4)]
+   base_pt = Vector([-0.5, -0.5, 0.5])
+   lattice = [Vector([0,0,0]), v, w, v+w]
+   centers = [base_pt + vec for vec in lattice]
+   return ico_scales, angles, centers

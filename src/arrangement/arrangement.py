@@ -172,7 +172,7 @@ class EpithelialArrangement(CellArrangement):
         self.z_rot_angle = param_dict["z_rot_angle"]  # Rotation along z-axis of crypt in degrees.
         self.center_loc = param_dict["center_loc"] # Center of crypt cut in world coordinates.
 
-        self.nuclei_limit = 120  # If nuclei count is above this limit, abort script, due to long compute time.
+        self.nuclei_limit = 90  # If nuclei count is above this limit, abort script, due to long compute time.
         self.ico_z_scale = 2 # The smaller the number, the denser the nuclei. But it also increases the compute time.
         self.ico_scale = (*self.ico_xy_scale, self.ico_z_scale) # Scale of the icosphere
         self.slice_thickness = 0.1  # Reduce this if the computation time is too long.
