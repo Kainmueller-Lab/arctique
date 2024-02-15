@@ -40,6 +40,7 @@ class BioMedicalScene:
     def __init__(self, light_source: LightSource, camera: Camera):
         self.light_source = light_source
         self.camera = camera
+        self.arrangements = []
         self.cell_objects = []
         self.scene = bpy.context.scene
         self.scene.camera = self.camera.cam_obj
@@ -87,11 +88,10 @@ class BioMedicalScene:
             cell.cell_object.data.materials.append(material)
             cell.cell_object.active_material = material
     
-    def add_arangement(self, cell_arrangement: arr.CellArrangement):
-        cell_arrangement.generate_cells()
-        self.cell_objects = self.cell_objects + cell_arrangement.objects
+    def add_arrangement(self, cell_arrangement: arr.CellArrangement):
+        self.arrangements.append(cell_arrangement)
         cell_arrangement.add()
-        self.objects_list = cell_arrangement.objects
+        self.cell_objects = self.cell_objects + cell_arrangement.objects
 
     def hide_everything(self): 
         '''hide all objects in the scene'''
@@ -272,6 +272,11 @@ class BioMedicalScene:
         print("rendering completed")
 
 
+    def hide_auxiliary_objects(self):
+        for arr in self.arrangements:
+            for obj in arr.auxiliary_objects:
+                obj.hide_render = True
+                obj.hide_viewport = True
 
     def render3d(self, 
                filepath: str, 
