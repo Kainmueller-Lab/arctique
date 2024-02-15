@@ -70,7 +70,7 @@ my_scene.add_tissue(tissue=my_tissue.tissue)
 my_scene.cut_cells()
 my_scene.add_staining(material=my_materials.nuclei_staining)
 
-RENDER_PATH = 'C:/Users/cwinklm/Documents/Alpacathon/rendered_HE/renders2/'
+RENDER_PATH = 'C:/Users/cwinklm/Documents/Alpacathon/rendered_HE/renders2d/'
 
 my_scene.render(filepath = RENDER_PATH,  # where to save renders
                scene = True, # if true scene is rendered
