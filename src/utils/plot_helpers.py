@@ -47,7 +47,7 @@ def reduce_single_masks(source_folder, file_names):
         mask_png_small.save(file_name)
     
 
-def build_semantic_mask(source_folder, cell_info_tuples): 
+def build_semantic_mask(source_folder, cell_info_dicts, file_name="semantic_mask", palette = None): 
     """
     Combines individual cell masks to a semantic map of the full scene. 
  
@@ -60,13 +60,13 @@ def build_semantic_mask(source_folder, cell_info_tuples):
         semantic_map: A png file where cells of the same type have the same pixel value
     """
 
-    unique_cell_types = set([cit[1] for cit in cell_info_tuples]) # identify unique cell types 
+    unique_cell_types = set([cit["Type"] for cit in cell_info_dicts]) # identify unique cell types 
     cell_type_dict = {uct : (i+1) for i, uct in enumerate(unique_cell_types)} # assign unique id to each cell type
 
 
-    for cell_counter, cell_info_tuple in enumerate(cell_info_tuples): 
-        cell_mask_file = cell_info_tuple[2]
-        cell_type = cell_info_tuple[1]
+    for cell_counter, cell_info_tuple in enumerate(cell_info_dicts): 
+        cell_mask_file = cell_info_tuple["Filename"]
+        cell_type = cell_info_tuple["Type"]
         mask_png = Image.open(cell_mask_file)
         mask_np = np.array(mask_png).astype(np.float64)
 
@@ -76,22 +76,60 @@ def build_semantic_mask(source_folder, cell_info_tuples):
         # assign pixel value based on cell class
         semantic_mask += mask_np*(cell_type_dict[cell_type]/255.) # in mask the object has pixel value 255 (backgrund is 0)
 
-        np.save(str(Path(source_folder).joinpath("semantic_mask.npy")), semantic_mask)
+        np.save(str(Path(source_folder).joinpath(f"{file_name}.npy")), semantic_mask)
 
         # generate unique colors for each class (background is black by default)
-        palette = make_color_palette(len(cell_type_dict.keys()))
+        if palette is None: 
+            palette = make_color_palette(len(cell_type_dict.keys()))
         # generate Image object from array, needs to be converted to uint8 to avoid aliasing
         colored_instance_mask = Image.fromarray(semantic_mask.astype(np.uint8))
         # assign color palette to image
         colored_instance_mask.putpalette(palette)
         # save to png
-        colored_instance_mask.save(str(Path(source_folder).joinpath("semantic_mask.png")))
+        colored_instance_mask.save(str(Path(source_folder).joinpath(f"{file_name}.png")))
 
 
+# this works for 2d but must be adapted for 3d
+# def build_instance_mask(source_folder, file_names): 
+#     """
+#     Combines individual cell masks to a semantic map of the full scene. 
+ 
+#     Args:
+#         source_folder (int): The folder where the masks can be found
+#         file_names (list): List of names of the single masks
+#         class_identifiers (list): LIst of strings identifying the different cell types as shown in file names  
 
-def build_instance_mask(source_folder, file_names): 
+ 
+#     Returns:
+#         instance_mask: A png file where each cell object has a different pixel value
+#     """
+
+#     for file_idx, file_name in enumerate(file_names):   
+#         mask_png = Image.open(file_name) # open mask png
+#         mask_np = np.array(mask_png).astype(np.float64) # convert to numpy
+
+
+#         if file_idx == 0:
+#             instance_mask = np.zeros_like(mask_np) # instance_mask has same shape as the masks
+    
+#         instance_mask += mask_np*((file_idx+1)/255.) # in mask the object has pixel value 255 (backgrund is 0)
+
+#     np.save(str(Path(source_folder).joinpath("instance_mask.npy")), instance_mask)
+
+#     # generate unique colors for each instance (background is black by default)
+#     palette = make_color_palette(len(np.unique(instance_mask)))
+#     # generate Image object from array, needs to be converted to uint8 to avoid aliasing
+#     colored_instance_mask = Image.fromarray(instance_mask.astype(np.uint8))
+#     # assign color palette to image
+#     colored_instance_mask.putpalette(palette)
+#     # save to png
+#     colored_instance_mask.save(str(Path(source_folder).joinpath("instance_mask.png")))
+        
+
+def build_instance_mask(source_folder, cell_info_dicts, file_name="semantic_mask", palette=None): 
+   # source_folder, cell_info_tuples, file_name="semantic_mask", palette = None): 
     """
-    Combines individual cell masks to a semantic map of the full scene. 
+    Combines individual cell masks to an instance map of the full scene. 
  
     Args:
         source_folder (int): The folder where the masks can be found
@@ -103,35 +141,65 @@ def build_instance_mask(source_folder, file_names):
         instance_mask: A png file where each cell object has a different pixel value
     """
 
-    for file_idx, file_name in enumerate(file_names):   
-        mask_png = Image.open(file_name) # open mask png
+    cell_ID_list = [c["ID"] for c in cell_info_dicts] # make list of all cell ids 
+    cell_ID_dict = {cid : (i+1) for i, cid in enumerate(cell_ID_list)} # assign unique integer to each cell id
+
+    #for file_idx, file_name in enumerate(file_names):   ´
+    for cell_counter, cell_info_tuple in enumerate(cell_info_dicts): 
+        cell_id = cell_info_tuple["ID"]
+        cell_mask_file = cell_info_tuple["Filename"]
+        mask_png = Image.open(cell_mask_file) # open mask png
         mask_np = np.array(mask_png).astype(np.float64) # convert to numpy
 
-
-        if file_idx == 0:
+        if cell_counter==0: 
             instance_mask = np.zeros_like(mask_np) # instance_mask has same shape as the masks
+
     
-        instance_mask += mask_np*((file_idx+1)/255.) # in mask the object has pixel value 255 (backgrund is 0)
+        instance_mask += mask_np*((cell_ID_dict[cell_id])/255.) # in mask the object has pixel value 255 (backgrund is 0)
 
     np.save(str(Path(source_folder).joinpath("instance_mask.npy")), instance_mask)
 
     # generate unique colors for each instance (background is black by default)
-    palette = make_color_palette(len(np.unique(instance_mask)))
+    # palette = make_color_palette(len(np.unique(instance_mask)))
     # generate Image object from array, needs to be converted to uint8 to avoid aliasing
     colored_instance_mask = Image.fromarray(instance_mask.astype(np.uint8))
     # assign color palette to image
     colored_instance_mask.putpalette(palette)
     # save to png
-    colored_instance_mask.save(str(Path(source_folder).joinpath("instance_mask.png")))
+    colored_instance_mask.save(str(Path(source_folder).joinpath(f"{file_name}.png")))
+
+
+
+
+
+
 
 
 
 
 def remove_single_masks(file_names): 
-    '''
+    """
     Removes individual cell masks.
-    '''
+    """
 
     for file_name in file_names: 
         os.remove(file_name)
 
+
+
+def build_gif(png_file_names, gif_file_name): 
+    """
+    Combines multiple PNG images to a GIF
+    """
+
+    frames = []
+    for png_file in png_file_names: 
+        frames.append(Image.open(png_file))
+
+    frame_one = frames[0]
+    frame_one.save(gif_file_name,
+                   format="GIF", 
+                   append_images=frames[1:], #list of images to append as additional frames.
+                   save_all=True, 
+                   duration=500, #display duration of each frame, in milliseconds
+                   loop=0)#Number of times to repeat the animation'
