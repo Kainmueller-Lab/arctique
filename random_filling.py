@@ -17,12 +17,12 @@ def delete_objects():
     for mesh in bpy.data.meshes:
         bpy.data.meshes.remove(mesh, do_unlink=True)
         
-def add_point_cloud(locations, radius):
+def add_point_cloud(locations, radius, name=None):
     # Create a small sphere object for each base point
     for idx, location in enumerate(locations):
         bpy.ops.mesh.primitive_uv_sphere_add(radius=radius, location=location)
         sphere = bpy.context.active_object
-        sphere.name = f"Point_{idx}"
+        sphere.name = f"Point_{name}_{idx}" if name!=None else f"Point_{idx}"
         
 def get_shrinked_copy(mesh, shrink_value):
     copied_mesh = mesh.data.copy()
@@ -44,6 +44,7 @@ def generate_points(num_points, min_distance, mesh, padding=True):
     box_volume = get_box_volume(bounding_box)
     max_iterations = upper_limit_points(box_volume, max_radius)
     print(f"Max point count: {max_iterations}")
+
     # Find num_points points inside the mesh that have at least min_distance
     points = []
     iterations = 0
@@ -64,6 +65,20 @@ def generate_points(num_points, min_distance, mesh, padding=True):
     if padding:
         bpy.data.objects.remove(bounding_mesh, do_unlink=True)
     return points
+
+def generate_points_per_type(counts, radii, types, mesh):
+    assert len(counts) == len(radii), "Counts and radii must have the same length"
+    points_per_type = []
+    # Sort counts and radii by radii
+    zipped_data = list(zip(radii, counts, types))
+    sorted_data = sorted(zipped_data, key=lambda x: x[0])
+    
+    for radius, count, type in sorted_data:
+        points = generate_points(count, 2*radius, mesh)
+        points_per_type.append((points, radius, type))
+    assert len(counts) == len(points_per_type), "List points_per_type is not the same length as list counts"
+    return points_per_type
+
 
 
 def minimum_distance(points):
@@ -123,26 +138,30 @@ overlaps. If there are any overlaps, keep the diameter unchanged and continue.
 '''
 
 # TODO
-# - Add arbitrary volume meshes
-# - Add boundary padding
 # - Add different sizes
 # - Add different scales
 # - Add differen orientations
 # - Add blowup algorithm (Monte Carlo)
 
 
-num_points = 200
-min_distance = 0.1  # Example minimum distance
+NUM_POINTS = 200
+TYPES = ["A", "B"]
+RADII = [0.1, 0.05]
+COUNT_RATIOS = [0.2, 0.8]
+
+# Get counts
+sum = sum(COUNT_RATIOS)
+normalized_ratios = [ratio/sum for ratio in COUNT_RATIOS]
+counts = [int(ratio*NUM_POINTS) for ratio in normalized_ratios]
+min_dist = 2 * max(RADII)
 
 # Add a mesh object
 bpy.ops.mesh.primitive_torus_add()
 mesh = bpy.context.active_object
 
 # Generate points inside mesh with given minimum distance
-points = generate_points(num_points, min_distance, mesh)
+points_per_type = generate_points_per_type(counts, RADII, TYPES, mesh)
 
-actual_min_dist = minimum_distance(points)
-print(f"Created {len(points)} points, realised minimum distance: {actual_min_dist}")
-
-add_point_cloud(points, actual_min_dist/2)
+for points, radius, type in points_per_type:
+    add_point_cloud(points, radius, type)
 #mesh.hide_viewport = True
