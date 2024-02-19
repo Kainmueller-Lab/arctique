@@ -1,9 +1,11 @@
-import bmesh
 import random
+
 from mathutils import Vector
+
 from src.objects.cells import Cell
 from src.utils.geometry import *
 from src.utils.helper_methods import *
+from src.utils.voronoi import *
 
 class CellArrangement:
     # Class variable to keep track of the count
@@ -261,4 +263,39 @@ class EpithelialArrangement(CellArrangement):
                 artifacts.append(obj)
         nucleus_objects = [obj for obj in nucleus_objects if obj not in artifacts]
         return nucleus_objects, artifacts
+    
+
+class VolumeFill(CellArrangement):
+    def __init__(self, mesh, number, attributes, ratios):
+        """
+        Initializes a CellArrangement object with the given parameters.
+        Fills a volume with randomly place nuclei of different attributes without intersection.
+
+        Parameters:
+            - mesh: mesh of volume to populate with nuclei
+            - number: number of total nuclei to populate
+            - attributes: list of nuclei type attributes that should appear
+            - ratios: list of ratios of nuclei types to populate
+        """
+        super().__init__()
+        self.mesh = mesh
+        self.number = number
+        self.attributes = attributes
+        self.ratios = ratios
+        self.radii = None # TODO
+        self.types = None # TODO
+
+        # Get counts
+        sum = sum(ratios)
+        normalized_ratios = [ratio/sum for ratio in ratios]
+        self.counts = [int(ratio*number) for ratio in normalized_ratios]
+
+        # Generate points inside mesh with given minimum distance
+        self.points_per_type = generate_points_per_type(self.counts, self.radii, self.types, self.mesh)
+
+
+    def add(self):
+        for points, radius, type in self.points_per_type:
+            # TODO: Make general add_nuclei method
+            add_point_cloud(points, radius, type)
 
