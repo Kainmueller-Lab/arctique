@@ -1,21 +1,28 @@
 import bpy
 import src.arrangement.arrangement as arr
 import src.utils.helper_methods as hm
-import imp
+import src.utils.plot_helpers as ph
+#import imp
+import importlib as imp # imp module is deprecated since python 3.12
+import time
 imp.reload(arr)
 imp.reload(hm)
+imp.reload(ph)
+
+def fn_print_time_when_render_done(dummy):
+    print("----- the time is: ", time.time())
 
 class Camera:
     def __init__(self, name='camera 1', pos = (0, 0, 2), rot = (0, 0, 0), size = (2, 2)):
         self.scene = bpy.context.scene
         cam = bpy.data.cameras.new(name)
         cam.lens = 18
+        
+        self.cam_obj = bpy.data.objects.new(name, cam)
+        self.cam_obj.location = pos
+        self.cam_obj.rotation_euler = rot
+        #self.scene.collection.objects.link(self.cam_obj)
 
-        # create camera object
-        cam_obj = bpy.data.objects.new(name, cam)
-        cam_obj.location = pos
-        cam_obj.rotation_euler = rot
-        self.scene.collection.objects.link(cam_obj)
 
 class LightSource:
     def __init__(self, material, name='lightsource'):
@@ -33,7 +40,8 @@ class BioMedicalScene:
         self.camera = camera
         self.arrangements = []
         self.cell_objects = []
-        self.scene = bpy.context.scene#camera.scene 
+        self.scene = bpy.context.scene
+        self.scene.camera = self.camera.cam_obj
         self._clear_compositor()
 
     @staticmethod
@@ -77,39 +85,157 @@ class BioMedicalScene:
         cell_arrangement.add()
         self.cell_objects = self.cell_objects + cell_arrangement.objects
 
-    def render_engine(self):
-        self.scene.render.engine = 'CYCLES' #or 'BLENDER_EEVEE'
-        self.scene.render.filepath = self.filepath + "cells.png" #render full picture
-        self.scene.render.image_settings.file_format = 'PNG'
+    def hide_everything(self): 
+        '''hide all objects in the scene'''
+        # hide tissue 
+        self.tissue.hide_viewport = True
+        self.tissue.hide_render = True
+        # hide light source
+        self.light_source.light_source.hide_viewport = True
+        self.light_source.light_source.hide_render = True
+        # hide cells 
+        for cell in self.cell_objects: 
+            cell.cell_object.hide_viewport = True
+            cell.cell_object.hide_render = True
+
+    def unhide_everything(self): 
+        '''unhide all objects in the scene'''
+        # unhide tissue
+        self.tissue.hide_viewport = False
+        self.tissue.hide_render = False
+        # unhide light source
+        self.light_source.light_source.hide_viewport = False
+        self.light_source.light_source.hide_render = False
+        # unhide cells 
+        for cell in self.cell_objects: 
+            cell.cell_object.hide_viewport = False
+            cell.cell_object.hide_render = False
+
+    def setup_scene_render_mask(self, output_shape = (500, 500)): 
+        '''specify settings for the rendering of the individual cell masks '''
+        self.scene.render.resolution_x = output_shape[0]
+        self.scene.render.resolution_y = output_shape[0]
+
+        self.scene.render.engine = "BLENDER_WORKBENCH"
+        self.scene.display.shading.light = "FLAT"
+
+        self.scene.display.shading.background_type = "WORLD"
+        self.scene.display.shading.single_color = (255, 255, 255)
+        self.scene.display.render_aa = "OFF"
+
+        self.scene.render.film_transparent = True # this makes the background transparent and the alpha chanell of output will have only two pixel values
+        self.scene.render.image_settings.color_mode = "RGBA"
+
+
+    def setup_scene_render_default(self, output_shape = (500, 500), max_samples = 1024): 
+        '''specify settings for the rendering of the full scene'''
+        self.scene.render.resolution_x = output_shape[0]
+        self.scene.render.resolution_y = output_shape[0]
+        self.scene.render.engine = "CYCLES"
+        self.scene.cycles.samples = max_samples
+        self.scene.render.filepath = self.filepath + "scene.png"
+
+    def export_scene(self): 
+        '''Generates a png image of the complete scene using the specifications defined in setup_scene_render_default'''
+        bpy.ops.render.render('EXEC_DEFAULT', write_still=True)
     
-    def add_output_file(self):
-        self.output_file = self.tree.nodes.new("CompositorNodeOutputFile")
-        self.output_file.base_path = self.filepath
-        self.output_file.format.file_format = 'PNG'
-    
-    def mask_objects(self, index):
-        maskid = self.tree.nodes.new('CompositorNodeIDMask')
-        maskid.index = index
-        self.scene.node_tree.links.new(self.render_nodes.outputs['IndexOB'], maskid.inputs[0])
-        self.output_file.file_slots.new(f"mask_output_{index}")
-        self.scene.node_tree.links.new(maskid.outputs['Alpha'], self.output_file.inputs[1])
-    
-    def render(self, filepath: str, mask: str = False, index: int = 0):
+    def export_masks(self): 
+
+        self.hide_everything()
+        self.cell_info = []
+        for cell in self.cell_objects: 
+            # show only one cell 
+            cell.cell_object.hide_viewport = False
+            cell.cell_object.hide_render = False
+            # save mask for one cell 
+            mask_name = f"{cell.cell_name}.png"
+            self.scene.render.filepath = self.filepath + mask_name
+            
+            cell_id = cell.cell_id   # cell.cell_object.cell_id
+            cell_type = cell.cell_attributes.cell_type
+            cell_filename = self.filepath + mask_name
+            cell_info_tuple = (cell_id, cell_type, cell_filename)
+            self.cell_info.append(cell_info_tuple)
+
+            bpy.ops.render.render('EXEC_DEFAULT', write_still=True)
+            # hide cell again
+            cell.cell_object.hide_viewport = True
+            cell.cell_object.hide_render = True
+
+        self.unhide_everything()
+        ph.reduce_single_masks(self.filepath, [info_tuple[2] for info_tuple in self.cell_info])
+
+
+    def combine_masks_semantic(self): 
+        ph.build_semantic_mask(self.filepath, self.cell_info)
+
+    def combine_masks_instance(self): 
+        cell_mask_filenames = [info_tuple[2] for info_tuple in self.cell_info]
+        
+        ph.build_instance_mask(self.filepath, cell_mask_filenames)
+
+    def remove_single_masks(self): 
+        cell_mask_filenames = [info_tuple[2] for info_tuple in self.cell_info]
+        ph.remove_single_masks(cell_mask_filenames)
+
+    def export_depth(self): 
+        pass
+
+    def export_obj3d(self): 
+        bpy.ops.export_scene.obj(filepath=f"{self.filepath}/my_scene.obj")
+
+    def render(self, 
+               filepath: str, 
+               scene: bool = True, 
+               masks: bool = True, 
+               semantic_mask: bool = False, 
+               instance_mask: bool = False,
+               depth_mask: bool = False, 
+               obj3d: bool = True, 
+               remove_single_masks: bool = False, 
+               output_shape = (500, 500), 
+               max_samples = 10):
+        '''
+        filepath: the folder where all outputs will be stored
+        scene: if true a png of the scene will be generated
+        masks: if true individual masks for each cell will be rendered
+        semantic_mask: if true the individual masks will be combined to a single mask where pixel values distinguish between cell types
+        instance_mask: if true the individual masks will be combined to a single mask each cell has a different pixel value
+        depth_mask: if true a mask will be generated where pixel values correspond to depth values 
+        obj3d: if true the entire scene will be exported in .OBJ format
+        keep_single_masks: if true the an individual mask will be generated and saved for each cell
+        max_samples: number of samples for rendering. Fewer samples will render more quickly
+        '''
+
         self.filepath = filepath
-        self.render_engine()
-        
-        self.scene.use_nodes = True
-        self.tree = self.scene.node_tree
-        self.render_nodes = bpy.context.scene.node_tree.nodes.new(type='CompositorNodeRLayers')
-        bpy.context.scene.view_layers["ViewLayer"].use_pass_object_index = True
-        self.add_output_file()
-        self.scene.node_tree.links.new(self.render_nodes.outputs['Image'], self.output_file.inputs[0])
-        
-        bpy.ops.render.render('INVOKE_DEFAULT', write_still=True)
-        
-        if mask:
-            self.mask_objects(index)
-            bpy.ops.render.render('INVOKE_DEFAULT', write_still=True)
+
+        bpy.app.handlers.render_complete.append(fn_print_time_when_render_done)
+
+        if scene: 
+            self.setup_scene_render_default(output_shape=output_shape, max_samples=max_samples)
+            self.export_scene()
+
+        if masks:
+            self.setup_scene_render_mask(output_shape=output_shape)
+            self.export_masks()
+
+            if semantic_mask: 
+                self.combine_masks_semantic()
+            if instance_mask: 
+                self.combine_masks_instance()
+
+            if remove_single_masks: 
+                self.remove_single_masks()
+
+        if depth_mask: 
+            self.export_depth()
+
+        if obj3d: 
+            self.export_obj3d()
+
+        bpy.app.handlers.render_complete.remove(fn_print_time_when_render_done)
+        print("rendering completed")
+
 
     def hide_auxiliary_objects(self):
         for arr in self.arrangements:

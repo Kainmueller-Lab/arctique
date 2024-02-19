@@ -235,7 +235,7 @@ def get_objects_with(string):
             object_list.append(obj)
     return object_list
 
-def generate_lattice_parameters(theta):
+def generate_lattice_parameters(theta, only_one=False):
    '''
    Theta defines a lattice of 4 isosceles parallelograms of area 1.
    Each such parallelogram defines a rotated ellipsoid fitting into it.
@@ -254,4 +254,8 @@ def generate_lattice_parameters(theta):
    base_pt = Vector([-0.5, -0.5, 0.5])
    lattice = [Vector([0,0,0]), v, w, v+w]
    centers = [base_pt + vec for vec in lattice]
+   if only_one:
+      ico_scales = [ico_scales[0]]
+      angles = [angles[0]]
+      centers = [centers[0]]
    return ico_scales, angles, centers

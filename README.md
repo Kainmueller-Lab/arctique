@@ -25,6 +25,8 @@ pip install fake-bpy-module-latest
 python.exe -m pip install scipy
 ```
 
+NOTE: Order to install python libraries inside Blender follow the description here: [pip install in Blender](https://blender.stackexchange.com/questions/56011/how-to-install-pip-for-blenders-bundled-python)
+
 
 ## Setup Blender and Pycharm
 1) Download [https://www.blender.org/download/](https://www.blender.org/download/)
