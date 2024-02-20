@@ -265,11 +265,7 @@ class EpithelialArrangement(CellArrangement):
         return nucleus_objects, artifacts
     
 
-# TODO
-# - Add different scales
-# - Add differen orientations
-# - Add blowup algorithm (Monte Carlo)
-
+# TODO: Add blowup algorithm (Monte Carlo)
 class VolumeFill(CellArrangement):
     def __init__(self, mesh, number, attributes, ratios):
         """
@@ -284,6 +280,7 @@ class VolumeFill(CellArrangement):
         """
         super().__init__()
         self.mesh = mesh
+        self.subdivision_levels = 2
         self.number = number
         self.attributes = attributes
         self.ratios = ratios
@@ -292,18 +289,39 @@ class VolumeFill(CellArrangement):
         normalized_ratios = [ratio/sum for ratio in ratios]
         self.counts = [int(ratio*number) for ratio in normalized_ratios]
         # Generate points inside mesh with given minimum distance
+        # TODO: Generate based on Mahalanobis distance for scaled spheres
         self.points_per_type = generate_points_per_type(self.counts, self.attributes, self.mesh)
 
     def add(self):
         for points, radius, type in self.points_per_type:
             self.add_nuclei(points, radius, type)
-            # TODO:
-            # deform_nuclei()
 
     def add_nuclei(self, locations, radius, type):
+        attribute = self.get_attribute_by_type(self.attributes, type)
+        world_inv = self.mesh.matrix_world.inverted()
         # Create a small sphere object for each base point
         for idx, location in enumerate(locations):
-            # TODO: Add nuclei based on scale
-            bpy.ops.mesh.primitive_uv_sphere_add(radius=radius, location=location)
-            sphere = bpy.context.active_object
-            sphere.name = f"Nucleus_Type_{type}_{idx}"
+            bpy.ops.mesh.primitive_ico_sphere_add(radius=radius, location=location)
+            nucleus = bpy.context.active_object
+            nucleus.modifiers.new(name="Subdivision", type='SUBSURF')
+            nucleus.modifiers["Subdivision"].levels = self.subdivision_levels
+            bpy.ops.object.modifier_apply({"object": nucleus}, modifier="Subdivision")
+            nucleus.name = f"Nucleus_Type_{type}_{idx}"
+            nucleus.scale = attribute.scale
+            # TODO: orientation of nuclei aligned to mesh
+            nucleus.rotation_euler = [random.uniform(0, 2*math.pi) for _ in range(3)]
+            # Make nuclei children of bounding mesh
+            # TODO: Necessary? seems to take some time
+            nucleus.parent = self.mesh
+            nucleus.matrix_parent_inverse = world_inv
+            #deform_mesh(nucleus, attribute)
+            self.objects.append(nucleus)
+
+    def get_attribute_by_type(self, attributes, type):
+        res = None
+        for attribute in attributes:
+            if attribute.cell_type == type:
+                res = attribute
+                break
+        assert res is not None, "Type not found"
+        return res

@@ -67,7 +67,7 @@ class BioMedicalScene:
     
     def cut_cells(self):
         for cell in self.cell_objects:
-            boolean = cell.cell_object.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
+            boolean = cell.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
             boolean.operation = 'INTERSECT'
             boolean.object = self.tissue_empty
 
