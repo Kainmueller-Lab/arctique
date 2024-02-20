@@ -171,10 +171,10 @@ class BioMedicalScene:
         create a list of dictionaries wich contains for each cell its type and ID 
         ''' 
         self.cell_info = []
-        for cell in self.cell_objects: 
-            cell_id = cell.cell_id   # cell.cell_id
-            cell_type = cell.cell_attributes.cell_type
-            mask_name = f"{cell.cell_name}.png"
+        for idx, cell in enumerate(self.cell_objects): 
+            cell_id = idx
+            cell_type = hm.get_type_from_cell_name(cell.name)
+            mask_name = f"{cell.name}.png"
             cell_filename = self.filepath + mask_name
             cell_info_tuple = {"ID": cell_id, "Type": cell_type, "Filename": cell_filename}
             self.cell_info.append(cell_info_tuple)

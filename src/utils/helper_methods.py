@@ -24,3 +24,6 @@ def get_objects_with(string):
         if obj.name.startswith(string):
             object_list.append(obj)
     return object_list
+
+def get_type_from_cell_name(name):
+    return name.split('_')[2]
