@@ -15,7 +15,6 @@ import src.objects.tissue as tissue
 import src.shading.shading as shading
 import src.scene as scene
 import src.utils as utils
-from src.utils.helper_methods import generate_lattice_parameters
 
 # this next part forces a reload in case you edit the source after you first start the blender session
 #import imp
@@ -31,18 +30,6 @@ imp.reload(utils)
 # args_camera = {'pos'} # no change just test
 
 
-NUMBER = 200
-TYPES = ["A", "B", "C"]
-RADII = [0.1, 0.05, 0.03]
-RATIOS = [0.1, 0.3, 0.6]
-
-# Example torus mesh
-bpy.ops.mesh.primitive_torus_add()
-MESH = bpy.context.active_object
-
-
-
-
 ###################  MAIN  METHOD  #####################
 # create the necessary objects
 scene.BioMedicalScene.clear()
@@ -56,18 +43,15 @@ my_camera = scene.Camera()
 # create scene
 my_scene = scene.BioMedicalScene(my_light_source, my_camera)
 
-
-# TODO
-# - Add different sizes
-# - Add different scales
-# - Add differen orientations
-# - Add blowup algorithm (Monte Carlo)
-
 # add cell arrangement
-# TODO: deal with attributes: size, scale, typename, deformation etc.
+NUMBER = 200
+ATTRIBUTES = [cells.CellAttributeA(), cells.CellAttributeB(), cells.CellAttributeC()]
+RATIOS = [0.1, 0.3, 0.6]
+bpy.ops.mesh.primitive_torus_add(location=(0,0,0.5)) # Example torus mesh
+MESH = bpy.context.active_object
+
 volume_fill = arr.VolumeFill(MESH, NUMBER, ATTRIBUTES, RATIOS)
 my_scene.add_arrangement(volume_fill)
-
 
 # Add tissue
 my_scene.add_tissue(tissue=my_tissue.tissue)
