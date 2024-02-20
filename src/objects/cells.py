@@ -19,9 +19,11 @@ class CellAttribute():
         self.attribute_name = None
         self.max_bending_strength = None
 
+# NOTE: The scale of an attribute should always be normalized such that 1 is the max size. 
+# This ensures that the maximal diameter of a cell nucleus is twice its size.
 class CellAttributeA(CellAttribute):
     # TODO: should defo_strength be relative to size, maybe always 40%? Would make defaulting easier. - ck
-    def __init__(self, cell_type = "A", size = 0.03, scale = (1,1,1), deformation_strength = 0.02, attribute_name = "Cell Type A", max_bending_strength = 0.2):
+    def __init__(self, cell_type = "A", size = 0.03, scale = (1,1,1), deformation_strength = 0.2, attribute_name = "Cell Type A", max_bending_strength = 0.2):
         self.cell_type = cell_type
         self.size = size
         self.scale = scale
@@ -30,7 +32,7 @@ class CellAttributeA(CellAttribute):
         self.max_bending_strength = max_bending_strength
 
 class CellAttributeB(CellAttribute):
-    def __init__(self, cell_type = "B", size = 0.1, scale = (1, 0.8, 0.7), deformation_strength = 0.05, attribute_name = "Cell Type B", max_bending_strength = 0.3):
+    def __init__(self, cell_type = "B", size = 0.1, scale = (1, 0.8, 0.7), deformation_strength = 0.2, attribute_name = "Cell Type B", max_bending_strength = 0.3):
         self.cell_type = cell_type
         self.size = size
         self.scale = scale
@@ -39,7 +41,7 @@ class CellAttributeB(CellAttribute):
         self.max_bending_strength = max_bending_strength
 
 class CellAttributeC(CellAttribute):
-    def __init__(self, cell_type = "C", size = 0.06, scale = (1, 1, 0.5), deformation_strength = 0.03, attribute_name = "Cell Type B", max_bending_strength = 0.3):
+    def __init__(self, cell_type = "C", size = 0.06, scale = (1, 1, 0.5), deformation_strength = 0.2, attribute_name = "Cell Type B", max_bending_strength = 0.3):
         self.cell_type = cell_type
         self.size = size
         self.scale = scale

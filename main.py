@@ -44,11 +44,11 @@ my_camera = scene.Camera()
 my_scene = scene.BioMedicalScene(my_light_source, my_camera)
 
 # add cell arrangement
-NUMBER = 200
+bpy.ops.mesh.primitive_torus_add(location=(0,0,0.5)) # Example bounding torus mesh
+MESH = bpy.context.active_object
+NUMBER = 20
 ATTRIBUTES = [cells.CellAttributeA(), cells.CellAttributeB(), cells.CellAttributeC()]
 RATIOS = [0.1, 0.3, 0.6]
-bpy.ops.mesh.primitive_torus_add(location=(0,0,0.5)) # Example torus mesh
-MESH = bpy.context.active_object
 
 volume_fill = arr.VolumeFill(MESH, NUMBER, ATTRIBUTES, RATIOS)
 my_scene.add_arrangement(volume_fill)

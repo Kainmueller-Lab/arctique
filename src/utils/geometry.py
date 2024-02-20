@@ -346,3 +346,69 @@ def get_box_volume(bounding_box):
 def random_point_in_bbox(bounding_box):
     xs, ys, zs = bounding_box
     return Vector((random.uniform(xs[0], xs[1]), random.uniform(ys[0], ys[1]), random.uniform(zs[0], zs[1])))
+
+def deform_mesh_old(mesh, attribute):
+    """
+    Deforms the mesh by adding a random displacement to each vertex position.
+    This function iterates through each vertex of the mesh and deforms its position
+    by adding a random displacement vector. The displacement vector is calculated
+    by multiplying a random vector with values between -1 and 1 by the scale and
+    deformation strength attributes of the cell. The original position of each 
+    vertex is stored and then updated by adding the deformation vector.
+    """
+    # Iterate through each vertex and deform its position
+    for vertex in mesh.data.vertices:
+        original_position = vertex.co.copy()
+        deformation_vector = Vector([
+            random.uniform(-1, 1),
+            random.uniform(-1, 1),
+            random.uniform(-1, 1)
+        ])*Vector(attribute.scale)*attribute.deformation_strength*attribute.size
+        vertex.co = original_position + deformation_vector
+
+def deform_mesh(obj, attribute):
+    """
+    Deforms the mesh by randomly translating a subset of vertices using proportional edit.
+    That is, neighboring vertices are also translated proportionally
+
+    Parameters:
+    - None
+    
+    Return:
+    - None
+    
+    Internal Variables:
+    - TRANSLATION_RANGE: The maximum range of translation for each vertex.
+    - TRANSFORM_COUNT: The number of transformations to apply.
+    - PROPORTIONAL_SIZE: The size of the proportional edit range.
+    """
+    # TODO: Put these variables as members to CellAttributes class. - ck
+    # NOTE: One can fine tune these values for better results. So far this is good enough. - ck
+    TRANSLATION_RANGE = 0.05
+    TRANSFORM_COUNT = 15
+    PROPORTIONAL_SIZE = 0.5     
+
+    mesh = obj.data
+    # deselect all faces
+    mesh.polygons.foreach_set("select", (False,) * len(mesh.polygons))
+    # deselect all edges
+    mesh.edges.foreach_set("select", (False,) * len(mesh.edges))
+    # deselect all vertices
+    mesh.vertices.foreach_set("select", (False,) * len(mesh.vertices))
+    # translate random mesh vertices using proportional edit
+    for _ in range(TRANSFORM_COUNT):
+        transform = Vector([random.uniform(-1, 1),
+                    random.uniform(-1, 1),
+                    random.uniform(-1, 1)])*TRANSLATION_RANGE
+        v = mesh.vertices[random.randint(0, len(mesh.vertices) - 1)]
+        v.select = True
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.transform.translate(value=transform, 
+                                constraint_axis=(False, False, False),
+                                orient_type='GLOBAL',
+                                mirror=False, 
+                                use_proportional_edit = True,
+                                use_proportional_connected =True,
+                                proportional_edit_falloff='SMOOTH',
+                                proportional_size=PROPORTIONAL_SIZE)
+        bpy.ops.object.mode_set(mode='OBJECT')
