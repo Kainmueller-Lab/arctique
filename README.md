@@ -11,7 +11,28 @@ world: Domain Adaption and Uncertainty Prediction.
 
 For now, let's dive into the installation procedure.
 
-## Setup Blender and VS Code
+## Automatic Installation
+TBA
+
+## Manual Installation
+1) Download [https://www.blender.org/download/](https://www.blender.org/download/)
+2) Clone this repository: 
+```
+git clone https://github.com/Kainmueller-Lab/rendered_HE.git
+```
+3) Install the package inside the blender python.
+For windows, adapt the following command:
+```
+blender-X\\X.0\\python\\bin\\python.exe -m pip install -e rendered_HE
+```
+For linux, adapt the following command:
+```
+blender-X.X/python/bin/python3.9 -m pip install -e rendered_HE
+```
+
+TODO: how to run the main.py script inside blender?
+
+## Setup Blender and VS Code for development
 
 1) Download [https://www.blender.org/download/](https://www.blender.org/download/)
 2) Follow the steps in: [5 Steps to setup VSCode for Blender Python (on Windows)](https://www.youtube.com/watch?v=YUytEtaVrrc).
@@ -28,7 +49,7 @@ python.exe -m pip install scipy
 NOTE: Order to install python libraries inside Blender follow the description here: [pip install in Blender](https://blender.stackexchange.com/questions/56011/how-to-install-pip-for-blenders-bundled-python)
 
 
-## Setup Blender and Pycharm
+## Setup Blender and Pycharm  for development
 1) Download [https://www.blender.org/download/](https://www.blender.org/download/)
 2) Install blend-charm plugin via: [https://github.com/BlackStartx/PyCharm-Blender-Plugin](https://github.com/BlackStartx/PyCharm-Blender-Plugin) (see releases, make sure you have the correct pycharm version for the plugin!)
 3) Follow instructions in the repository.
