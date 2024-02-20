@@ -255,6 +255,7 @@ class BioMedicalScene:
         if semantic_mask: 
             semantic_palette = self.define_palette(type="semantic")
             self.combine_masks_semantic(palette=semantic_palette)
+            
         if instance_mask: 
             instance_palette = self.define_palette(type="instance")
             self.combine_masks_instance(palette=instance_palette)
