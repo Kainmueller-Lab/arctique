@@ -1,9 +1,11 @@
-import bmesh
 import random
+
 from mathutils import Vector
+
 from src.objects.cells import Cell
 from src.utils.geometry import *
 from src.utils.helper_methods import *
+from src.utils.voronoi import *
 
 class CellArrangement:
     # Class variable to keep track of the count
@@ -261,4 +263,47 @@ class EpithelialArrangement(CellArrangement):
                 artifacts.append(obj)
         nucleus_objects = [obj for obj in nucleus_objects if obj not in artifacts]
         return nucleus_objects, artifacts
+    
 
+# TODO
+# - Add different scales
+# - Add differen orientations
+# - Add blowup algorithm (Monte Carlo)
+
+class VolumeFill(CellArrangement):
+    def __init__(self, mesh, number, attributes, ratios):
+        """
+        Initializes a CellArrangement object with the given parameters.
+        Fills a volume with randomly place nuclei of different attributes without intersection.
+
+        Parameters:
+            - mesh: mesh of volume to populate with nuclei
+            - number: number of total nuclei to populate
+            - attributes: list of nuclei type attributes that should appear
+            - ratios: list of ratios of nuclei types to populate
+        """
+        super().__init__()
+        self.mesh = mesh
+        self.number = number
+        self.attributes = attributes
+        self.ratios = ratios
+        # Get count
+        sum = np.sum(ratios)
+        normalized_ratios = [ratio/sum for ratio in ratios]
+        self.counts = [int(ratio*number) for ratio in normalized_ratios]
+        # Generate points inside mesh with given minimum distance
+        self.points_per_type = generate_points_per_type(self.counts, self.attributes, self.mesh)
+
+    def add(self):
+        for points, radius, type in self.points_per_type:
+            self.add_nuclei(points, radius, type)
+            # TODO:
+            # deform_nuclei()
+
+    def add_nuclei(self, locations, radius, type):
+        # Create a small sphere object for each base point
+        for idx, location in enumerate(locations):
+            # TODO: Add nuclei based on scale
+            bpy.ops.mesh.primitive_uv_sphere_add(radius=radius, location=location)
+            sphere = bpy.context.active_object
+            sphere.name = f"Nucleus_Type_{type}_{idx}"

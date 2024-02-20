@@ -8,7 +8,7 @@ from typing import List, Optional
 from mathutils import Vector
 
 from src.shading.shading import Material
-from src.utils.helper_methods import set_orientation
+from src.utils.geometry import set_orientation
 
 class CellAttribute():
     def __init__(self):
@@ -20,7 +20,8 @@ class CellAttribute():
         self.max_bending_strength = None
 
 class CellAttributeA(CellAttribute):
-    def __init__(self, cell_type = "A", size = 0.04, scale = (1,1,1), deformation_strength = 0.02, attribute_name = "Cell Type A", max_bending_strength = 0.2):
+    # TODO: should defo_strength be relative to size, maybe always 40%? Would make defaulting easier. - ck
+    def __init__(self, cell_type = "A", size = 0.03, scale = (1,1,1), deformation_strength = 0.02, attribute_name = "Cell Type A", max_bending_strength = 0.2):
         self.cell_type = cell_type
         self.size = size
         self.scale = scale
@@ -30,6 +31,15 @@ class CellAttributeA(CellAttribute):
 
 class CellAttributeB(CellAttribute):
     def __init__(self, cell_type = "B", size = 0.1, scale = (1, 0.8, 0.7), deformation_strength = 0.05, attribute_name = "Cell Type B", max_bending_strength = 0.3):
+        self.cell_type = cell_type
+        self.size = size
+        self.scale = scale
+        self.deformation_strength = deformation_strength
+        self.attribute_name = attribute_name
+        self.max_bending_strength = max_bending_strength
+
+class CellAttributeC(CellAttribute):
+    def __init__(self, cell_type = "C", size = 0.06, scale = (1, 1, 0.5), deformation_strength = 0.03, attribute_name = "Cell Type B", max_bending_strength = 0.3):
         self.cell_type = cell_type
         self.size = size
         self.scale = scale
