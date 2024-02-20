@@ -74,19 +74,19 @@ class BioMedicalScene:
     def uncut_cells(self): 
         """ reverses the action of cut_cells"""
         for cell in self.cell_objects:
-            mod = cell.cell_object.modifiers['Boolean Modifier']
-            cell.cell_object.modifiers.remove(mod)
+            mod = cell.modifiers['Boolean Modifier']
+            cell.modifiers.remove(mod)
 
     def cut_tissue(self):
         for cell in self.cell_objects:
             boolean = self.tissue.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
             boolean.operation = 'DIFFERENCE'
-            boolean.object = cell.cell_object
+            boolean.object = cell
 
     def add_staining(self, material):
         for cell in self.cell_objects:
-            cell.cell_object.data.materials.append(material)
-            cell.cell_object.active_material = material
+            cell.data.materials.append(material)
+            cell.active_material = material
     
     def add_arrangement(self, cell_arrangement: arr.CellArrangement):
         self.arrangements.append(cell_arrangement)
@@ -103,8 +103,8 @@ class BioMedicalScene:
         self.light_source.light_source.hide_render = True
         # hide cells 
         for cell in self.cell_objects: 
-            cell.cell_object.hide_viewport = True
-            cell.cell_object.hide_render = True
+            cell.hide_viewport = True
+            cell.hide_render = True
 
     def unhide_everything(self): 
         '''unhide all objects in the scene'''
@@ -116,8 +116,8 @@ class BioMedicalScene:
         self.light_source.light_source.hide_render = False
         # unhide cells 
         for cell in self.cell_objects: 
-            cell.cell_object.hide_viewport = False
-            cell.cell_object.hide_render = False
+            cell.hide_viewport = False
+            cell.hide_render = False
 
     def setup_scene_render_mask(self, output_shape = (500, 500)): 
         '''specify settings for the rendering of the individual cell masks '''
@@ -172,7 +172,7 @@ class BioMedicalScene:
         ''' 
         self.cell_info = []
         for cell in self.cell_objects: 
-            cell_id = cell.cell_id   # cell.cell_object.cell_id
+            cell_id = cell.cell_id   # cell.cell_id
             cell_type = cell.cell_attributes.cell_type
             mask_name = f"{cell.cell_name}.png"
             cell_filename = self.filepath + mask_name

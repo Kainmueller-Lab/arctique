@@ -45,8 +45,9 @@ my_scene = scene.BioMedicalScene(my_light_source, my_camera)
 
 # add cell arrangement
 bpy.ops.mesh.primitive_torus_add(location=(0,0,0.5)) # Example bounding torus mesh
+# TODO: Changing the scale of the bounding volume does not affect the placement of nuclei :/
 MESH = bpy.context.active_object
-NUMBER = 20
+NUMBER = 200
 ATTRIBUTES = [cells.CellAttributeA(), cells.CellAttributeB(), cells.CellAttributeC()]
 RATIOS = [0.1, 0.3, 0.6]
 
