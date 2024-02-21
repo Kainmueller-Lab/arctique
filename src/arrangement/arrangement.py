@@ -298,23 +298,25 @@ class VolumeFill(CellArrangement):
 
     def add_nuclei(self, locations, radius, type):
         attribute = self.get_attribute_by_type(self.attributes, type)
-        world_inv = self.mesh.matrix_world.inverted()
+
         # Create a small sphere object for each base point
         for idx, location in enumerate(locations):
-            bpy.ops.mesh.primitive_ico_sphere_add(radius=radius, location=location)
+            bpy.ops.mesh.primitive_ico_sphere_add(radius=radius)
             nucleus = bpy.context.active_object
-            nucleus.modifiers.new(name="Subdivision", type='SUBSURF')
-            nucleus.modifiers["Subdivision"].levels = self.subdivision_levels
-            bpy.ops.object.modifier_apply({"object": nucleus}, modifier="Subdivision")
+            deform_mesh(nucleus, attribute)
             nucleus.name = f"Nucleus_Type_{type}_{idx}"
+            nucleus.location = location
             nucleus.scale = attribute.scale
             # TODO: orientation of nuclei aligned to mesh
             nucleus.rotation_euler = [random.uniform(0, 2*math.pi) for _ in range(3)]
+            # TODO: Necessary?
             # Make nuclei children of bounding mesh
-            # TODO: Necessary? seems to take some time
-            nucleus.parent = self.mesh
-            nucleus.matrix_parent_inverse = world_inv
-            #deform_mesh(nucleus, attribute)
+            #nucleus.parent = self.mesh
+            #world_inv = self.mesh.matrix_world.inverted()
+            #nucleus.matrix_parent_inverse = world_inv
+            nucleus.modifiers.new(name="Subdivision", type='SUBSURF')
+            nucleus.modifiers["Subdivision"].levels = self.subdivision_levels
+            bpy.ops.object.modifier_apply({"object": nucleus}, modifier="Subdivision")
             self.objects.append(nucleus)
 
     def get_attribute_by_type(self, attributes, type):
