@@ -42,7 +42,6 @@ class BioMedicalScene:
         self.camera = camera
         self.arrangements = []
         self.cell_objects = []
-        self.bounding_mesh = None
         self.scene = bpy.context.scene
         self.scene.camera = self.camera.cam_obj
         self._clear_compositor()
@@ -90,10 +89,12 @@ class BioMedicalScene:
             cell.active_material = material
     
     def add_arrangement(self, cell_arrangement: arr.CellArrangement):
-        self.bounding_mesh = cell_arrangement.mesh
         self.arrangements.append(cell_arrangement)
         cell_arrangement.add()
         self.cell_objects = self.cell_objects + cell_arrangement.objects
+        # Delete mesh
+        # NOTE: The mesh might be needed in the future. In that case remove it differently.
+        bpy.data.objects.remove(cell_arrangement.mesh)
 
     def hide_everything(self): 
         '''hide all objects in the scene'''
@@ -103,10 +104,6 @@ class BioMedicalScene:
         # hide light source
         self.light_source.light_source.hide_viewport = True
         self.light_source.light_source.hide_render = True
-        # hide bounding volume
-        # TODO: edit for multiple volumes
-        self.bounding_mesh.hide_viewport = True
-        self.bounding_mesh.hide_render = True
         # hide cells 
         for cell in self.cell_objects: 
             cell.hide_viewport = True
