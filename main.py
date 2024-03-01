@@ -44,19 +44,32 @@ my_camera = scene.Camera()
 my_scene = scene.BioMedicalScene(my_light_source, my_camera)
 
 # Define volume and surface objects
+# NOTE: Tissue usually 5-10 mu thick, Epithelial cells usally 9-17 mu thick, nuclei apparently also 5-10 mu
 # TODO: Make tissue parameters hard-coded and use those for placing the object more precisely
 # TODO: This object is an example and should be replaced by a tissue object to be populated with nuclei.
 bpy.ops.mesh.primitive_torus_add() # Example bounding torus mesh
-OBJ = bpy.context.active_object
-OBJ.location = (0, 0, 0.5)
-OBJ.scale = (1, 0.7, 0.7)
+VOL_OBJ = bpy.context.active_object
+VOL_OBJ.location = (0, 0, 0.5)
+VOL_OBJ.scale = (1, 0.7, 0.7)
 # NOTE: Necessary to transform the vertices of the mesh according to scale
 # It should be used when the object is created, but maybe there's a better place in the methds for it. ck
 bpy.ops.object.transform_apply(location=True, rotation=True, scale=True) 
 
-# TODO: Think about whether the objects ae still necessary after the meshes are populated. 
-# I think yes,so take care of that.
-bpy.ops.mesh.primitive_torus_add() # Example bounding torus mesh
+# Intersect with tissue
+bool_mod = VOL_OBJ.modifiers.new(name="Intersection", type='BOOLEAN')
+bool_mod.object = my_tissue.tissue
+bool_mod.operation = 'INTERSECT'
+bpy.ops.object.modifier_apply(modifier=bool_mod.name)
+
+# Add volume filling
+NUMBER = 200
+ATTRIBUTES = [cells.CellAttributeA(), cells.CellAttributeB(), cells.CellAttributeC()]
+RATIOS = [0.05, 0.15, 0.8]
+#volume_fill = arr.VolumeFill(VOL_OBJ, NUMBER, ATTRIBUTES, RATIOS, strict_boundary=False)
+#my_scene.add_arrangement(volume_fill)
+
+# Add surface filling
+bpy.ops.mesh.primitive_torus_add()
 SURF_OBJ = bpy.context.active_object
 SURF_OBJ.location = (0, 0, 0.5)
 SURF_OBJ.scale = (1, 0.7, 0.7)
@@ -64,18 +77,22 @@ SURF_OBJ.scale = (1, 0.7, 0.7)
 # It should be used when the object is created, but maybe there's a better place in the methds for it. ck
 bpy.ops.object.transform_apply(location=True, rotation=True, scale=True) 
 
-# Add volume filling
-NUMBER = 200
-ATTRIBUTES = [cells.CellAttributeA(), cells.CellAttributeB(), cells.CellAttributeC()]
-RATIOS = [0.1, 0.3, 0.6]
-volume_fill = arr.VolumeFill(OBJ, NUMBER, ATTRIBUTES, RATIOS, strict_boundary=True)
-my_scene.add_arrangement(volume_fill)
+# Intersect with tissue
+bool_mod = SURF_OBJ.modifiers.new(name="Intersection", type='BOOLEAN')
+bool_mod.object = my_tissue.tissue
+bool_mod.operation = 'INTERSECT'
+bpy.ops.object.modifier_apply(modifier=bool_mod.name)
 
-# Add surface filling
 SURF_NUMBER = 200
-SURF_ATTRIBUTE = cells.CellAttributeA()
+SURF_ATTRIBUTE = cells.CellAttributeEpi()
 surface_fill = arr.SurfaceFill(SURF_OBJ, SURF_NUMBER, SURF_ATTRIBUTE)
 my_scene.add_arrangement(surface_fill)
+
+# Hide macro objects
+# OBJ.hide_viewport = True
+# OBJ.hide_render = True
+# SURF_OBJ.hide_viewport = True
+# SURF_OBJ.hide_render = True
 
 # TODO:
 # - Add surface fill arrangement

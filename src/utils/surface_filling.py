@@ -123,22 +123,20 @@ def fill_surface(obj, max_point_count, attribute):
     First refines the mesh of the object until the edges are sufficiently small.
     Then samples the maximal number of vertices on the refined mesh such that intersection free placement of nuclei is possible.
     '''
-    # TODO: Fille the parameters with attribute info
-    MIN_DIST = 0.12
-    FILL_DIST = 0.09
-    SCALE = (2,1,1)
-
-    max_point_count = 200
-
-    # TODO: Find optimal value, maybe MIN_DIST/3? - ck
-    mesh_delta = MIN_DIST/3 # Maximal edge length in refined mesh
+    
+    min_dist = 4 * attribute.size * attribute.scale[1] # NOTE: Use medium radius of scale, as max radius is for normal direction. - ck
+    # TODO: Test value 0.75
+    # NOTE: That's the best idea so far for creating packed surfaces. Is there better way? - ck
+    fill_dist = min_dist * 0.75 # Smaller radius of nucleus to fill the gaps between large ones
+    # NOTE: Find optimal value, min_dist/3 looks good? - ck
+    mesh_delta = min_dist/3 # Refine mesh until vertices in mesh grid are at most mesh_delta apart.
 
     triangulate_object(obj)
     mesh = obj.data
 
     # Density information
     #area = mesh_area(mesh)
-    #radius = MIN_DIST/2
+    #radius = min_dist/2
     #print(f"\nArea of Mesh: {area}")
     #print(f"Number of faces: {len(mesh.polygons)}")
     #print(f"Max number of cells of radius {radius} for dense packing: {0.6*area/(np.pi*radius*radius)}")
@@ -153,7 +151,7 @@ def fill_surface(obj, max_point_count, attribute):
     # Sample nuclei centers
     grid_verts = list(mesh.vertices)
     random.shuffle(grid_verts)
-    center_verts = sample_centers(grid_verts, MIN_DIST, max_point_count)
-    filler_verts = sample_fillers(grid_verts, center_verts, MIN_DIST, FILL_DIST, max_point_count)
+    center_verts = sample_centers(grid_verts, min_dist, max_point_count)
+    filler_verts = sample_fillers(grid_verts, center_verts, min_dist, fill_dist, max_point_count)
     #print(f"Placed {len(center_verts)} centers and {len(filler_verts)} fillers")
     return center_verts, filler_verts
