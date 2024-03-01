@@ -43,7 +43,7 @@ my_camera = scene.Camera()
 # create scene
 my_scene = scene.BioMedicalScene(my_light_source, my_camera)
 
-# add cell arrangement
+# Define volume and surface objects
 # TODO: Make tissue parameters hard-coded and use those for placing the object more precisely
 # TODO: This object is an example and should be replaced by a tissue object to be populated with nuclei.
 bpy.ops.mesh.primitive_torus_add() # Example bounding torus mesh
@@ -54,12 +54,28 @@ OBJ.scale = (1, 0.7, 0.7)
 # It should be used when the object is created, but maybe there's a better place in the methds for it. ck
 bpy.ops.object.transform_apply(location=True, rotation=True, scale=True) 
 
+# TODO: Think about whether the objects ae still necessary after the meshes are populated. 
+# I think yes,so take care of that.
+bpy.ops.mesh.primitive_torus_add() # Example bounding torus mesh
+SURF_OBJ = bpy.context.active_object
+SURF_OBJ.location = (0, 0, 0.5)
+SURF_OBJ.scale = (1, 0.7, 0.7)
+# NOTE: Necessary to transform the vertices of the mesh according to scale
+# It should be used when the object is created, but maybe there's a better place in the methds for it. ck
+bpy.ops.object.transform_apply(location=True, rotation=True, scale=True) 
+
+# Add volume filling
 NUMBER = 200
 ATTRIBUTES = [cells.CellAttributeA(), cells.CellAttributeB(), cells.CellAttributeC()]
 RATIOS = [0.1, 0.3, 0.6]
-
 volume_fill = arr.VolumeFill(OBJ, NUMBER, ATTRIBUTES, RATIOS, strict_boundary=True)
 my_scene.add_arrangement(volume_fill)
+
+# Add surface filling
+SURF_NUMBER = 200
+SURF_ATTRIBUTE = cells.CellAttributeA()
+surface_fill = arr.SurfaceFill(SURF_OBJ, SURF_NUMBER, SURF_ATTRIBUTE)
+my_scene.add_arrangement(surface_fill)
 
 # TODO:
 # - Add surface fill arrangement

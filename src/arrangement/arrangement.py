@@ -5,6 +5,7 @@ from mathutils import Vector
 from src.objects.cells import Cell
 from src.utils.geometry import *
 from src.utils.helper_methods import *
+from src.utils.surface_filling import fill_surface
 from src.utils.voronoi import *
 
 class CellArrangement:
@@ -270,7 +271,7 @@ class VolumeFill(CellArrangement):
     def __init__(self, mesh, number, attributes, ratios, strict_boundary = True):
         """
         Initializes a CellArrangement object with the given parameters.
-        Fills a volume with randomly place nuclei of different attributes without intersection.
+        Fills a volume with randomly placed nuclei of different attributes without intersection.
 
         Parameters:
             - mesh: mesh of volume to populate with nuclei
@@ -328,3 +329,47 @@ class VolumeFill(CellArrangement):
                 break
         assert res is not None, "Type not found"
         return res
+
+class SurfaceFill(CellArrangement):
+    #OBJ, SURF_ATTRIBUTE)
+    def __init__(self, mesh, number, attribute):
+        """
+        Initializes a CellArrangement object with the given parameters.
+        Fills a surface with randomly place nuclei of given attribute
+        such that the x-axes of the nuclei are aligned with the surface normals.
+
+        Parameters:
+            - mesh: mesh of volume to populate with nuclei
+            - number: number of total nuclei to populate
+            - attributes: list of nuclei type attributes that should appear
+            - ratios: list of ratios of nuclei types to populate
+        """
+        super().__init__()
+        self.mesh = mesh
+        self.number = number
+        self.attribute = attribute
+        self.main_verts, self.filler_verts = fill_surface(self.mesh, self.number, self.attribute)
+
+
+    def add(self):
+        center_points = [v.co for v in self.main_verts]
+        center_normals = [v.normal for v in self.main_verts]
+        self.add_nuclei(center_points, center_normals, self.attribute)
+
+        filler_points = [v.co for v in self.filler_verts]
+        filler_normals = [v.normal for v in self.filler_verts]
+        self.add_nuclei(filler_points, filler_normals, self.attribute)
+
+    def add_nuclei(self, points, normals, attribute):
+        for idx, (pt, dir) in enumerate(zip(points, normals)):
+            bpy.ops.mesh.primitive_uv_sphere_add(radius=attribute.size)
+            nucleus = bpy.context.active_object
+            # TODO: add defotm
+            # deform_mesh(nucleus, attribute)
+            nucleus.location = pt
+            # Rotate obj such that local x axis is aligned with surface normal
+            rotation_matrix = Matrix.Translation(nucleus.location) @ dir.to_track_quat('X').to_matrix().to_4x4()
+            nucleus.matrix_world = rotation_matrix
+            nucleus.scale = attribute.scale
+            nucleus.name = f"Surface_Nucleus_Type_{attribute.cell_type}_{idx}"
+            self.objects.append(nucleus)

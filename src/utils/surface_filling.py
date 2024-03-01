@@ -59,7 +59,7 @@ def refine_mesh(mesh, delta, smoothness=1):
     bpy.ops.object.mode_set(mode='EDIT')
     for face in mesh.polygons:
         # Get longest side length of face
-        vertices = [obj.data.vertices[index].co for index in face.vertices]
+        vertices = [mesh.vertices[index].co for index in face.vertices]
         diameter = max((v1 - v2).length for v1 in vertices for v2 in vertices)
 
         # If face is too large subdivide it
@@ -71,38 +71,39 @@ def refine_mesh(mesh, delta, smoothness=1):
     bpy.ops.object.mode_set(mode='OBJECT')
     return mesh
 
-def sample_centers(points, dist, max_count):
-    sampled_points = []
-    for pt in points:
+def sample_centers(verts, dist, max_count):
+    sampled_verts = []
+    for v in verts:
         is_free = True
-        for q in sampled_points:
-            if (pt-q).length < dist:
+        for q in sampled_verts:
+            if (v.co-q.co).length < dist:
                 is_free = False
                 break
         if is_free:
-            sampled_points.append(pt)
-        if len(sampled_points) == max_count:
+            sampled_verts.append(v)
+        if len(sampled_verts) == max_count:
             break
-    return sampled_points
+    return sampled_verts
         
-def sample_fillers(grid_points, center_points, center_dist, fill_dist, max_count):
-    filler_points = []
-    for pt in grid_points:
+def sample_fillers(mesh_verts, center_verts, center_dist, fill_dist, max_count):
+    filler_verts = []
+    for v in mesh_verts:
         is_free = True
-        for q in center_points:
-            if (pt-q).length < 0.5*(center_dist+fill_dist):
+        for q in center_verts:
+            if (v.co-q.co).length < 0.5*(center_dist+fill_dist):
                 is_free = False
                 break
-        for q in filler_points:
-            if (pt-q).length < fill_dist:
+        for q in filler_verts:
+            if (v.co-q.co).length < fill_dist:
                 is_free = False
                 break
         if is_free:
-            filler_points.append(pt)
-        if len(filler_points) == max_count:
+            filler_verts.append(v)
+        if len(filler_verts) == max_count:
             break
-    return filler_points
-
+    return filler_verts
+        
+        
 def add_oriented_points(points, directions, scale, radius):
     for idx, (pt, dir) in enumerate(zip(points, directions)):
         bpy.ops.mesh.primitive_uv_sphere_add(radius=radius)
@@ -115,3 +116,44 @@ def add_oriented_points(points, directions, scale, radius):
         sphere.scale = scale
         
         sphere.name = f"Point_{idx}"
+        
+
+def fill_surface(obj, max_point_count, attribute):
+    '''
+    First refines the mesh of the object until the edges are sufficiently small.
+    Then samples the maximal number of vertices on the refined mesh such that intersection free placement of nuclei is possible.
+    '''
+    # TODO: Fille the parameters with attribute info
+    MIN_DIST = 0.12
+    FILL_DIST = 0.09
+    SCALE = (2,1,1)
+
+    max_point_count = 200
+
+    # TODO: Find optimal value, maybe MIN_DIST/3? - ck
+    mesh_delta = MIN_DIST/3 # Maximal edge length in refined mesh
+
+    triangulate_object(obj)
+    mesh = obj.data
+
+    # Density information
+    #area = mesh_area(mesh)
+    #radius = MIN_DIST/2
+    #print(f"\nArea of Mesh: {area}")
+    #print(f"Number of faces: {len(mesh.polygons)}")
+    #print(f"Max number of cells of radius {radius} for dense packing: {0.6*area/(np.pi*radius*radius)}")
+
+    # Refine mesh
+    # _, max_edge = min_max_edges(mesh)
+    # print(f"Before refinement: {len(mesh.vertices)} vertices, mesh offset {max_edge}")
+    mesh = refine_mesh(mesh, mesh_delta)
+    # _, max_edge = min_max_edges(mesh)
+    # print(f"After refinement: {len(mesh.vertices)} vertices, mesh offset {max_edge}")
+
+    # Sample nuclei centers
+    grid_verts = list(mesh.vertices)
+    random.shuffle(grid_verts)
+    center_verts = sample_centers(grid_verts, MIN_DIST, max_point_count)
+    filler_verts = sample_fillers(grid_verts, center_verts, MIN_DIST, FILL_DIST, max_point_count)
+    #print(f"Placed {len(center_verts)} centers and {len(filler_verts)} fillers")
+    return center_verts, filler_verts
