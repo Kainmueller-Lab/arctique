@@ -262,7 +262,7 @@ def generate_points(num_points, min_distance, mesh, padding=True):
         bpy.data.objects.remove(bounding_mesh, do_unlink=True)
     return points
 
-def generate_points_per_type(counts, attributes, mesh, padding=True):
+def generate_points_per_type(counts, attributes, mesh, padding):
     radii = [attribute.size for attribute in attributes]
     types = [attribute.cell_type for attribute in attributes]
     assert len(counts) == len(radii), "Counts and radii must have the same length"

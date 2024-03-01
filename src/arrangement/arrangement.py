@@ -267,7 +267,7 @@ class EpithelialArrangement(CellArrangement):
 
 # TODO: Add blowup algorithm (Monte Carlo)
 class VolumeFill(CellArrangement):
-    def __init__(self, mesh, number, attributes, ratios):
+    def __init__(self, mesh, number, attributes, ratios, strict_boundary = True):
         """
         Initializes a CellArrangement object with the given parameters.
         Fills a volume with randomly place nuclei of different attributes without intersection.
@@ -284,13 +284,14 @@ class VolumeFill(CellArrangement):
         self.number = number
         self.attributes = attributes
         self.ratios = ratios
+        self.strict_boundary = strict_boundary # If true will place nuclei fully inside the mesh, if false only centroids will be placed fully inside the mesh
         # Get count
         sum = np.sum(ratios)
         normalized_ratios = [ratio/sum for ratio in ratios]
         self.counts = [int(ratio*number) for ratio in normalized_ratios]
         # Generate points inside mesh with given minimum distance
         # TODO: Generate based on Mahalanobis distance for scaled spheres
-        self.points_per_type = generate_points_per_type(self.counts, self.attributes, self.mesh)
+        self.points_per_type = generate_points_per_type(self.counts, self.attributes, self.mesh, self.strict_boundary)
 
     def add(self):
         for points, radius, type in self.points_per_type:
