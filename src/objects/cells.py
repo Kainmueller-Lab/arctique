@@ -50,6 +50,7 @@ class CellAttributeC(CellAttribute):
         self.max_bending_strength = max_bending_strength
 
 class CellAttributeEpi(CellAttribute):
+    # TODO: Make cell type a fixed value
     def __init__(self, cell_type = "Epi", size = 0.06, scale = (1, 0.5, 0.4), deformation_strength = 0.2, attribute_name = "Epithelial cell", max_bending_strength = 0.3):
         self.cell_type = cell_type
         self.size = size

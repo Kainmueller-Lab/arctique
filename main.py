@@ -14,6 +14,8 @@ import src.objects.tissue as tissue
 import src.shading.shading as shading
 import src.scene as scene
 import src.utils as utils
+import src.utils.geometry as geom
+import src.utils.surface_filling as sf
 
 # this next part forces a reload in case you edit the source after you first start the blender session
 #import imp
@@ -24,6 +26,8 @@ imp.reload(tissue)
 imp.reload(shading)
 imp.reload(scene)
 imp.reload(utils)
+imp.reload(geom)
+imp.reload(sf)
 
 ###################  PARAMETER  #####################
 # args_camera = {'pos'} # no change just test
@@ -51,22 +55,27 @@ my_scene = scene.BioMedicalScene(my_light_source, my_camera)
 
 # Define volume and surface objects
 # NOTE: In the end the volume and surface objects should come from the epithelial tissue macrostructure. - ck
-VOL_OBJ, SURF_OBJ = utils.geometry.add_dummy_objects(my_tissue, TISSUE_PADDING)
+vol_scale = (0.6, 0.3, 1)
+surf_scale = (0.8, 0.5, 1)
+VOL_OBJ, SURF_OBJ = utils.geometry.add_dummy_objects(my_tissue, TISSUE_PADDING, vol_scale, surf_scale)
 
-# Add volume filling
-NUMBER = 200
-ATTRIBUTES = [cells.CellAttributeA(), cells.CellAttributeB(), cells.CellAttributeC()]
-RATIOS = [0.05, 0.15, 0.8]
-volume_fill = arr.VolumeFill(VOL_OBJ, NUMBER, ATTRIBUTES, RATIOS, strict_boundary=False)
-my_scene.add_arrangement(volume_fill)
-
+# NOTE: For some very weird reason you need to create the surface filling before the volume filling.
+# Otherwise the surface filling won't work and it won't even refine the mesh. :/ - ck
 # Add surface filling
-SURF_NUMBER = 200
-SURF_ATTRIBUTE = cells.CellAttributeEpi()
-surface_fill = arr.SurfaceFill(SURF_OBJ, SURF_NUMBER, SURF_ATTRIBUTE)
+SURF_NUMBER = 80
+SURF_ATTRIBUTE = cells.CellAttributeEpi(size=0.1, scale=(1, 0.5, 0.5))
+FILLER_SCALE = 0.8 # Scale of the size of smaller filler nuclei w.r.t to the original nuclei size
+surface_fill = arr.SurfaceFill(SURF_OBJ, SURF_NUMBER, SURF_ATTRIBUTE, FILLER_SCALE)
 my_scene.add_arrangement(surface_fill)
 
-# # Hide macro objects
+# Add volume filling
+NUMBER = 20
+ATTRIBUTES = [cells.CellAttributeA(), cells.CellAttributeB(), cells.CellAttributeC()]
+RATIOS = [0.05, 0.15, 0.8]
+#volume_fill = arr.VolumeFill(VOL_OBJ, NUMBER, ATTRIBUTES, RATIOS, strict_boundary=False)
+#my_scene.add_arrangement(volume_fill)
+
+# Hide macro objects
 # VOL_OBJ.hide_viewport = True
 # VOL_OBJ.hide_render = True
 # SURF_OBJ.hide_viewport = True

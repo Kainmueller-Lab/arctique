@@ -279,7 +279,6 @@ def generate_points_per_type(counts, attributes, mesh, padding):
         bounding_box = get_bounding_box(bounding_mesh) # NOTE: Apparently the bounding box is always centered in the origin
         box_volume = get_box_volume(bounding_box)
         max_iterations = upper_limit_points(box_volume, radius)
-        print(f"Max point count for type {type}: {max_iterations}")
 
         # TODO: test this
         points = []
@@ -399,27 +398,26 @@ def remove_top_and_bottom_faces(obj):
     bm.to_mesh(obj.data)
     bm.free()
 
-def add_dummy_objects(tissue, padding):
+def add_dummy_objects(tissue, padding, vol_scale, surf_scale):
+    # Create temporarily padded tissue
     old_scale = tuple(s for s in tissue.tissue.scale)
     tissue.tissue.scale = tuple(s*(1+padding) for s in tissue.tissue.scale)
 
     bpy.ops.mesh.primitive_cylinder_add() # Example bounding torus mesh
     vol_obj = bpy.context.active_object
-    vol_obj.location = Vector(tissue.tissue.location) + Vector((0, 0, 0.5))
-    vol_obj.scale = (0.8, 0.5, 1)
+    #vol_obj.location = Vector(tissue.tissue.location) + Vector((0, 0, 0.5))
+    vol_obj.scale = vol_scale
     # NOTE: Necessary to transform the vertices of the mesh according to scale
     # It should be used when the object is created, but maybe there's a better place in the methds for it. ck
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True) 
     # Intersect with tissue
-    # TODO: Pad Tissue
     intersect_with_object([vol_obj], tissue.tissue)
     remove_top_and_bottom_faces(vol_obj)
 
-
     bpy.ops.mesh.primitive_cylinder_add()
     surf_obj = bpy.context.active_object
-    surf_obj.location = Vector(tissue.tissue.location) + Vector((0, 0, 0.5))
-    surf_obj.scale = (1, 0.7, 1)
+    #surf_obj.location = Vector(tissue.tissue.location) + Vector((0, 0, 0.5))
+    surf_obj.scale = surf_scale
     # NOTE: Necessary to transform the vertices of the mesh according to scale
     # It should be used when the object is created, but maybe there's a better place in the methds for it. ck
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True) 

@@ -15,11 +15,9 @@ class CellArrangement:
     def __init__(self):
         self.objects = [] # Contains the nuclei objects
         self.auxiliary_objects = [] # These will be hidden in viewport and rendering but can be used for further computing.
+        self.name = None
         self.id = CellArrangement.count
         CellArrangement.count += 1
-
-    def add(self):
-        pass
 
 class CellList(CellArrangement):
     def __init__(self, cell_attributes, locations):
@@ -33,7 +31,7 @@ class CellList(CellArrangement):
         super().__init__()
         self.cell_attributes = cell_attributes
         self.locations = locations
-        self.type = "LIST"
+        self.name = "CellList"
 
     def add(self):
         for location in self.locations:
@@ -58,6 +56,7 @@ class VolumeFill(CellArrangement):
             - ratios: list of ratios of nuclei types to populate
         """
         super().__init__()
+        self.name = "VolumeFill"
         self.mesh = mesh
         self.subdivision_levels = 2
         self.number = number
@@ -109,7 +108,7 @@ class VolumeFill(CellArrangement):
         return res
 
 class SurfaceFill(CellArrangement):
-    def __init__(self, mesh, number, attribute):
+    def __init__(self, mesh, number, attribute, filler_scale):
         """
         Initializes a CellArrangement object with the given parameters.
         Fills a surface with randomly place nuclei of given attribute
@@ -122,10 +121,12 @@ class SurfaceFill(CellArrangement):
             - ratios: list of ratios of nuclei types to populate
         """
         super().__init__()
+        self.name = "SurfaceFill"
         self.mesh = mesh
         self.number = number
         self.attribute = attribute
-        self.main_verts, self.filler_verts = fill_surface(self.mesh, self.number, self.attribute)
+        self.filler_scale = filler_scale
+        self.main_verts, self.filler_verts = fill_surface(self.mesh, self.number, self.attribute, self.filler_scale)
 
 
     def add(self):
@@ -135,18 +136,20 @@ class SurfaceFill(CellArrangement):
 
         filler_points = [v.co for v in self.filler_verts]
         filler_normals = [v.normal for v in self.filler_verts]
-        self.add_nuclei(filler_points, filler_normals, self.attribute)
+        self.add_nuclei(filler_points, filler_normals, self.attribute, name="_small")
 
-    def add_nuclei(self, points, normals, attribute):
+    def add_nuclei(self, points, normals, attribute, name=""):
         for idx, (pt, dir) in enumerate(zip(points, normals)):
-            bpy.ops.mesh.primitive_uv_sphere_add(radius=attribute.size)
+            # TODO: 0.75 is hard coded here. Fix that. - ck
+            radius = attribute.size if name == "" else attribute.size * self.filler_scale
+            bpy.ops.mesh.primitive_uv_sphere_add(radius=radius)
             nucleus = bpy.context.active_object
             # TODO: add deform
-            # deform_mesh(nucleus, attribute)
+            #deform_mesh(nucleus, attribute)
             nucleus.location = pt
             # Rotate obj such that local x axis is aligned with surface normal
             rotation_matrix = Matrix.Translation(nucleus.location) @ dir.to_track_quat('X').to_matrix().to_4x4()
             nucleus.matrix_world = rotation_matrix
             nucleus.scale = attribute.scale
-            nucleus.name = f"Surface_Nucleus_Type_{attribute.cell_type}_{idx}"
+            nucleus.name = f"Surface_Nucleus_Type_{attribute.cell_type}_{idx}{name}"
             self.objects.append(nucleus)

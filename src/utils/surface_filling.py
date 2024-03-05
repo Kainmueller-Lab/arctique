@@ -21,10 +21,8 @@ def triangulate_object(obj):
     # Get a BMesh representation
     bm = bmesh.new()
     bm.from_mesh(me)
-
     bmesh.ops.triangulate(bm, faces=bm.faces[:])
     # V2.79 : bmesh.ops.triangulate(bm, faces=bm.faces[:], quad_method=0, ngon_method=0)
-
     # Finish up, write the bmesh back to the mesh
     bm.to_mesh(me)
     bm.free()
@@ -46,7 +44,7 @@ def mesh_area(mesh):
     # Iterate over the faces and compute their areas
     for face in mesh.polygons:
         # Get the vertices of the face
-        verts = [obj.matrix_world @ mesh.vertices[i].co for i in face.vertices]
+        verts = [mesh.matrix_world @ mesh.vertices[i].co for i in face.vertices]
         assert len(verts) == 3, "Face must be triangle"
         a = verts[1] - verts[0]
         b = verts[2] - verts[0]
@@ -76,13 +74,16 @@ def sample_centers(verts, dist, max_count):
     for v in verts:
         is_free = True
         for q in sampled_verts:
+            print((v.co-q.co).length)
             if (v.co-q.co).length < dist:
                 is_free = False
                 break
+        print(is_free)
         if is_free:
             sampled_verts.append(v)
         if len(sampled_verts) == max_count:
             break
+    print(dist)
     return sampled_verts
         
 def sample_fillers(mesh_verts, center_verts, center_dist, fill_dist, max_count):
@@ -118,16 +119,16 @@ def add_oriented_points(points, directions, scale, radius):
         sphere.name = f"Point_{idx}"
         
 
-def fill_surface(obj, max_point_count, attribute):
+def fill_surface(obj, max_point_count, attribute, filler_scale):
     '''
     First refines the mesh of the object until the edges are sufficiently small.
     Then samples the maximal number of vertices on the refined mesh such that intersection free placement of nuclei is possible.
     '''
-    
-    min_dist = 4 * attribute.size * attribute.scale[1] # NOTE: Use medium radius of scale, as max radius is for normal direction. - ck
-    # TODO: Test value 0.75
+    print(attribute.size, attribute.scale)
+    min_dist = 2 * attribute.size * attribute.scale[1] # NOTE: Use medium radius of scale, as max radius is for normal direction. - ck
+    print(min_dist)
     # NOTE: That's the best idea so far for creating packed surfaces. Is there better way? - ck
-    fill_dist = min_dist * 0.75 # Smaller radius of nucleus to fill the gaps between large ones
+    fill_dist = min_dist * filler_scale # Smaller radius of nucleus to fill the gaps between large ones
     # NOTE: Find optimal value, min_dist/3 looks good? - ck
     mesh_delta = min_dist/3 # Refine mesh until vertices in mesh grid are at most mesh_delta apart.
 
@@ -135,6 +136,7 @@ def fill_surface(obj, max_point_count, attribute):
     mesh = obj.data
 
     # Density information
+    # TODO: Delete after testing
     #area = mesh_area(mesh)
     #radius = min_dist/2
     #print(f"\nArea of Mesh: {area}")
