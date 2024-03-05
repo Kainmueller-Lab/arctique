@@ -1,8 +1,7 @@
 import bpy
-import random
 import sys
 import os
-from mathutils import Vector
+
 
 # IMPORT SOURCES
 dir = os.path.dirname(bpy.data.filepath)
@@ -29,6 +28,13 @@ imp.reload(utils)
 ###################  PARAMETER  #####################
 # args_camera = {'pos'} # no change just test
 
+# NOTE: It might be good to use realistic units here.
+# Tissue usually 5-10 mu thick, Epithelial cells usally 9-17 mu thick, nuclei apparently also 5-10 mu thick.
+TISSUE_THICKNESS = 0.2
+TISSUE_SIZE = 2
+TISSUE_LOCATION = (0, 0, 0.5)
+TISSUE_PADDING = 0.5
+
 
 ###################  MAIN  METHOD  #####################
 # create the necessary objects
@@ -36,7 +42,7 @@ scene.BioMedicalScene.clear()
     
 # add microscope objects
 my_materials = shading.Material()
-my_tissue = tissue.Tissue(my_materials.tissue_staining, thickness=0.2, size=2, location=(0, 0, 0.5)) # thickness and location of tissue should encapsulate min and max z-coordinates of cells 
+my_tissue = tissue.Tissue(my_materials.tissue_staining, thickness=TISSUE_THICKNESS, size=TISSUE_SIZE, location=TISSUE_LOCATION) # thickness and location of tissue should encapsulate min and max z-coordinates of cells 
 my_light_source = scene.LightSource(material=my_materials.light_source)
 my_camera = scene.Camera()
 
@@ -44,53 +50,25 @@ my_camera = scene.Camera()
 my_scene = scene.BioMedicalScene(my_light_source, my_camera)
 
 # Define volume and surface objects
-# NOTE: Tissue usually 5-10 mu thick, Epithelial cells usally 9-17 mu thick, nuclei apparently also 5-10 mu
-# TODO: Make tissue parameters hard-coded and use those for placing the object more precisely
-# TODO: This object is an example and should be replaced by a tissue object to be populated with nuclei.
-bpy.ops.mesh.primitive_torus_add() # Example bounding torus mesh
-VOL_OBJ = bpy.context.active_object
-VOL_OBJ.location = (0, 0, 0.5)
-VOL_OBJ.scale = (1, 0.7, 0.7)
-# NOTE: Necessary to transform the vertices of the mesh according to scale
-# It should be used when the object is created, but maybe there's a better place in the methds for it. ck
-bpy.ops.object.transform_apply(location=True, rotation=True, scale=True) 
-
-# Intersect with tissue
-bool_mod = VOL_OBJ.modifiers.new(name="Intersection", type='BOOLEAN')
-bool_mod.object = my_tissue.tissue
-bool_mod.operation = 'INTERSECT'
-bpy.ops.object.modifier_apply(modifier=bool_mod.name)
+# NOTE: In the end the volume and surface objects should come from the epithelial tissue macrostructure. - ck
+VOL_OBJ, SURF_OBJ = utils.geometry.add_dummy_objects(my_tissue, TISSUE_PADDING)
 
 # Add volume filling
 NUMBER = 200
 ATTRIBUTES = [cells.CellAttributeA(), cells.CellAttributeB(), cells.CellAttributeC()]
 RATIOS = [0.05, 0.15, 0.8]
-#volume_fill = arr.VolumeFill(VOL_OBJ, NUMBER, ATTRIBUTES, RATIOS, strict_boundary=False)
-#my_scene.add_arrangement(volume_fill)
+volume_fill = arr.VolumeFill(VOL_OBJ, NUMBER, ATTRIBUTES, RATIOS, strict_boundary=False)
+my_scene.add_arrangement(volume_fill)
 
 # Add surface filling
-bpy.ops.mesh.primitive_torus_add()
-SURF_OBJ = bpy.context.active_object
-SURF_OBJ.location = (0, 0, 0.5)
-SURF_OBJ.scale = (1, 0.7, 0.7)
-# NOTE: Necessary to transform the vertices of the mesh according to scale
-# It should be used when the object is created, but maybe there's a better place in the methds for it. ck
-bpy.ops.object.transform_apply(location=True, rotation=True, scale=True) 
-
-# Intersect with tissue
-bool_mod = SURF_OBJ.modifiers.new(name="Intersection", type='BOOLEAN')
-bool_mod.object = my_tissue.tissue
-bool_mod.operation = 'INTERSECT'
-bpy.ops.object.modifier_apply(modifier=bool_mod.name)
-
 SURF_NUMBER = 200
 SURF_ATTRIBUTE = cells.CellAttributeEpi()
 surface_fill = arr.SurfaceFill(SURF_OBJ, SURF_NUMBER, SURF_ATTRIBUTE)
 my_scene.add_arrangement(surface_fill)
 
-# Hide macro objects
-# OBJ.hide_viewport = True
-# OBJ.hide_render = True
+# # Hide macro objects
+# VOL_OBJ.hide_viewport = True
+# VOL_OBJ.hide_render = True
 # SURF_OBJ.hide_viewport = True
 # SURF_OBJ.hide_render = True
 

@@ -374,3 +374,58 @@ def deform_mesh(obj, attribute):
     perturb_vertices(mesh, abs_deform_strength)
     # TODO: Rescale such that diameter of mesh lies in bounding ball
     rescale_obj(obj, size, attribute.scale)
+
+
+def remove_top_and_bottom_faces(obj):
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+
+    epsilon = 1e-3
+    # Deselect all faces
+    for face in bm.faces:
+        face.select_set(False)
+    
+    # Select faces with vertical normals
+    for face in bm.faces:
+        normal = face.normal
+        # Check if the z-component of the normal is close to -1 or 1
+        if abs(normal.z) > 1-epsilon:
+            face.select_set(True)
+    
+    # Delete selected faces
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.select], context='FACES')
+    
+    # Update the mesh data
+    bm.to_mesh(obj.data)
+    bm.free()
+
+def add_dummy_objects(tissue, padding):
+    old_scale = tuple(s for s in tissue.tissue.scale)
+    tissue.tissue.scale = tuple(s*(1+padding) for s in tissue.tissue.scale)
+
+    bpy.ops.mesh.primitive_cylinder_add() # Example bounding torus mesh
+    vol_obj = bpy.context.active_object
+    vol_obj.location = Vector(tissue.tissue.location) + Vector((0, 0, 0.5))
+    vol_obj.scale = (0.8, 0.5, 1)
+    # NOTE: Necessary to transform the vertices of the mesh according to scale
+    # It should be used when the object is created, but maybe there's a better place in the methds for it. ck
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True) 
+    # Intersect with tissue
+    # TODO: Pad Tissue
+    intersect_with_object([vol_obj], tissue.tissue)
+    remove_top_and_bottom_faces(vol_obj)
+
+
+    bpy.ops.mesh.primitive_cylinder_add()
+    surf_obj = bpy.context.active_object
+    surf_obj.location = Vector(tissue.tissue.location) + Vector((0, 0, 0.5))
+    surf_obj.scale = (1, 0.7, 1)
+    # NOTE: Necessary to transform the vertices of the mesh according to scale
+    # It should be used when the object is created, but maybe there's a better place in the methds for it. ck
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True) 
+    # Intersect with tissue
+    intersect_with_object([surf_obj], tissue.tissue)
+    remove_top_and_bottom_faces(surf_obj)
+
+    tissue.tissue.scale = old_scale
+    return vol_obj, surf_obj
