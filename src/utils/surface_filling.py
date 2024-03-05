@@ -6,18 +6,6 @@ import random
 from itertools import combinations
 from mathutils import Vector, Matrix
 
-
-def delete_objects():
-    # Select all objects 
-    for obj in bpy.context.scene.objects:
-        obj.hide_viewport = False
-    bpy.ops.object.select_all(action='SELECT')
-    # Delete the selected objects
-    bpy.ops.object.delete()
-    # Remove orphaned meshes
-    for mesh in bpy.data.meshes:
-        bpy.data.meshes.remove(mesh, do_unlink=True)
-
 def edge_length(mesh, edge):
     v1 = mesh.vertices[edge.vertices[0]].co
     v2 = mesh.vertices[edge.vertices[1]].co
@@ -33,10 +21,8 @@ def triangulate_object(obj):
     # Get a BMesh representation
     bm = bmesh.new()
     bm.from_mesh(me)
-
     bmesh.ops.triangulate(bm, faces=bm.faces[:])
     # V2.79 : bmesh.ops.triangulate(bm, faces=bm.faces[:], quad_method=0, ngon_method=0)
-
     # Finish up, write the bmesh back to the mesh
     bm.to_mesh(me)
     bm.free()
@@ -58,7 +44,7 @@ def mesh_area(mesh):
     # Iterate over the faces and compute their areas
     for face in mesh.polygons:
         # Get the vertices of the face
-        verts = [obj.matrix_world @ mesh.vertices[i].co for i in face.vertices]
+        verts = [mesh.matrix_world @ mesh.vertices[i].co for i in face.vertices]
         assert len(verts) == 3, "Face must be triangle"
         a = verts[1] - verts[0]
         b = verts[2] - verts[0]
@@ -71,7 +57,7 @@ def refine_mesh(mesh, delta, smoothness=1):
     bpy.ops.object.mode_set(mode='EDIT')
     for face in mesh.polygons:
         # Get longest side length of face
-        vertices = [obj.data.vertices[index].co for index in face.vertices]
+        vertices = [mesh.vertices[index].co for index in face.vertices]
         diameter = max((v1 - v2).length for v1 in vertices for v2 in vertices)
 
         # If face is too large subdivide it
@@ -129,66 +115,32 @@ def add_oriented_points(points, directions, scale, radius):
         
         sphere.name = f"Point_{idx}"
         
-    
 
-#############  MAIN
+def fill_surface(obj, max_point_count, attribute, filler_scale):
+    '''
+    First refines the mesh of the object until the edges are sufficiently small.
+    Then samples the maximal number of vertices on the refined mesh such that intersection free placement of nuclei is possible.
+    '''
+    min_dist = 2 * attribute.size * attribute.scale[1] # NOTE: Use medium radius of scale, as max radius is for normal direction. - ck
+    # NOTE: That's the best idea so far for creating packed surfaces. Is there better way? - ck
+    fill_dist = min_dist * filler_scale # Smaller radius of nucleus to fill the gaps between large ones
+    # NOTE: Find optimal value, min_dist/3 looks good? - ck
+    mesh_delta = min_dist/3 # Refine mesh until vertices in mesh grid are at most mesh_delta apart.
 
-# IDEA: Given a mesh, triangulate it, subdivide the faces until all edges are below a threshold, and then collapse too small edges
+    triangulate_object(obj)
+    mesh = obj.data
 
-#bpy.ops.object.mode_set(mode='OBJECT')
-delete_objects()
+    # Refine mesh
+    # _, max_edge = min_max_edges(mesh)
+    # print(f"Before refinement: {len(mesh.vertices)} vertices, mesh offset {max_edge}")
+    mesh = refine_mesh(mesh, mesh_delta)
+    # _, max_edge = min_max_edges(mesh)
+    # print(f"After refinement: {len(mesh.vertices)} vertices, mesh offset {max_edge}")
 
-MIN_DIST = 0.12
-FILL_DIST = 0.09
-SCALE = (2,1,1)
-
-MAX_POINT_COUNT = 200
-
-# TODO: Find optimal value, maybe MIN_DIST/3?
-mesh_delta = MIN_DIST/3 # Maximal edge length in refined mesh
-
-
-bpy.ops.mesh.primitive_ico_sphere_add()
-obj = bpy.context.active_object
-triangulate_object(obj)
-obj.scale = (1, 0.5, 0.5)
-bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
-mesh = obj.data
-
-area = mesh_area(mesh)
-radius = MIN_DIST/2
-print(f"\nArea of Mesh: {area}")
-print(f"Number of faces: {len(mesh.polygons)}")
-print(f"Max number of cells of radius {radius} for dense packing: {0.6*area/(np.pi*radius*radius)}")
-
-# Refine mesh
-min_edge, max_edge = min_max_edges(mesh)
-print(f"Before refinement: {len(mesh.vertices)} vertices, mesh offset {max_edge}")
-mesh = refine_mesh(mesh, mesh_delta)
-min_edge, max_edge = min_max_edges(mesh)
-print(f"After refinement: {len(mesh.vertices)} vertices, mesh offset {max_edge}")
-
-# Sample nuclei centers
-grid_points = [v.co for v in mesh.vertices]
-grid_normals = [v.normal for v in mesh.vertices]
-
-grid_verts = list(mesh.vertices)
-random.shuffle(grid_verts)
-center_verts = sample_centers(grid_verts, MIN_DIST, MAX_POINT_COUNT)
-filler_verts = sample_fillers(grid_verts, center_verts, MIN_DIST, FILL_DIST, MAX_POINT_COUNT)
-
-
-print(f"Placed {len(center_verts)} centers and {len(filler_verts)} fillers")
-
-center_points = [v.co for v in center_verts]
-center_normals = [v.normal for v in center_verts]
-add_oriented_points(center_points, center_normals, SCALE, MIN_DIST/2)
-
-filler_points = [v.co for v in filler_verts]
-filler_normals = [v.normal for v in filler_verts]
-add_oriented_points(filler_points, filler_normals, SCALE, FILL_DIST/2)
-
-
-#add_point_cloud(center_points, MIN_DIST/2)
-#add_point_cloud(filler_points, FILL_DIST/2)
-##mesh.hide_viewport = True
+    # Sample nuclei centers
+    grid_verts = list(mesh.vertices)
+    random.shuffle(grid_verts)
+    center_verts = sample_centers(grid_verts, min_dist, max_point_count)
+    filler_verts = sample_fillers(grid_verts, center_verts, min_dist, fill_dist, max_point_count)
+    #print(f"Placed {len(center_verts)} centers and {len(filler_verts)} fillers")
+    return center_verts, filler_verts, mesh_delta

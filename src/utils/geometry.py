@@ -262,7 +262,7 @@ def generate_points(num_points, min_distance, mesh, padding=True):
         bpy.data.objects.remove(bounding_mesh, do_unlink=True)
     return points
 
-def generate_points_per_type(counts, attributes, mesh, padding=True):
+def generate_points_per_type(counts, attributes, mesh, padding):
     radii = [attribute.size for attribute in attributes]
     types = [attribute.cell_type for attribute in attributes]
     assert len(counts) == len(radii), "Counts and radii must have the same length"
@@ -279,7 +279,6 @@ def generate_points_per_type(counts, attributes, mesh, padding=True):
         bounding_box = get_bounding_box(bounding_mesh) # NOTE: Apparently the bounding box is always centered in the origin
         box_volume = get_box_volume(bounding_box)
         max_iterations = upper_limit_points(box_volume, radius)
-        print(f"Max point count for type {type}: {max_iterations}")
 
         # TODO: test this
         points = []
@@ -374,3 +373,57 @@ def deform_mesh(obj, attribute):
     perturb_vertices(mesh, abs_deform_strength)
     # TODO: Rescale such that diameter of mesh lies in bounding ball
     rescale_obj(obj, size, attribute.scale)
+
+
+def remove_top_and_bottom_faces(obj):
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+
+    epsilon = 1e-3
+    # Deselect all faces
+    for face in bm.faces:
+        face.select_set(False)
+    
+    # Select faces with vertical normals
+    for face in bm.faces:
+        normal = face.normal
+        # Check if the z-component of the normal is close to -1 or 1
+        if abs(normal.z) > 1-epsilon:
+            face.select_set(True)
+    
+    # Delete selected faces
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.select], context='FACES')
+    
+    # Update the mesh data
+    bm.to_mesh(obj.data)
+    bm.free()
+
+def add_dummy_objects(tissue, padding, vol_scale, surf_scale):
+    # Create temporarily padded tissue
+    old_scale = tuple(s for s in tissue.tissue.scale)
+    tissue.tissue.scale = tuple(s*(1+padding) for s in tissue.tissue.scale)
+
+    bpy.ops.mesh.primitive_cylinder_add() # Example bounding torus mesh
+    vol_obj = bpy.context.active_object
+    #vol_obj.location = Vector(tissue.tissue.location) + Vector((0, 0, 0.5))
+    vol_obj.scale = vol_scale
+    # NOTE: Necessary to transform the vertices of the mesh according to scale
+    # It should be used when the object is created, but maybe there's a better place in the methds for it. ck
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True) 
+    # Intersect with tissue
+    intersect_with_object([vol_obj], tissue.tissue)
+    remove_top_and_bottom_faces(vol_obj)
+
+    bpy.ops.mesh.primitive_cylinder_add()
+    surf_obj = bpy.context.active_object
+    #surf_obj.location = Vector(tissue.tissue.location) + Vector((0, 0, 0.5))
+    surf_obj.scale = surf_scale
+    # NOTE: Necessary to transform the vertices of the mesh according to scale
+    # It should be used when the object is created, but maybe there's a better place in the methds for it. ck
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True) 
+    # Intersect with tissue
+    intersect_with_object([surf_obj], tissue.tissue)
+    remove_top_and_bottom_faces(surf_obj)
+
+    tissue.tissue.scale = old_scale
+    return vol_obj, surf_obj
