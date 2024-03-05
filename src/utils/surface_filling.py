@@ -74,16 +74,13 @@ def sample_centers(verts, dist, max_count):
     for v in verts:
         is_free = True
         for q in sampled_verts:
-            print((v.co-q.co).length)
             if (v.co-q.co).length < dist:
                 is_free = False
                 break
-        print(is_free)
         if is_free:
             sampled_verts.append(v)
         if len(sampled_verts) == max_count:
             break
-    print(dist)
     return sampled_verts
         
 def sample_fillers(mesh_verts, center_verts, center_dist, fill_dist, max_count):
@@ -124,9 +121,7 @@ def fill_surface(obj, max_point_count, attribute, filler_scale):
     First refines the mesh of the object until the edges are sufficiently small.
     Then samples the maximal number of vertices on the refined mesh such that intersection free placement of nuclei is possible.
     '''
-    print(attribute.size, attribute.scale)
     min_dist = 2 * attribute.size * attribute.scale[1] # NOTE: Use medium radius of scale, as max radius is for normal direction. - ck
-    print(min_dist)
     # NOTE: That's the best idea so far for creating packed surfaces. Is there better way? - ck
     fill_dist = min_dist * filler_scale # Smaller radius of nucleus to fill the gaps between large ones
     # NOTE: Find optimal value, min_dist/3 looks good? - ck
@@ -134,14 +129,6 @@ def fill_surface(obj, max_point_count, attribute, filler_scale):
 
     triangulate_object(obj)
     mesh = obj.data
-
-    # Density information
-    # TODO: Delete after testing
-    #area = mesh_area(mesh)
-    #radius = min_dist/2
-    #print(f"\nArea of Mesh: {area}")
-    #print(f"Number of faces: {len(mesh.polygons)}")
-    #print(f"Max number of cells of radius {radius} for dense packing: {0.6*area/(np.pi*radius*radius)}")
 
     # Refine mesh
     # _, max_edge = min_max_edges(mesh)
@@ -156,4 +143,4 @@ def fill_surface(obj, max_point_count, attribute, filler_scale):
     center_verts = sample_centers(grid_verts, min_dist, max_point_count)
     filler_verts = sample_fillers(grid_verts, center_verts, min_dist, fill_dist, max_point_count)
     #print(f"Placed {len(center_verts)} centers and {len(filler_verts)} fillers")
-    return center_verts, filler_verts
+    return center_verts, filler_verts, mesh_delta

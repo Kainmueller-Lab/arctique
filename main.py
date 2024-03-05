@@ -61,6 +61,7 @@ VOL_OBJ, SURF_OBJ = utils.geometry.add_dummy_objects(my_tissue, TISSUE_PADDING, 
 
 # NOTE: For some very weird reason you need to create the surface filling before the volume filling.
 # Otherwise the surface filling won't work and it won't even refine the mesh. :/ - ck
+# TODO: Fix that
 # Add surface filling
 SURF_NUMBER = 80
 SURF_ATTRIBUTE = cells.CellAttributeEpi(size=0.1, scale=(1, 0.5, 0.5))
@@ -69,20 +70,17 @@ surface_fill = arr.SurfaceFill(SURF_OBJ, SURF_NUMBER, SURF_ATTRIBUTE, FILLER_SCA
 my_scene.add_arrangement(surface_fill)
 
 # Add volume filling
-NUMBER = 20
+NUMBER = 40
 ATTRIBUTES = [cells.CellAttributeA(), cells.CellAttributeB(), cells.CellAttributeC()]
 RATIOS = [0.05, 0.15, 0.8]
-#volume_fill = arr.VolumeFill(VOL_OBJ, NUMBER, ATTRIBUTES, RATIOS, strict_boundary=False)
-#my_scene.add_arrangement(volume_fill)
+volume_fill = arr.VolumeFill(VOL_OBJ, NUMBER, ATTRIBUTES, RATIOS, strict_boundary=False)
+my_scene.add_arrangement(volume_fill)
 
-# Hide macro objects
+# # Hide macro objects
 # VOL_OBJ.hide_viewport = True
 # VOL_OBJ.hide_render = True
 # SURF_OBJ.hide_viewport = True
 # SURF_OBJ.hide_render = True
-
-# TODO:
-# - Add surface fill arrangement
 
 # Add tissue
 my_scene.add_tissue(tissue=my_tissue.tissue)

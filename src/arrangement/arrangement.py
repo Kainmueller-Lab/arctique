@@ -86,13 +86,8 @@ class VolumeFill(CellArrangement):
             nucleus.name = f"Nucleus_Type_{type}_{idx}"
             nucleus.location = location
             nucleus.scale = attribute.scale
-            # TODO: orientation of nuclei aligned to mesh
+            # TODO: Apply a rotation to the volume nuclei such that they follow the tissue flow or smth like that I am no tissuologist how the hell should I know what that is I mean come on is there really someone who could answer that question yes maybe there is I will ask the Big Goose Of Enlightenment, quak.
             nucleus.rotation_euler = [random.uniform(0, 2*math.pi) for _ in range(3)]
-            # TODO: Necessary?
-            # Make nuclei children of bounding mesh
-            #nucleus.parent = self.mesh
-            #world_inv = self.mesh.matrix_world.inverted()
-            #nucleus.matrix_parent_inverse = world_inv
             nucleus.modifiers.new(name="Subdivision", type='SUBSURF')
             nucleus.modifiers["Subdivision"].levels = self.subdivision_levels
             bpy.ops.object.modifier_apply({"object": nucleus}, modifier="Subdivision")
@@ -126,7 +121,7 @@ class SurfaceFill(CellArrangement):
         self.number = number
         self.attribute = attribute
         self.filler_scale = filler_scale
-        self.main_verts, self.filler_verts = fill_surface(self.mesh, self.number, self.attribute, self.filler_scale)
+        self.main_verts, self.filler_verts, self.mesh_delta = fill_surface(self.mesh, self.number, self.attribute, self.filler_scale)
 
 
     def add(self):
@@ -140,13 +135,13 @@ class SurfaceFill(CellArrangement):
 
     def add_nuclei(self, points, normals, attribute, name=""):
         for idx, (pt, dir) in enumerate(zip(points, normals)):
-            # TODO: 0.75 is hard coded here. Fix that. - ck
             radius = attribute.size if name == "" else attribute.size * self.filler_scale
             bpy.ops.mesh.primitive_uv_sphere_add(radius=radius)
             nucleus = bpy.context.active_object
-            # TODO: add deform
+            # TODO: add deform. Is it more eficcient to deform after adding? Can loop through all objects
             #deform_mesh(nucleus, attribute)
-            nucleus.location = pt
+            # NOTE: Random small displacement along the normal axis
+            nucleus.location = pt + random.uniform(-0.5*self.mesh_delta, self.mesh_delta) * dir
             # Rotate obj such that local x axis is aligned with surface normal
             rotation_matrix = Matrix.Translation(nucleus.location) @ dir.to_track_quat('X').to_matrix().to_4x4()
             nucleus.matrix_world = rotation_matrix
