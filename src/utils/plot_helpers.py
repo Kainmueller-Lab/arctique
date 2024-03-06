@@ -144,6 +144,7 @@ def build_instance_mask(source_folder, cell_info_dicts, file_name="semantic_mask
     cell_ID_list = [c["ID"] for c in cell_info_dicts] # make list of all cell ids 
     cell_ID_dict = {cid : (i+1) for i, cid in enumerate(cell_ID_list)} # assign unique integer to each cell id
 
+    #print(cell_info_dicts)
     #for file_idx, file_name in enumerate(file_names):   ´
     for cell_counter, cell_info_tuple in enumerate(cell_info_dicts): 
         cell_id = cell_info_tuple["ID"]
@@ -163,7 +164,7 @@ def build_instance_mask(source_folder, cell_info_dicts, file_name="semantic_mask
     # palette = make_color_palette(len(np.unique(instance_mask)))
     # generate Image object from array, needs to be converted to uint8 to avoid aliasing
     colored_instance_mask = Image.fromarray(instance_mask.astype(np.uint8))
-    # assign color palette to image
+    # assign color palette to image 
     colored_instance_mask.putpalette(palette)
     # save to png
     colored_instance_mask.save(str(Path(source_folder).joinpath(f"{file_name}.png")))
