@@ -91,10 +91,8 @@ class BioMedicalScene:
     def add_arrangement(self, cell_arrangement: arr.CellArrangement):
         self.arrangements.append(cell_arrangement)
         cell_arrangement.add()
+        print(f"Added arrangement {cell_arrangement.name} with {len(cell_arrangement.objects)} objects.")
         self.cell_objects = self.cell_objects + cell_arrangement.objects
-        # Delete mesh
-        # NOTE: The mesh might be needed in the future. In that case remove it differently.
-        bpy.data.objects.remove(cell_arrangement.mesh)
 
     def hide_everything(self): 
         '''hide all objects in the scene'''

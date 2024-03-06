@@ -33,13 +33,10 @@ def compute_normal(curve_function, t): # Only in x-y-plane
 def random_unit_vector():
     # Generate random values for x, y, and z
     x, y, z = np.random.uniform(-1, 1, 3)
-
     # Create a vector
     vector = np.array([x, y, z])
-
     # Normalize the vector to make it a unit vector
     unit_vector = vector / np.linalg.norm(vector)
-
     return unit_vector
 
 def rotate_objects(objects, alpha):
@@ -265,7 +262,7 @@ def generate_points(num_points, min_distance, mesh, padding=True):
         bpy.data.objects.remove(bounding_mesh, do_unlink=True)
     return points
 
-def generate_points_per_type(counts, attributes, mesh, padding=True):
+def generate_points_per_type(counts, attributes, mesh, padding):
     radii = [attribute.size for attribute in attributes]
     types = [attribute.cell_type for attribute in attributes]
     assert len(counts) == len(radii), "Counts and radii must have the same length"
@@ -282,7 +279,6 @@ def generate_points_per_type(counts, attributes, mesh, padding=True):
         bounding_box = get_bounding_box(bounding_mesh) # NOTE: Apparently the bounding box is always centered in the origin
         box_volume = get_box_volume(bounding_box)
         max_iterations = upper_limit_points(box_volume, radius)
-        print(f"Max point count for type {type}: {max_iterations}")
 
         # TODO: test this
         points = []
@@ -347,68 +343,87 @@ def random_point_in_bbox(bounding_box):
     xs, ys, zs = bounding_box
     return Vector((random.uniform(xs[0], xs[1]), random.uniform(ys[0], ys[1]), random.uniform(zs[0], zs[1])))
 
-def deform_mesh_old(mesh, attribute):
-    """
-    Deforms the mesh by adding a random displacement to each vertex position.
-    This function iterates through each vertex of the mesh and deforms its position
-    by adding a random displacement vector. The displacement vector is calculated
-    by multiplying a random vector with values between -1 and 1 by the scale and
-    deformation strength attributes of the cell. The original position of each 
-    vertex is stored and then updated by adding the deformation vector.
-    """
-    # Iterate through each vertex and deform its position
-    for vertex in mesh.data.vertices:
-        original_position = vertex.co.copy()
-        deformation_vector = Vector([
-            random.uniform(-1, 1),
-            random.uniform(-1, 1),
-            random.uniform(-1, 1)
-        ])*Vector(attribute.scale)*attribute.deformation_strength*attribute.size
-        vertex.co = original_position + deformation_vector
+          
+def pos_value(x):
+    return x if x>0 else 0
 
+def perturb_vertices(mesh, deform_strength):
+    VERTS_TO_MOVE = 8 # TODO: Take care of magical number
+    PROPORTIONAL_SIZE = 0.5 # TODO: Necessary? If yes implement
+    for _ in range(VERTS_TO_MOVE):
+    # TODO: Test different deformations
+        #source_v = mesh.vertices[random.randint(0, len(mesh.vertices) - 1)]
+        #direction = source_v.normal
+        direction = Vector(random_unit_vector())
+        for w in mesh.vertices:
+            mu = deform_strength * pos_value(np.dot(direction, w.normal))
+            w.co += direction * mu
+    
+def rescale_obj(obj, size, scale):
+    max_radius = max(np.linalg.norm(v.co) for v in obj.data.vertices)
+    for v in obj.data.vertices:
+        v.co *= size/max_radius
+        v.co = Vector([v/sc for v, sc in zip(v.co, scale)])
+            
 def deform_mesh(obj, attribute):
-    """
-    Deforms the mesh by randomly translating a subset of vertices using proportional edit.
-    That is, neighboring vertices are also translated proportionally
-
-    Parameters:
-    - None
-    
-    Return:
-    - None
-    
-    Internal Variables:
-    - TRANSLATION_RANGE: The maximum range of translation for each vertex.
-    - TRANSFORM_COUNT: The number of transformations to apply.
-    - PROPORTIONAL_SIZE: The size of the proportional edit range.
-    """
-    # TODO: Put these variables as members to CellAttributes class. - ck
-    # NOTE: One can fine tune these values for better results. So far this is good enough. - ck
-    TRANSLATION_RANGE = 0.05
-    TRANSFORM_COUNT = 15
-    PROPORTIONAL_SIZE = 0.5     
-
+    size = attribute.size
+    deform_strength = attribute.deformation_strength
+    abs_deform_strength = size*deform_strength  
     mesh = obj.data
-    # deselect all faces
-    mesh.polygons.foreach_set("select", (False,) * len(mesh.polygons))
-    # deselect all edges
-    mesh.edges.foreach_set("select", (False,) * len(mesh.edges))
-    # deselect all vertices
-    mesh.vertices.foreach_set("select", (False,) * len(mesh.vertices))
-    # translate random mesh vertices using proportional edit
-    for _ in range(TRANSFORM_COUNT):
-        transform = Vector([random.uniform(-1, 1),
-                    random.uniform(-1, 1),
-                    random.uniform(-1, 1)])*TRANSLATION_RANGE
-        v = mesh.vertices[random.randint(0, len(mesh.vertices) - 1)]
-        v.select = True
-        bpy.ops.object.mode_set(mode='EDIT')
-        bpy.ops.transform.translate(value=transform, 
-                                constraint_axis=(False, False, False),
-                                orient_type='GLOBAL',
-                                mirror=False, 
-                                use_proportional_edit = True,
-                                use_proportional_connected =True,
-                                proportional_edit_falloff='SMOOTH',
-                                proportional_size=PROPORTIONAL_SIZE)
-        bpy.ops.object.mode_set(mode='OBJECT')
+    perturb_vertices(mesh, abs_deform_strength)
+    # TODO: Rescale such that diameter of mesh lies in bounding ball
+    rescale_obj(obj, size, attribute.scale)
+
+
+def remove_top_and_bottom_faces(obj):
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+
+    epsilon = 1e-3
+    # Deselect all faces
+    for face in bm.faces:
+        face.select_set(False)
+    
+    # Select faces with vertical normals
+    for face in bm.faces:
+        normal = face.normal
+        # Check if the z-component of the normal is close to -1 or 1
+        if abs(normal.z) > 1-epsilon:
+            face.select_set(True)
+    
+    # Delete selected faces
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.select], context='FACES')
+    
+    # Update the mesh data
+    bm.to_mesh(obj.data)
+    bm.free()
+
+def add_dummy_objects(tissue, padding, vol_scale, surf_scale):
+    # Create temporarily padded tissue
+    old_scale = tuple(s for s in tissue.tissue.scale)
+    tissue.tissue.scale = tuple(s*(1+padding) for s in tissue.tissue.scale)
+
+    bpy.ops.mesh.primitive_cylinder_add() # Example bounding torus mesh
+    vol_obj = bpy.context.active_object
+    #vol_obj.location = Vector(tissue.tissue.location) + Vector((0, 0, 0.5))
+    vol_obj.scale = vol_scale
+    # NOTE: Necessary to transform the vertices of the mesh according to scale
+    # It should be used when the object is created, but maybe there's a better place in the methds for it. ck
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True) 
+    # Intersect with tissue
+    intersect_with_object([vol_obj], tissue.tissue)
+    remove_top_and_bottom_faces(vol_obj)
+
+    bpy.ops.mesh.primitive_cylinder_add()
+    surf_obj = bpy.context.active_object
+    #surf_obj.location = Vector(tissue.tissue.location) + Vector((0, 0, 0.5))
+    surf_obj.scale = surf_scale
+    # NOTE: Necessary to transform the vertices of the mesh according to scale
+    # It should be used when the object is created, but maybe there's a better place in the methds for it. ck
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True) 
+    # Intersect with tissue
+    intersect_with_object([surf_obj], tissue.tissue)
+    remove_top_and_bottom_faces(surf_obj)
+
+    tissue.tissue.scale = old_scale
+    return vol_obj, surf_obj
