@@ -5,9 +5,12 @@ from src.shading.shading import Material
 class Tissue():
     def __init__(self, material: Material, thickness=0.2, size=2, location=(0, 0, 0.5)):
         self.material = material
+        self.thickness = thickness
+        self.size = size
+        self.location = location
 
         # create tissue mesh
-        bpy.ops.mesh.primitive_cube_add(size=2, location=location)
+        bpy.ops.mesh.primitive_cube_add(size=size, location=location)
         self.tissue = bpy.context.active_object
         self.tissue.name = 'tissue'
 
