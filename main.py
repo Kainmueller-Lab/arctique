@@ -77,11 +77,11 @@ RATIOS = [0.05, 0.15, 0.8]
 volume_fill = arr.VolumeFill(VOL_OBJ, NUMBER, ATTRIBUTES, RATIOS, strict_boundary=False)
 my_scene.add_arrangement(volume_fill)
 
-# # Hide macro objects
-# VOL_OBJ.hide_viewport = True
-# VOL_OBJ.hide_render = True
-# SURF_OBJ.hide_viewport = True
-# SURF_OBJ.hide_render = True
+# Hide macro objects
+VOL_OBJ.hide_viewport = True
+VOL_OBJ.hide_render = True
+SURF_OBJ.hide_viewport = True
+SURF_OBJ.hide_render = True
 
 # Add tissue
 my_scene.add_tissue(tissue=my_tissue.tissue)
