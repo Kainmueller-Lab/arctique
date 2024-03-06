@@ -46,6 +46,7 @@ scene.BioMedicalScene.clear()
     
 # add microscope objects
 my_materials = shading.Material()
+
 my_tissue = tissue.Tissue(my_materials.tissue_staining, thickness=TISSUE_THICKNESS, size=TISSUE_SIZE, location=TISSUE_LOCATION) # thickness and location of tissue should encapsulate min and max z-coordinates of cells 
 my_light_source = scene.LightSource(material=my_materials.light_source)
 my_camera = scene.Camera()
@@ -55,7 +56,7 @@ my_scene = scene.BioMedicalScene(my_light_source, my_camera)
 
 # Define volume and surface objects
 # NOTE: In the end the volume and surface objects should come from the epithelial tissue macrostructure. - ck
-vol_scale = (0.6, 0.3, 1)
+vol_scale = (1, 0.7, 1)
 surf_scale = (0.8, 0.5, 1)
 VOL_OBJ, SURF_OBJ = utils.geometry.add_dummy_objects(my_tissue, TISSUE_PADDING, vol_scale, surf_scale)
 
@@ -70,7 +71,7 @@ surface_fill = arr.SurfaceFill(SURF_OBJ, SURF_NUMBER, SURF_ATTRIBUTE, FILLER_SCA
 my_scene.add_arrangement(surface_fill)
 
 # Add volume filling
-NUMBER = 40
+NUMBER = 80
 ATTRIBUTES = [cells.CellAttributeA(), cells.CellAttributeB(), cells.CellAttributeC()]
 RATIOS = [0.05, 0.15, 0.8]
 volume_fill = arr.VolumeFill(VOL_OBJ, NUMBER, ATTRIBUTES, RATIOS, strict_boundary=False)

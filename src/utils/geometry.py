@@ -347,7 +347,7 @@ def random_point_in_bbox(bounding_box):
 def pos_value(x):
     return x if x>0 else 0
 
-def perturb_vertices(mesh, deform_strength):
+def perturb_vertices_old(mesh, deform_strength):
     VERTS_TO_MOVE = 8 # TODO: Take care of magical number
     PROPORTIONAL_SIZE = 0.5 # TODO: Necessary? If yes implement
     for _ in range(VERTS_TO_MOVE):
@@ -358,6 +358,18 @@ def perturb_vertices(mesh, deform_strength):
         for w in mesh.vertices:
             mu = deform_strength * pos_value(np.dot(direction, w.normal))
             w.co += direction * mu
+
+def perturb_vertices(mesh, scaled_deform_strength):
+    VERTS_TO_MOVE = 3 # TODO: Take care of magical number
+    PROPORTIONAL_SIZE = 0.4 # TODO: Necessary? If yes implement
+    # TODO: Test different deformations
+    for _ in range(VERTS_TO_MOVE):
+        #source_v = mesh.vertices[random.randint(0, len(mesh.vertices) - 1)]
+        #direction = source_v.normal
+        direction = Vector(random_unit_vector())
+        for w in mesh.vertices:
+            mu = scaled_deform_strength * pos_value(np.dot(direction, w.normal)-PROPORTIONAL_SIZE)
+            w.co -= direction * mu
     
 def rescale_obj(obj, size, scale):
     max_radius = max(np.linalg.norm(v.co) for v in obj.data.vertices)
@@ -367,12 +379,19 @@ def rescale_obj(obj, size, scale):
             
 def deform_mesh(obj, attribute):
     size = attribute.size
+    scale = attribute.scale
     deform_strength = attribute.deformation_strength
-    abs_deform_strength = size*deform_strength  
+    scaled_deform_strength = Vector(s*size*deform_strength for s in scale) 
     mesh = obj.data
-    perturb_vertices(mesh, abs_deform_strength)
-    # TODO: Rescale such that diameter of mesh lies in bounding ball
-    rescale_obj(obj, size, attribute.scale)
+    perturb_vertices(mesh, scaled_deform_strength)
+    # TODO: Old deform
+    # # TODO: Rescale such that diameter of mesh lies in bounding ball
+    # #rescale_obj(obj, size, scale)
+    # abs_deform_strength = size*deform_strength  
+    # mesh = obj.data
+    # perturb_vertices(mesh, abs_deform_strength)
+    # # TODO: Rescale such that diameter of mesh lies in bounding ball
+    # rescale_obj(obj, size, attribute.scale)
 
 
 def remove_top_and_bottom_faces(obj):
@@ -400,19 +419,24 @@ def remove_top_and_bottom_faces(obj):
 
 def add_dummy_objects(tissue, padding, vol_scale, surf_scale):
     # Create temporarily padded tissue
-    old_scale = tuple(s for s in tissue.tissue.scale)
-    tissue.tissue.scale = tuple(s*(1+padding) for s in tissue.tissue.scale)
+    tissue.tissue.scale = tuple(1+padding for _ in range(3))
 
     bpy.ops.mesh.primitive_cylinder_add() # Example bounding torus mesh
-    vol_obj = bpy.context.active_object
+    cylinder = bpy.context.active_object
     #vol_obj.location = Vector(tissue.tissue.location) + Vector((0, 0, 0.5))
-    vol_obj.scale = vol_scale
+    cylinder.scale = vol_scale
     # NOTE: Necessary to transform the vertices of the mesh according to scale
     # It should be used when the object is created, but maybe there's a better place in the methds for it. ck
-    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True) 
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
     # Intersect with tissue
-    intersect_with_object([vol_obj], tissue.tissue)
+    bpy.ops.mesh.primitive_cube_add(location=tissue.location)
+    box = bpy.context.active_object
+    box.scale = (1.1, 1.1, tissue.thickness/tissue.size)
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    vol_obj = subtract_object([box], cylinder)[0]
     remove_top_and_bottom_faces(vol_obj)
+    remove_objects([cylinder])
+    vol_obj.name = "Volume"
 
     bpy.ops.mesh.primitive_cylinder_add()
     surf_obj = bpy.context.active_object
@@ -424,6 +448,7 @@ def add_dummy_objects(tissue, padding, vol_scale, surf_scale):
     # Intersect with tissue
     intersect_with_object([surf_obj], tissue.tissue)
     remove_top_and_bottom_faces(surf_obj)
+    surf_obj.name = "Surface"
 
-    tissue.tissue.scale = old_scale
+    tissue.tissue.scale = (1,1,1)
     return vol_obj, surf_obj
