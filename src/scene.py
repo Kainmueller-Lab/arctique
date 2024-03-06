@@ -215,6 +215,46 @@ class BioMedicalScene:
 
     def export_depth(self): 
         pass
+        # """Obtains depth map from Blender render.
+        # :return: The depth map of the rendered camera view as a numpy array of size (H,W).
+        # """
+                
+        # self.tissue.hide_viewport = True
+        # self.tissue.hide_render = True
+        # # hide light source
+        # self.light_source.light_source.hide_viewport = True
+        # self.light_source.light_source.hide_render = True
+
+        # self.scene.render.resolution_x = 500
+        # self.scene.render.resolution_y = 500
+        # self.scene.render.engine = "CYCLES"
+        # self.scene.cycles.samples = 100      
+
+        # self.scene.render.use_compositing = True
+        # self.scene.use_nodes = True
+        # self.scene.view_layers[0].use_pass_z = True
+        # tree = self.scene.node_tree 
+        # nodes = tree.nodes
+        # links = tree.links
+
+
+        # for node in nodes:
+        #     nodes.remove(node)
+
+        # render_layer_node = nodes.new('CompositorNodeRLayers')
+        # viewer_node = nodes.new('CompositorNodeViewer')
+        # norm_node = nodes.new("CompositorNodeNormalize")
+        # viewer_node.use_alpha = True
+
+        # links.new(render_layer_node.outputs['Depth'], norm_node.inputs[0])  # link Render Z to Viewer Image Alpha
+        # links.new(norm_node.outputs[0], viewer_node.inputs[1])
+
+        # bpy.ops.render.render(write_still=True) 
+        # pixels = bpy.data.images['Viewer Node'].pixels
+        
+        # dmap = np.flip(np.array(pixels[:]).reshape((500, 500, 4)), axis=0)
+        # np.save(f"{self.filepath}/depth", dmap)
+
 
     def export_obj3d(self): 
         '''Export the entrie scene as a 3d object'''
@@ -251,6 +291,9 @@ class BioMedicalScene:
             self.setup_scene_render_default(output_shape=output_shape, max_samples=max_samples)
             self.export_scene()
 
+        if depth_mask: 
+            self.export_depth()
+            
         if single_masks or semantic_mask or instance_mask:
             self.setup_scene_render_mask(output_shape=output_shape)
             self.export_masks()
@@ -266,10 +309,12 @@ class BioMedicalScene:
         if not single_masks: 
             self.remove_single_masks()
 
-        if depth_mask: 
-            self.export_depth()
+        # if depth_mask: 
+        #     self.setup_scene_render_default(output_shape=output_shape, max_samples=max_samples)
+        #     self.export_depth()
 
         if obj3d: 
+            self.setup_scene_render_default(output_shape=output_shape, max_samples=max_samples)
             self.export_obj3d()
 
         bpy.app.handlers.render_complete.remove(fn_print_time_when_render_done)
