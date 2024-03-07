@@ -121,6 +121,7 @@ class SurfaceFill(CellArrangement):
         self.number = number
         self.attribute = attribute
         self.filler_scale = filler_scale
+        self.subdivision_levels = 2
         self.main_verts, self.filler_verts, self.mesh_delta = fill_surface(self.mesh, self.number, self.attribute, self.filler_scale)
 
 
@@ -136,10 +137,10 @@ class SurfaceFill(CellArrangement):
     def add_nuclei(self, points, normals, attribute, name=""):
         for idx, (pt, dir) in enumerate(zip(points, normals)):
             radius = attribute.size if name == "" else attribute.size * self.filler_scale
-            bpy.ops.mesh.primitive_uv_sphere_add(radius=radius)
+            bpy.ops.mesh.primitive_ico_sphere_add(radius=radius)
             nucleus = bpy.context.active_object
             # TODO: add deform. Is it more eficcient to deform after adding? Can loop through all objects
-            #deform_mesh(nucleus, attribute)
+            deform_mesh(nucleus, attribute)
             # NOTE: Random small displacement along the normal axis
             nucleus.location = pt + random.uniform(-0.5*self.mesh_delta, self.mesh_delta) * dir
             # Rotate obj such that local x axis is aligned with surface normal
@@ -147,4 +148,7 @@ class SurfaceFill(CellArrangement):
             nucleus.matrix_world = rotation_matrix
             nucleus.scale = attribute.scale
             nucleus.name = f"Surface_Nucleus_Type_{attribute.cell_type}_{idx}{name}"
+            nucleus.modifiers.new(name="Subdivision", type='SUBSURF')
+            nucleus.modifiers["Subdivision"].levels = self.subdivision_levels
+            bpy.ops.object.modifier_apply({"object": nucleus}, modifier="Subdivision")
             self.objects.append(nucleus)

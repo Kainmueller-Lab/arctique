@@ -360,8 +360,8 @@ def perturb_vertices_old(mesh, deform_strength):
             w.co += direction * mu
 
 def perturb_vertices(mesh, scaled_deform_strength):
-    VERTS_TO_MOVE = 3 # TODO: Take care of magical number
-    PROPORTIONAL_SIZE = 0.4 # TODO: Necessary? If yes implement
+    VERTS_TO_MOVE = 2 # TODO: Take care of magical number
+    PROPORTIONAL_SIZE = 0.7 # TODO: Necessary? If yes implement
     # TODO: Test different deformations
     for _ in range(VERTS_TO_MOVE):
         #source_v = mesh.vertices[random.randint(0, len(mesh.vertices) - 1)]
