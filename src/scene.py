@@ -185,7 +185,8 @@ class BioMedicalScene:
             self.cell_info.append(cell_info_tuple)
 
         with open(Path("C:/Users/cwinklm/Documents/Alpacathon/rendered_HE/renders2d_test/").joinpath('data.json'), 'w') as f:
-            json.dump(self.cell_info, f)
+            cell_info_dict = {i:info for i, info in enumerate(self.cell_info)}
+            json.dump(cell_info_dict, f)
 
     def define_palette(self, type=""):
         '''
