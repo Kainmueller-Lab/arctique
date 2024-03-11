@@ -147,7 +147,7 @@ class SurfaceFill(CellArrangement):
             rotation_matrix = Matrix.Translation(nucleus.location) @ dir.to_track_quat('X').to_matrix().to_4x4()
             nucleus.matrix_world = rotation_matrix
             nucleus.scale = attribute.scale
-            nucleus.name = f"Surface_Nucleus_Type_{attribute.cell_type}_{idx}{name}"
+            nucleus.name = f"Nucleus_Type_{attribute.cell_type}_{idx}{name}"
             nucleus.modifiers.new(name="Subdivision", type='SUBSURF')
             nucleus.modifiers["Subdivision"].levels = self.subdivision_levels
             bpy.ops.object.modifier_apply({"object": nucleus}, modifier="Subdivision")
