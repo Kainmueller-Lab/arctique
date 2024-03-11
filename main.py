@@ -46,6 +46,7 @@ scene.BioMedicalScene.clear()
     
 # add microscope objects
 my_materials = shading.Material()
+
 my_tissue = tissue.Tissue(my_materials.tissue_staining, thickness=TISSUE_THICKNESS, size=TISSUE_SIZE, location=TISSUE_LOCATION) # thickness and location of tissue should encapsulate min and max z-coordinates of cells 
 my_light_source = scene.LightSource(material=my_materials.light_source)
 my_camera = scene.Camera()
@@ -53,9 +54,10 @@ my_camera = scene.Camera()
 # create scene
 my_scene = scene.BioMedicalScene(my_light_source, my_camera)
 
+# TODO: Add documentation and docstrings
 # Define volume and surface objects
 # NOTE: In the end the volume and surface objects should come from the epithelial tissue macrostructure. - ck
-vol_scale = (0.6, 0.3, 1)
+vol_scale = (1, 0.7, 1)
 surf_scale = (0.8, 0.5, 1)
 VOL_OBJ, SURF_OBJ = utils.geometry.add_dummy_objects(my_tissue, TISSUE_PADDING, vol_scale, surf_scale)
 
@@ -64,23 +66,23 @@ VOL_OBJ, SURF_OBJ = utils.geometry.add_dummy_objects(my_tissue, TISSUE_PADDING, 
 # TODO: Fix that
 # Add surface filling
 SURF_NUMBER = 80
-SURF_ATTRIBUTE = cells.CellAttributeEpi(size=0.1, scale=(1, 0.5, 0.5))
+SURF_ATTRIBUTE = cells.CellAttributeEpi()
 FILLER_SCALE = 0.8 # Scale of the size of smaller filler nuclei w.r.t to the original nuclei size
 surface_fill = arr.SurfaceFill(SURF_OBJ, SURF_NUMBER, SURF_ATTRIBUTE, FILLER_SCALE)
 my_scene.add_arrangement(surface_fill)
 
 # Add volume filling
-NUMBER = 40
+NUMBER = 80
 ATTRIBUTES = [cells.CellAttributeA(), cells.CellAttributeB(), cells.CellAttributeC()]
-RATIOS = [0.05, 0.15, 0.8]
+RATIOS = [0.6, 0.2, 0.2]
 volume_fill = arr.VolumeFill(VOL_OBJ, NUMBER, ATTRIBUTES, RATIOS, strict_boundary=False)
 my_scene.add_arrangement(volume_fill)
 
-# # Hide macro objects
-# VOL_OBJ.hide_viewport = True
-# VOL_OBJ.hide_render = True
-# SURF_OBJ.hide_viewport = True
-# SURF_OBJ.hide_render = True
+# Hide macro objects
+VOL_OBJ.hide_viewport = True
+VOL_OBJ.hide_render = True
+SURF_OBJ.hide_viewport = True
+SURF_OBJ.hide_render = True
 
 # Add tissue
 my_scene.add_tissue(tissue=my_tissue.tissue)
