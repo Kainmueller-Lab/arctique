@@ -1,4 +1,6 @@
 import bpy
+import json
+
 import src.arrangement.arrangement as arr
 import src.utils.helper_methods as hm
 import src.utils.plot_helpers as ph
@@ -155,7 +157,7 @@ class BioMedicalScene:
         self.hide_everything()
         for cell_info_dict in self.cell_info: 
 
-            cell_object = bpy.data.objects[cell_info_dict["ID"]] # get cell object
+            cell_object = bpy.data.objects[cell_info_dict["Cellname"]] # get cell object
             cell_object.hide_viewport = False # unhide cell from viewport
             cell_object.hide_render = False # unhide cell from render
             self.scene.render.filepath = cell_info_dict["Filename"] #self.filepath + mask_nam
@@ -174,11 +176,16 @@ class BioMedicalScene:
         self.cell_info = []
         for idx, cell in enumerate(self.cell_objects): 
             cell_id = idx
-            cell_type = hm.get_type_from_cell_name(cell.name)
-            mask_name = f"{cell.name}.png"
+            cell_name = cell.name 
+
+            cell_type = hm.get_type_from_cell_name(cell_name)
+            mask_name = f"{cell_name}.png"
             cell_filename = self.filepath + mask_name
-            cell_info_tuple = {"ID": cell_id, "Type": cell_type, "Filename": cell_filename}
+            cell_info_tuple = {"ID": cell_id, "Type": cell_type, "Filename": cell_filename, "Cellname":cell_name}
             self.cell_info.append(cell_info_tuple)
+
+        with open(Path("C:/Users/cwinklm/Documents/Alpacathon/rendered_HE/renders2d_test/").joinpath('data.json'), 'w') as f:
+            json.dump(self.cell_info, f)
 
     def define_palette(self, type=""):
         '''
