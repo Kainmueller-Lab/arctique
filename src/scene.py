@@ -1,4 +1,6 @@
 import bpy
+import json
+
 import src.arrangement.arrangement as arr
 import src.utils.helper_methods as hm
 import src.utils.plot_helpers as ph
@@ -155,7 +157,7 @@ class BioMedicalScene:
         self.hide_everything()
         for cell_info_dict in self.cell_info: 
 
-            cell_object = bpy.data.objects[cell_info_dict["ID"]] # get cell object
+            cell_object = bpy.data.objects[cell_info_dict["Cellname"]] # get cell object
             cell_object.hide_viewport = False # unhide cell from viewport
             cell_object.hide_render = False # unhide cell from render
             self.scene.render.filepath = cell_info_dict["Filename"] #self.filepath + mask_nam
@@ -174,11 +176,16 @@ class BioMedicalScene:
         self.cell_info = []
         for idx, cell in enumerate(self.cell_objects): 
             cell_id = idx
-            cell_type = hm.get_type_from_cell_name(cell.name)
-            mask_name = f"{cell.name}.png"
+            cell_name = cell.name 
+
+            cell_type = hm.get_type_from_cell_name(cell_name)
+            mask_name = f"{cell_name}.png"
             cell_filename = self.filepath + mask_name
-            cell_info_tuple = {"ID": cell_id, "Type": cell_type, "Filename": cell_filename}
+            cell_info_tuple = {"ID": cell_id, "Type": cell_type, "Filename": cell_filename, "Cellname":cell_name}
             self.cell_info.append(cell_info_tuple)
+
+        with open(Path("C:/Users/cwinklm/Documents/Alpacathon/rendered_HE/renders2d_test/").joinpath('data.json'), 'w') as f:
+            json.dump(self.cell_info, f)
 
     def define_palette(self, type=""):
         '''
@@ -213,6 +220,46 @@ class BioMedicalScene:
 
     def export_depth(self): 
         pass
+        # """Obtains depth map from Blender render.
+        # :return: The depth map of the rendered camera view as a numpy array of size (H,W).
+        # """
+                
+        # self.tissue.hide_viewport = True
+        # self.tissue.hide_render = True
+        # # hide light source
+        # self.light_source.light_source.hide_viewport = True
+        # self.light_source.light_source.hide_render = True
+
+        # self.scene.render.resolution_x = 500
+        # self.scene.render.resolution_y = 500
+        # self.scene.render.engine = "CYCLES"
+        # self.scene.cycles.samples = 100      
+
+        # self.scene.render.use_compositing = True
+        # self.scene.use_nodes = True
+        # self.scene.view_layers[0].use_pass_z = True
+        # tree = self.scene.node_tree 
+        # nodes = tree.nodes
+        # links = tree.links
+
+
+        # for node in nodes:
+        #     nodes.remove(node)
+
+        # render_layer_node = nodes.new('CompositorNodeRLayers')
+        # viewer_node = nodes.new('CompositorNodeViewer')
+        # norm_node = nodes.new("CompositorNodeNormalize")
+        # viewer_node.use_alpha = True
+
+        # links.new(render_layer_node.outputs['Depth'], norm_node.inputs[0])  # link Render Z to Viewer Image Alpha
+        # links.new(norm_node.outputs[0], viewer_node.inputs[1])
+
+        # bpy.ops.render.render(write_still=True) 
+        # pixels = bpy.data.images['Viewer Node'].pixels
+        
+        # dmap = np.flip(np.array(pixels[:]).reshape((500, 500, 4)), axis=0)
+        # np.save(f"{self.filepath}/depth", dmap)
+
 
     def export_obj3d(self): 
         '''Export the entrie scene as a 3d object'''
@@ -249,6 +296,9 @@ class BioMedicalScene:
             self.setup_scene_render_default(output_shape=output_shape, max_samples=max_samples)
             self.export_scene()
 
+        if depth_mask: 
+            self.export_depth()
+            
         if single_masks or semantic_mask or instance_mask:
             self.setup_scene_render_mask(output_shape=output_shape)
             self.export_masks()
@@ -256,17 +306,23 @@ class BioMedicalScene:
         if semantic_mask: 
             semantic_palette = self.define_palette(type="semantic")
             self.combine_masks_semantic(palette=semantic_palette)
+            
+            if not single_masks: 
+                self.remove_single_masks()
+            
         if instance_mask: 
             instance_palette = self.define_palette(type="instance")
             self.combine_masks_instance(palette=instance_palette)
 
-        if not single_masks: 
-            self.remove_single_masks()
+            if not single_masks: 
+                self.remove_single_masks()
 
-        if depth_mask: 
-            self.export_depth()
+        # if depth_mask: 
+        #     self.setup_scene_render_default(output_shape=output_shape, max_samples=max_samples)
+        #     self.export_depth()
 
         if obj3d: 
+            self.setup_scene_render_default(output_shape=output_shape, max_samples=max_samples)
             self.export_obj3d()
 
         bpy.app.handlers.render_complete.remove(fn_print_time_when_render_done)
