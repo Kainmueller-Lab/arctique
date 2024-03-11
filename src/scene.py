@@ -300,12 +300,15 @@ class BioMedicalScene:
             semantic_palette = self.define_palette(type="semantic")
             self.combine_masks_semantic(palette=semantic_palette)
             
+            if not single_masks: 
+                self.remove_single_masks()
+            
         if instance_mask: 
             instance_palette = self.define_palette(type="instance")
             self.combine_masks_instance(palette=instance_palette)
 
-        if not single_masks: 
-            self.remove_single_masks()
+            if not single_masks: 
+                self.remove_single_masks()
 
         # if depth_mask: 
         #     self.setup_scene_render_default(output_shape=output_shape, max_samples=max_samples)
