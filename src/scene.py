@@ -329,7 +329,7 @@ class BioMedicalScene:
             
         if instance_mask: 
             instance_palette = self.define_palette(type="instance")
-            self.combine_masks_instance(palette=instance_palette)
+            self.combine_masks_instance(palette=instance_palette, file_name=self.sample_name)
 
             if not single_masks: 
                 self.remove_single_masks()

@@ -132,7 +132,7 @@ def build_semantic_mask(source_folder, cell_info_dicts, file_name:int=0, palette
 #     colored_instance_mask.save(str(Path(source_folder).joinpath("instance_mask.png")))
         
 
-def build_instance_mask(source_folder, cell_info_dicts, file_name="semantic_mask", palette=None): 
+def build_instance_mask(source_folder, cell_info_dicts, file_name:int=0, palette=None): 
    # source_folder, cell_info_tuples, file_name="semantic_mask", palette = None): 
     """
     Combines individual cell masks to an instance map of the full scene. 
@@ -149,6 +149,7 @@ def build_instance_mask(source_folder, cell_info_dicts, file_name="semantic_mask
     cell_ID_list = [c["ID"] for c in cell_info_dicts] # make list of all cell ids 
     cell_ID_dict = {cid : (i+1) for i, cid in enumerate(cell_ID_list)} # assign unique integer to each cell id
 
+    print(source_folder + f'/train/{file_name}/masks/')
     if not os.path.exists(source_folder + f'/train/{file_name}/masks/'):
         raise TypeError('The creation of masks might have been unsuccessful')
     
