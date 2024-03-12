@@ -1,5 +1,6 @@
 import bpy
 import json
+import os
 
 import src.arrangement.arrangement as arr
 import src.utils.helper_methods as hm
@@ -39,9 +40,10 @@ class LightSource:
         bpy.context.active_object.active_material = material
         
 class BioMedicalScene:
-    def __init__(self, light_source: LightSource, camera: Camera):
+    def __init__(self, light_source: LightSource, camera: Camera, sample_name: int = None):
         self.light_source = light_source
         self.camera = camera
+        self.sample_name = sample_name
         self.arrangements = []
         self.cell_objects = []
         self.scene = bpy.context.scene
@@ -144,7 +146,12 @@ class BioMedicalScene:
         self.scene.render.resolution_y = output_shape[0]
         self.scene.render.engine = "CYCLES"
         self.scene.cycles.samples = max_samples
-        self.scene.render.filepath = self.filepath + "scene.png"
+        
+        filepath = self.filepath + f"/train"
+        if not os.path.exists(filepath):
+            os.makedirs(filepath)
+        
+        self.scene.render.filepath = filepath + f"/{self.sample_name}/images/{self.sample_name}.png"
 
     def export_scene(self): 
         '''Generates a png image of the complete scene using the specifications defined in setup_scene_render_default'''
@@ -155,12 +162,17 @@ class BioMedicalScene:
         create a binary mask for each individuals cell object
         '''
         self.hide_everything()
+        
+        filepath = self.filepath + f"/train"
+        if not os.path.exists(filepath):
+            os.makedirs(filepath)
+        self.new_filepath = filepath + f"/{self.sample_name}/masks/"
+        
         for cell_info_dict in self.cell_info: 
-
             cell_object = bpy.data.objects[cell_info_dict["Cellname"]] # get cell object
             cell_object.hide_viewport = False # unhide cell from viewport
             cell_object.hide_render = False # unhide cell from render
-            self.scene.render.filepath = cell_info_dict["Filename"] #self.filepath + mask_nam
+            self.scene.render.filepath = self.new_filepath + cell_info_dict["Cellname"] + '.png' #self.filepath + mask_nam
             bpy.ops.render.render('EXEC_DEFAULT', write_still=True) # render single cell mask
             cell_object.hide_viewport = True # hide cell from viewport
             cell_object.hide_render = True # hide cell from render
@@ -168,23 +180,28 @@ class BioMedicalScene:
         self.unhide_everything()
         
         ph.reduce_single_masks(self.filepath, [cell_info_dict["Filename"] for cell_info_dict in self.cell_info])# reduce RGBA image to only alpha channel
-
+        
     def create_cell_info(self):    
         ''''
         create a list of dictionaries wich contains for each cell its type and ID 
         ''' 
         self.cell_info = []
+        
+        masks_path = self.filepath + f'/train/{self.sample_name}/masks'
+        if not os.path.exists(masks_path):
+            os.makedirs(masks_path)
+            
         for idx, cell in enumerate(self.cell_objects): 
             cell_id = idx
             cell_name = cell.name 
 
             cell_type = hm.get_type_from_cell_name(cell_name)
             mask_name = f"{cell_name}.png"
-            cell_filename = self.filepath + mask_name
+            cell_filename = masks_path + '/' + mask_name
             cell_info_tuple = {"ID": cell_id, "Type": cell_type, "Filename": cell_filename, "Cellname":cell_name}
             self.cell_info.append(cell_info_tuple)
 
-        with open(Path("C:/Users/cwinklm/Documents/Alpacathon/rendered_HE/renders2d_test/").joinpath('data.json'), 'w') as f:
+        with open(Path(masks_path).joinpath('data.json'), 'w') as f:
             cell_info_dict = {i:info for i, info in enumerate(self.cell_info)}
             json.dump(cell_info_dict, f)
 
@@ -205,12 +222,11 @@ class BioMedicalScene:
 
         return palette
 
-
-    def combine_masks_semantic(self, file_name="semantic_mask", palette=None): 
+    def combine_masks_semantic(self, file_name:int=0, palette=None): 
         ''' Combine Masks for individual cells into a semantic masks assinging specific colors to each cell type '''
         ph.build_semantic_mask(self.filepath, self.cell_info, file_name=file_name, palette=palette)
 
-    def combine_masks_instance(self , file_name="instance_mask", palette=None): 
+    def combine_masks_instance(self, file_name:int=0, palette=None): 
         ''' Combine Masks for individual cells into an instance mask assinging specific colors to each individual cell '''
         ph.build_instance_mask(self.filepath, self.cell_info, file_name=file_name, palette=palette)
 
@@ -306,7 +322,7 @@ class BioMedicalScene:
 
         if semantic_mask: 
             semantic_palette = self.define_palette(type="semantic")
-            self.combine_masks_semantic(palette=semantic_palette)
+            self.combine_masks_semantic(palette=semantic_palette, file_name=self.sample_name)
             
             if not single_masks: 
                 self.remove_single_masks()
