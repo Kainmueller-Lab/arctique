@@ -4,6 +4,9 @@ import os
 import argparse
 import json
 import pathlib
+import bpycv
+import cv2
+import numpy as np
 
 from os import listdir
 from os.path import isfile, join
@@ -12,7 +15,7 @@ from tqdm import tqdm
 # IMPORT SOURCES
 dir = os.path.dirname(bpy.data.filepath)
 if not dir in sys.path:
-    sys.path.append(dir )
+    sys.path.append(dir)
 
 import src.arrangement.arrangement as arr 
 import src.objects.cells as cells
@@ -44,9 +47,9 @@ TISSUE_THICKNESS = 0.2
 TISSUE_SIZE = 2
 TISSUE_LOCATION = (0, 0, 0.5)
 TISSUE_PADDING = 0.5
-SURF_NUMBER = 80
+SURF_NUMBER = 80 #80
 FILLER_SCALE = 0.8 # Scale of the size of smaller filler nuclei w.r.t to the original nuclei size
-NUMBER = 80
+NUMBER = 80 #80
 RATIOS = [0.6, 0.2, 0.2]
 vol_scale = (1, 0.7, 1)
 surf_scale = (0.8, 0.5, 1)
@@ -58,7 +61,7 @@ def parse_dataset_args():
     parser = argparse.ArgumentParser()
     
     parser.add_argument("--output_dir", type=str, default="/Users/vguarin/Desktop/rendered_HE/dataset", help="Set output folder")
-    parser.add_argument("--n_samples", type=int, default=2, help="Dataset size")
+    parser.add_argument("--n_samples", type=int, default=1, help="Dataset size")
     
     args = parser.parse_args()
     
@@ -72,6 +75,8 @@ def main():
     
     #To continue creating samples from where we left off, use the following two lines of code, otherwise comment out 
     dir = render_path + '/train_combined_masks/semantic'
+    if not os.path.exists(dir):
+            os.makedirs(dir)
     max_n_samples = int(len(os.listdir(dir))/2) if any(isfile(join(dir, i)) for i in listdir(dir)) else 0
     
     for i in tqdm(range(max_n_samples, max_n_samples + args.n_samples)):
@@ -117,12 +122,18 @@ def main():
         my_scene.add_staining(material=my_materials.nuclei_staining)
     
         my_scene.sample_name = i+1
+        
+        # attempt to use bpycv
+        # result = bpycv.render_data()
+        # # save result
+        # cv2.imwrite("/demo-rgb.jpg", result["image"][..., ::-1])  # transfer RGB image to opencv's BGR
+
         my_scene.render(filepath = render_path,  # where to save renders
                     scene = True, # if true scene is rendered
                     single_masks = True, # if true single cell masks are rendered
                     semantic_mask = True, # if true semantic mask is generated
                     instance_mask = True, # if true instance mask is generated
-                    depth_mask = False, # if true depth mask is generated
+                    depth_mask = True, # if true depth mask is generated
                     obj3d = False, # if true scene is saved as 3d object
                     output_shape = (500, 500), # dimensions of output
                     max_samples = 10) # number of samples for rendering. Fewer samples will render more quickly. Default is 1024

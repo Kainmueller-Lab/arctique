@@ -44,6 +44,8 @@ def reduce_single_masks(source_folder, file_names):
         
         mask_png_small = Image.fromarray(mask_np)
         mask_png_small.save(file_name)
+        mask_png_small.close()
+
     
 
 def build_semantic_mask(source_folder, cell_info_dicts, file_name:int=0, palette = None): 
@@ -93,6 +95,7 @@ def build_semantic_mask(source_folder, cell_info_dicts, file_name:int=0, palette
         os.makedirs(new_source_folder)
     np.save(str(Path(new_source_folder).joinpath(f"{file_name}.npy")), semantic_mask)
     colored_instance_mask.save(str(Path(new_source_folder).joinpath(f"{file_name}.png")))
+    colored_instance_mask.close()
 
 
 # this works for 2d but must be adapted for 3d
@@ -162,7 +165,6 @@ def build_instance_mask(source_folder, cell_info_dicts, file_name:int=0, palette
 
         if cell_counter==0: 
             instance_mask = np.zeros_like(mask_np) # instance_mask has same shape as the masks
-
     
         instance_mask += mask_np*((cell_ID_dict[cell_id])/255.) # in mask the object has pixel value 255 (backgrund is 0)
 
@@ -179,6 +181,7 @@ def build_instance_mask(source_folder, cell_info_dicts, file_name:int=0, palette
     colored_instance_mask.putpalette(palette)
     # save to png
     colored_instance_mask.save(str(Path(new_source_folder).joinpath(f"{file_name}.png")))
+    colored_instance_mask.close()
 
 
 def remove_single_masks(file_names): 

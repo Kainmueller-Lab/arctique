@@ -260,7 +260,6 @@ class BioMedicalScene:
         # nodes = tree.nodes
         # links = tree.links
 
-
         # for node in nodes:
         #     nodes.remove(node)
 
@@ -277,7 +276,53 @@ class BioMedicalScene:
         
         # dmap = np.flip(np.array(pixels[:]).reshape((500, 500, 4)), axis=0)
         # np.save(f"{self.filepath}/depth", dmap)
+    
+    def enable_depth_output_render_setup(self):
+        self.tissue.hide_viewport = True
+        self.tissue.hide_render = True
+        self.light_source.light_source.hide_viewport = True
+        self.light_source.light_source.hide_render = True
 
+        self.scene.render.resolution_x = 500
+        self.scene.render.resolution_y = 500
+        self.scene.render.engine = "CYCLES"
+        self.scene.cycles.samples = 100 
+    
+    def enable_depth_graph_node(self):
+        self.scene.render.use_compositing = True
+        self.scene.use_nodes = True
+        tree = self.scene.node_tree
+        self.links = tree.links
+        self.scene.view_layers[0].use_pass_z = True 
+        
+        for n in tree.nodes:
+            tree.nodes.remove(n)
+        self.rl = tree.nodes.new('CompositorNodeRLayers')
+        
+        self.vl = tree.nodes.new('CompositorNodeViewer') # The viewer can come in handy for inspecting the results in the GUI
+        self.vl.use_alpha = True        
+        
+        self.links.new(self.rl.outputs[0], self.vl.inputs[0])  # link Image to Viewer Image RGB
+        self.links.new(self.rl.outputs['Depth'], self.vl.inputs[1])  # link Render Z to Viewer Image Alpha
+    
+    def enable_depth_output(self):
+        self.enable_depth_output_render_setup()
+        self.enable_depth_graph_node()
+        
+        output_path = self.filepath + f'/train_combined_masks/depth'
+        if not os.path.exists(output_path):
+            os.makedirs(output_path)
+        self.scene.render.filepath = output_path + f'/{self.sample_name}.png'
+        self.export_scene()
+        
+        pixels = bpy.data.images['Viewer Node'].pixels
+        
+        # dmap = np.flip(np.array(pixels[:]).reshape((500, 500, 4)), axis=0)
+        pixels = np.array(bpy.data.images['Viewer Node'].pixels)
+        resolution = int(np.sqrt(len(pixels)/4))
+        image_with_depth = pixels.reshape(resolution,resolution,4)  #reshaping into image array 4 channel (rgbz)
+        
+        np.save(f"{output_path}/{self.sample_name}", image_with_depth)
 
     def export_obj3d(self): 
         '''Export the entrie scene as a 3d object'''
@@ -313,9 +358,6 @@ class BioMedicalScene:
         if scene: 
             self.setup_scene_render_default(output_shape=output_shape, max_samples=max_samples)
             self.export_scene()
-
-        if depth_mask: 
-            self.export_depth()
             
         if single_masks or semantic_mask or instance_mask:
             self.setup_scene_render_mask(output_shape=output_shape)
@@ -334,6 +376,10 @@ class BioMedicalScene:
 
             if not single_masks: 
                 self.remove_single_masks()
+                
+        if depth_mask: 
+            self.enable_depth_output()
+            # self.export_depth()
 
         # if depth_mask: 
         #     self.setup_scene_render_default(output_shape=output_shape, max_samples=max_samples)
@@ -345,7 +391,6 @@ class BioMedicalScene:
 
         bpy.app.handlers.render_complete.remove(fn_print_time_when_render_done)
         print("rendering completed")
-
 
     def hide_auxiliary_objects(self):
         for arr in self.arrangements:
@@ -455,7 +500,6 @@ class BioMedicalScene:
             self.setup_scene_render_mask(output_shape=output_shape) # render 2d scene at the intersection of scene and moving tissue
             self.export_masks() # export individual cell masks 
 
-    	    
             if semantic_mask: 
                 # combine individual cells to a 2d semnatic mask
                 semantic_mask_name = f"{semantic_mask_label if len(semantic_mask_label)!=0 else 'semantic_mask'}_{idx}"
@@ -478,4 +522,3 @@ class BioMedicalScene:
         ph.build_gif(self.semantic_mask_names, Path(self.filepath).joinpath("semantic_mask.gif"))
         ph.build_gif(self.instance_mask_names, Path(self.filepath).joinpath("instance_mask.gif"))
         print("done combining masks to gif")
-
