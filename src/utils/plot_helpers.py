@@ -149,7 +149,6 @@ def build_instance_mask(source_folder, cell_info_dicts, file_name:int=0, palette
     cell_ID_list = [c["ID"] for c in cell_info_dicts] # make list of all cell ids 
     cell_ID_dict = {cid : (i+1) for i, cid in enumerate(cell_ID_list)} # assign unique integer to each cell id
 
-    print(source_folder + f'/train/{file_name}/masks/')
     if not os.path.exists(source_folder + f'/train/{file_name}/masks/'):
         raise TypeError('The creation of masks might have been unsuccessful')
     

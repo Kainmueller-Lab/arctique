@@ -5,6 +5,9 @@ import argparse
 import json
 import pathlib
 
+from os import listdir
+from os.path import isfile, join
+from tqdm import tqdm
 
 # IMPORT SOURCES
 dir = os.path.dirname(bpy.data.filepath)
@@ -63,12 +66,15 @@ def parse_dataset_args():
         print(f"- {arg}: {getattr(args, arg)}")
     return args
 
-
 def main():
     args = parse_dataset_args() 
     render_path = args.output_dir #render scene
     
-    for i in range(args.n_samples):
+    #To continue creating samples from where we left off, use the following two lines of code, otherwise comment out 
+    dir = render_path + '/train_combined_masks/semantic'
+    max_n_samples = int(len(os.listdir(dir))/2) if any(isfile(join(dir, i)) for i in listdir(dir)) else 0
+    
+    for i in tqdm(range(max_n_samples, max_n_samples + args.n_samples)):
         scene.BioMedicalScene.clear()
             
         # add microscope objects
@@ -121,15 +127,15 @@ def main():
                     output_shape = (500, 500), # dimensions of output
                     max_samples = 10) # number of samples for rendering. Fewer samples will render more quickly. Default is 1024
 
-    # my_scene.render3d(filepath = RENDER_PATH,  # where to save renders
-    #                scene = True, # if true scene is rendered
-    #                n_slices = 10,
-    #                semantic_mask = True, # if true semantic mask is generated
-    #                instance_mask = True, # if true instance mask is generated
-    #                depth_mask = True, # if true depth mask is generated
-    #                obj3d = True, # if true scene is saved as 3d object
-    #                output_shape = (500, 500), # dimensions of output
-    #                max_samples = 10) # number of samples for rendering. Fewer samples will render more quickly. Default is 1024
+        # my_scene.render3d(filepath = RENDER_PATH,  # where to save renders
+        #                scene = True, # if true scene is rendered
+        #                n_slices = 10,
+        #                semantic_mask = True, # if true semantic mask is generated
+        #                instance_mask = True, # if true instance mask is generated
+        #                depth_mask = True, # if true depth mask is generated
+        #                obj3d = True, # if true scene is saved as 3d object
+        #                output_shape = (500, 500), # dimensions of output
+        #                max_samples = 10) # number of samples for rendering. Fewer samples will render more quickly. Default is 1024
 
 
 if __name__ == "__main__":
