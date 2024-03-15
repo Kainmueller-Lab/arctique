@@ -7,6 +7,7 @@ import src.utils.plot_helpers as ph
 #import imp
 import importlib as imp # imp module is deprecated since python 3.12
 from pathlib import Path
+from PIL import Image
 import time
 import numpy as np
 imp.reload(arr)
@@ -122,7 +123,7 @@ class BioMedicalScene:
             cell.hide_viewport = False
             cell.hide_render = False
 
-    def setup_scene_render_mask(self, output_shape = (500, 500)): 
+    def setup_scene_render_single_masks(self, output_shape = (500, 500)): 
         '''specify settings for the rendering of the individual cell masks '''
         self.scene.render.resolution_x = output_shape[0]
         self.scene.render.resolution_y = output_shape[0]
@@ -134,7 +135,7 @@ class BioMedicalScene:
         self.scene.display.shading.single_color = (255, 255, 255)
         self.scene.display.render_aa = "OFF"
 
-        self.scene.render.film_transparent = True # this makes the background transparent and the alpha chanell of output will have only two pixel values
+        self.scene.render.film_transparent = True # this makes the background transparent and the alpha chanel of output will have only two pixel values
         self.scene.render.image_settings.color_mode = "RGBA"
 
 
@@ -150,7 +151,7 @@ class BioMedicalScene:
         '''Generates a png image of the complete scene using the specifications defined in setup_scene_render_default'''
         bpy.ops.render.render('EXEC_DEFAULT', write_still=True)
     
-    def export_masks(self): 
+    def export_single_masks(self): 
         ''''
         create a binary mask for each individuals cell object
         '''
@@ -174,17 +175,25 @@ class BioMedicalScene:
         create a list of dictionaries wich contains for each cell its type and ID 
         ''' 
         self.cell_info = []
+        unique_type_counter = 0
+        unique_type_dict = {}
         for idx, cell in enumerate(self.cell_objects): 
             cell_id = idx
             cell_name = cell.name 
 
             cell_type = hm.get_type_from_cell_name(cell_name)
+
+            if cell_type not in unique_type_dict.keys(): 
+                unique_type_counter +=1 
+                unique_type_dict[cell_type] = unique_type_counter
+
+
             mask_name = f"{cell_name}.png"
             cell_filename = self.filepath + mask_name
-            cell_info_tuple = {"ID": cell_id, "Type": cell_type, "Filename": cell_filename, "Cellname":cell_name}
+            cell_info_tuple = {"ID": cell_id, "Type": cell_type, "Filename": cell_filename, "Cellname":cell_name, "ID_Type": unique_type_dict[cell_type]}
             self.cell_info.append(cell_info_tuple)
 
-        with open(Path("C:/Users/cwinklm/Documents/Alpacathon/rendered_HE/renders2d_test/").joinpath('data.json'), 'w') as f:
+        with open(Path(self.filepath).joinpath('cell_info.json'), 'w') as f:
             cell_info_dict = {i:info for i, info in enumerate(self.cell_info)}
             json.dump(cell_info_dict, f)
 
@@ -205,14 +214,6 @@ class BioMedicalScene:
 
         return palette
 
-
-    def combine_masks_semantic(self, file_name="semantic_mask", palette=None): 
-        ''' Combine Masks for individual cells into a semantic masks assinging specific colors to each cell type '''
-        ph.build_semantic_mask(self.filepath, self.cell_info, file_name=file_name, palette=palette)
-
-    def combine_masks_instance(self , file_name="instance_mask", palette=None): 
-        ''' Combine Masks for individual cells into an instance mask assinging specific colors to each individual cell '''
-        ph.build_instance_mask(self.filepath, self.cell_info, file_name=file_name, palette=palette)
 
     def remove_single_masks(self): 
         '''Delete png files of singel cell 2d masks'''
@@ -260,11 +261,87 @@ class BioMedicalScene:
         
         # dmap = np.flip(np.array(pixels[:]).reshape((500, 500, 4)), axis=0)
         # np.save(f"{self.filepath}/depth", dmap)
+    
+    def setup_scene_render_full_masks(self, output_shape = (500, 500), max_samples = 1024): 
+        self.tissue.hide_viewport = True
+        self.tissue.hide_render = True
+        # hide light source
+        self.light_source.light_source.hide_viewport = True
+        self.light_source.light_source.hide_render = True
+
+        self.scene.render.resolution_x = output_shape[0]
+        self.scene.render.resolution_y = output_shape[1]
+        self.scene.render.engine = "CYCLES"
+        self.scene.cycles.samples = max_samples     
+
+
+    def setup_node_tree_full_masks(self): 
+                
+        self.scene.render.use_compositing = True
+        self.scene.use_nodes = True
+        tree = self.scene.node_tree 
+        nodes = tree.nodes
+        links = tree.links
+
+        for node in nodes:
+            nodes.remove(node)
+
+        render_layer_node = nodes.new('CompositorNodeRLayers')
+
+        math_node = nodes.new("CompositorNodeMath")
+        math_node.operation="DIVIDE"
+        math_node.inputs[1].default_value = 255
+
+        output_node = nodes.new("CompositorNodeOutputFile")
+        output_node.base_path = self.filepath
+
+
+        output_node.file_slots[0].path = "tmp"
+        output_node.file_slots[0].use_node_format = False
+        output_node.file_slots[0].format.color_mode ="BW"
+        output_node.file_slots[0].format.color_depth="16"
+
+        links.new(render_layer_node.outputs["IndexOB"], math_node.inputs[0])       # links.new(norm_node.outputs[0], viewer_node.inputs[1])
+        links.new(math_node.outputs[0], output_node.inputs[0]) 
+
+    
+    def set_object_pass_idx(self, flag): 
+
+        for cell_info_dict in self.cell_info: 
+            cell_object = bpy.data.objects[cell_info_dict["Cellname"]] # get cell object
+
+            if flag == "instance": 
+                cell_object.pass_index = cell_info_dict["ID"]
+            if flag == "semantic":  
+                cell_object.pass_index = cell_info_dict["ID_Type"]
+    
+
+
+    def export_full_mask(self, type=""): 
+        self.set_object_pass_idx(type)
+        self.scene.view_layers["ViewLayer"].use_pass_object_index = True
+
+        self.setup_node_tree_full_masks()
+        self.scene.render.filepath = ""
+        bpy.ops.render.render('EXEC_DEFAULT', write_still=True) # render single cell mask
+
+        # the exported image is a BW-png with the pixel values corresponding to the cell types/cell instances
+        # typically most pixel values are close to 0 and not well visible in a typical image viewer. Theerfore 
+        # we assign colors to to pixels to ensure visibility
+
+        palette = self.define_palette(type=type)
+        colored_instance_mask = Image.open(Path(self.filepath).joinpath("tmp0001.png"))
+        colored_instance_mask = Image.fromarray(np.array(colored_instance_mask).astype(np.uint8))
+        colored_instance_mask.putpalette(palette)
+        colored_instance_mask.save(str(Path(self.filepath).joinpath(f"{type}_mask.png")))
+
+        self._clear_compositor()
 
 
     def export_obj3d(self): 
         '''Export the entrie scene as a 3d object'''
         bpy.ops.export_scene.obj(filepath=f"{self.filepath}/my_scene.obj")
+
 
     def render(self, 
                filepath: str, 
@@ -300,23 +377,18 @@ class BioMedicalScene:
         if depth_mask: 
             self.export_depth()
             
-        if single_masks or semantic_mask or instance_mask:
-            self.setup_scene_render_mask(output_shape=output_shape)
-            self.export_masks()
+        if single_masks:
+            self.setup_scene_render_single_masks(output_shape=output_shape)
+            self.export_single_masks()
 
         if semantic_mask: 
-            semantic_palette = self.define_palette(type="semantic")
-            self.combine_masks_semantic(palette=semantic_palette)
-            
-            if not single_masks: 
-                self.remove_single_masks()
+            self.setup_scene_render_full_masks(output_shape=output_shape, max_samples=max_samples)
+            self.export_full_mask(type="semantic")
             
         if instance_mask: 
-            instance_palette = self.define_palette(type="instance")
-            self.combine_masks_instance(palette=instance_palette)
-
-            if not single_masks: 
-                self.remove_single_masks()
+           
+            self.setup_scene_render_full_masks(output_shape=output_shape, max_samples=max_samples)
+            self.export_full_mask(type="instance")
 
         # if depth_mask: 
         #     self.setup_scene_render_default(output_shape=output_shape, max_samples=max_samples)
@@ -330,11 +402,11 @@ class BioMedicalScene:
         print("rendering completed")
 
 
-    def hide_auxiliary_objects(self):
-        for arr in self.arrangements:
-            for obj in arr.auxiliary_objects:
-                obj.hide_render = True
-                obj.hide_viewport = True
+    # def hide_auxiliary_objects(self):
+    #     for arr in self.arrangements:
+    #         for obj in arr.auxiliary_objects:
+    #             obj.hide_render = True
+    #             obj.hide_viewport = True
 
     def render3d(self, 
                filepath: str, 
@@ -436,7 +508,7 @@ class BioMedicalScene:
             self.tissue_empty.location.z = loc # position moving slice 
             self.cut_cells()# make cell(-parts) invisible outside moving tissue
             self.setup_scene_render_mask(output_shape=output_shape) # render 2d scene at the intersection of scene and moving tissue
-            self.export_masks() # export individual cell masks 
+            self.export_single_masks() # export individual cell masks 
 
     	    
             if semantic_mask: 
