@@ -10,6 +10,15 @@ class build_crypt():
         self.node_tree, self.input, self.output = self._add_geometry_node()
         self.hex_input, self.hex_output = self._add_hexagon_structure(self.input.outputs['Geometry'])
         self.crypt_input, self.crypt_otput = self._add_crypts(self.hex_output, self.output.inputs['Geometry'])
+        bpy.ops.object.modifier_apply(modifier=self.name)
+
+        # rescale crypt for correct size (TODO change in the future directly in generation)
+        self.crypt.scale.x = 10
+        self.crypt.scale.y = 10
+        self.crypt.scale.z = 10
+        bpy.context.view_layer.objects.active = self.crypt
+        bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+
     
     def _add_geometry(self):
         bpy.ops.mesh.primitive_plane_add(size=2, location=(0, 0, 0))

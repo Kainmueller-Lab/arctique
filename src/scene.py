@@ -50,7 +50,8 @@ class BioMedicalScene:
 
     @staticmethod
     def clear():
-        hm.delete_objects()
+        hm.clear_scene()
+        # hm.delete_objects()
 
     def _clear_compositor(self):
         if self.scene.node_tree is not None:
