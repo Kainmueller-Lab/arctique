@@ -59,7 +59,7 @@ my_scene = scene.BioMedicalScene(my_light_source, my_camera)
 # NOTE: In the end the volume and surface objects should come from the epithelial tissue macrostructure. - ck
 vol_scale = (1, 0.7, 1)
 surf_scale = (0.8, 0.5, 1)
-VOL_OBJ, SURF_OBJ = utils.geometry.add_dummy_objects(my_tissue, TISSUE_PADDING, vol_scale, surf_scale)
+VOL_OBJ, SURF_OBJ = my_scene.add_dummy_objects(my_tissue, TISSUE_PADDING, vol_scale, surf_scale)
 
 # NOTE: For some very weird reason you need to create the surface filling before the volume filling.
 # Otherwise the surface filling won't work and it won't even refine the mesh. :/ - ck
@@ -78,16 +78,13 @@ RATIOS = [0.6, 0.2, 0.2]
 volume_fill = arr.VolumeFill(VOL_OBJ, NUMBER, ATTRIBUTES, RATIOS, strict_boundary=False)
 my_scene.add_arrangement(volume_fill)
 
-# Hide macro objects
-VOL_OBJ.hide_viewport = True
-VOL_OBJ.hide_render = True
-SURF_OBJ.hide_viewport = True
-SURF_OBJ.hide_render = True
-
 # Add tissue
 my_scene.add_tissue(tissue=my_tissue.tissue)
 my_scene.cut_cells()
 my_scene.add_staining(material=my_materials.nuclei_staining)
+
+# Hide non cell objects
+my_scene.hide_non_cell_objects()
 
 # render scene
 RENDER_PATH = 'C:/Users/cwinklm/Documents/Alpacathon/rendered_HE/renders2d_test/'

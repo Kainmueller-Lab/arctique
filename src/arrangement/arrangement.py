@@ -14,7 +14,6 @@ class CellArrangement:
 
     def __init__(self):
         self.objects = [] # Contains the nuclei objects
-        self.auxiliary_objects = [] # These will be hidden in viewport and rendering but can be used for further computing.
         self.name = None
         self.id = CellArrangement.count
         CellArrangement.count += 1

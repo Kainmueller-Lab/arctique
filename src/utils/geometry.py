@@ -416,39 +416,3 @@ def remove_top_and_bottom_faces(obj):
     # Update the mesh data
     bm.to_mesh(obj.data)
     bm.free()
-
-def add_dummy_objects(tissue, padding, vol_scale, surf_scale):
-    # Create temporarily padded tissue
-    tissue.tissue.scale = tuple(1+padding for _ in range(3))
-
-    bpy.ops.mesh.primitive_cylinder_add() # Example bounding torus mesh
-    cylinder = bpy.context.active_object
-    #vol_obj.location = Vector(tissue.tissue.location) + Vector((0, 0, 0.5))
-    cylinder.scale = vol_scale
-    # NOTE: Necessary to transform the vertices of the mesh according to scale
-    # It should be used when the object is created, but maybe there's a better place in the methds for it. ck
-    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-    # Intersect with tissue
-    bpy.ops.mesh.primitive_cube_add(location=tissue.location)
-    box = bpy.context.active_object
-    box.scale = (1.1, 1.1, tissue.thickness/tissue.size)
-    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
-    vol_obj = subtract_object([box], cylinder)[0]
-    remove_top_and_bottom_faces(vol_obj)
-    remove_objects([cylinder])
-    vol_obj.name = "Volume"
-
-    bpy.ops.mesh.primitive_cylinder_add()
-    surf_obj = bpy.context.active_object
-    #surf_obj.location = Vector(tissue.tissue.location) + Vector((0, 0, 0.5))
-    surf_obj.scale = surf_scale
-    # NOTE: Necessary to transform the vertices of the mesh according to scale
-    # It should be used when the object is created, but maybe there's a better place in the methds for it. ck
-    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True) 
-    # Intersect with tissue
-    intersect_with_object([surf_obj], tissue.tissue)
-    remove_top_and_bottom_faces(surf_obj)
-    surf_obj.name = "Surface"
-
-    tissue.tissue.scale = (1,1,1)
-    return vol_obj, surf_obj
