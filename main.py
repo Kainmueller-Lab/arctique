@@ -7,6 +7,8 @@ import pathlib
 import bpycv
 import cv2
 import numpy as np
+import time
+import glob
 
 from os import listdir
 from os.path import isfile, join
@@ -62,6 +64,7 @@ def parse_dataset_args():
     
     parser.add_argument("--output_dir", type=str, default="/Users/vguarin/Desktop/rendered_HE/dataset", help="Set output folder")
     parser.add_argument("--n_samples", type=int, default=1, help="Dataset size")
+    #other default value for --output_dir: "/Volumes/ag_kainmueller/vguarin/synthetic_H&E" via internal VPN
     
     args = parser.parse_args()
     
@@ -72,13 +75,18 @@ def parse_dataset_args():
 def main():
     args = parse_dataset_args() 
     render_path = args.output_dir #render scene
+    print(render_path)
     
     #To continue creating samples from where we left off, use the following two lines of code, otherwise comment out 
     dir = render_path + '/train_combined_masks/semantic'
+
     if not os.path.exists(dir):
             os.makedirs(dir)
-    max_n_samples = int(len(os.listdir(dir))/2) if any(isfile(join(dir, i)) for i in listdir(dir)) else 0
-    
+    max_n_samples = len(glob.glob(f"{dir}/*.png")) 
+    # max_n_samples = len(os.listdir(dir)) if any(isfile(join(dir, i)) for i in listdir(dir)) else 0
+    # print(glob.glob("dir/*.png"), len(glob.glob("dir/*.png")))
+
+
     for i in tqdm(range(max_n_samples, max_n_samples + args.n_samples)):
         scene.BioMedicalScene.clear()
             
@@ -91,6 +99,7 @@ def main():
 
         # create scene
         my_scene = scene.BioMedicalScene(my_light_source, my_camera)
+        # my_scene._clear_compositor()
 
         # TODO: Add documentation and docstrings
         # Define volume and surface objects
@@ -133,10 +142,12 @@ def main():
                     single_masks = True, # if true single cell masks are rendered
                     semantic_mask = True, # if true semantic mask is generated
                     instance_mask = True, # if true instance mask is generated
-                    depth_mask = True, # if true depth mask is generated
+                    depth_mask = False, # if true depth mask is generated
                     obj3d = False, # if true scene is saved as 3d object
                     output_shape = (500, 500), # dimensions of output
                     max_samples = 10) # number of samples for rendering. Fewer samples will render more quickly. Default is 1024
+
+        bpy.ops.wm.read_factory_settings(use_empty=True)
 
         # my_scene.render3d(filepath = RENDER_PATH,  # where to save renders
         #                scene = True, # if true scene is rendered

@@ -41,7 +41,6 @@ def reduce_single_masks(source_folder, file_names):
 
         mask_np = mask_np[:, :, -1] # keep only alpha channel
         
-        
         mask_png_small = Image.fromarray(mask_np)
         mask_png_small.save(file_name)
         mask_png_small.close()
@@ -63,9 +62,7 @@ def build_semantic_mask(source_folder, cell_info_dicts, file_name:int=0, palette
 
     unique_cell_types = set([cit["Type"] for cit in cell_info_dicts]) # identify unique cell types 
     cell_type_dict = {uct : (i+1) for i, uct in enumerate(unique_cell_types)} # assign unique id to each cell type
-    
-    #/Users/vguarin/Desktop/rendered_HE/dataset/train/1/masks/data.json
-    
+        
     if not os.path.exists(source_folder + f'/train/{file_name}/masks/'):
         raise TypeError('The creation of masks might have been unsuccessful')
     
@@ -95,7 +92,7 @@ def build_semantic_mask(source_folder, cell_info_dicts, file_name:int=0, palette
         os.makedirs(new_source_folder)
     np.save(str(Path(new_source_folder).joinpath(f"{file_name}.npy")), semantic_mask)
     colored_instance_mask.save(str(Path(new_source_folder).joinpath(f"{file_name}.png")))
-    colored_instance_mask.close()
+    # colored_instance_mask.close()
 
 
 # this works for 2d but must be adapted for 3d
@@ -181,7 +178,7 @@ def build_instance_mask(source_folder, cell_info_dicts, file_name:int=0, palette
     colored_instance_mask.putpalette(palette)
     # save to png
     colored_instance_mask.save(str(Path(new_source_folder).joinpath(f"{file_name}.png")))
-    colored_instance_mask.close()
+    # colored_instance_mask.close()
 
 
 def remove_single_masks(file_names): 
