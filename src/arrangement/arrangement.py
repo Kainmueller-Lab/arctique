@@ -38,8 +38,7 @@ class CellList(CellArrangement):
 
     def add(self):
         for location in self.locations:
-            # TODO: Make sure the ids are not just from the same range in different lists.
-            # They need to be unique for each scene. - ck
+            # TODO: This is old code, and needs an update if CellLists turn out to be relevant. - ck 
             cell = Cell(location, self.id, self.type, self.cell_attributes)
             self.objects.append(cell)
         for cell in self.objects:

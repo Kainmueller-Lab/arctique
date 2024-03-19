@@ -76,9 +76,10 @@ SURF_ATTRIBUTE = cells.CellAttributeEpi()
 FILLER_SCALE = 0.8 # Scale of the size of smaller filler nuclei w.r.t to the original nuclei size
 surface_fill = arr.SurfaceFill(SURF_OBJ, SURF_NUMBER, SURF_ATTRIBUTE, FILLER_SCALE)
 
-# Add arrangements
+# Add arrangements and rename nuclei with unique IDs
 my_scene.add_arrangement(volume_fill)
 my_scene.add_arrangement(surface_fill)
+my_scene.rename_nuclei()
 
 # Add tissue
 my_scene.add_tissue(tissue=my_tissue.tissue)

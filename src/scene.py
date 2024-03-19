@@ -98,6 +98,13 @@ class BioMedicalScene:
         print(f"Added arrangement {cell_arrangement.name} with {len(cell_arrangement.objects)} objects.")
         self.cell_objects = self.cell_objects + cell_arrangement.objects
 
+    def rename_nuclei(self):
+        for idx, cell in enumerate(self.cell_objects):
+            parts = cell.name.split("_")
+            cell.name = f"{parts[0]}_{idx}_{parts[1]}_{parts[2]}"
+
+
+
     def hide_everything(self): 
         '''hide all objects in the scene'''
         # hide tissue 
@@ -125,6 +132,7 @@ class BioMedicalScene:
             cell.hide_render = False
 
     def hide_non_cell_objects(self):
+        '''hide all objects except cells in the scene'''
         for obj in self.scene.objects:
             if not obj.name.startswith('Nucleus'):
                 obj.hide_viewport = True
@@ -182,11 +190,9 @@ class BioMedicalScene:
         create a list of dictionaries wich contains for each cell its type and ID 
         ''' 
         self.cell_info = []
-        for idx, cell in enumerate(self.cell_objects): 
-            cell_id = idx
+        for cell in self.cell_objects: 
             cell_name = cell.name 
-
-            cell_type = hm.get_type_from_cell_name(cell_name)
+            cell_id, cell_type = hm.get_info_from_cell_name(cell_name)
             mask_name = f"{cell_name}.png"
             cell_filename = self.filepath + mask_name
             cell_info_tuple = {"ID": cell_id, "Type": cell_type, "Filename": cell_filename, "Cellname":cell_name}
