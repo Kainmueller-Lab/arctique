@@ -11,6 +11,7 @@ class build_crypt():
         self.hex_input, self.hex_output = self._add_hexagon_structure(self.input.outputs['Geometry'])
         self.crypt_input, self.crypt_otput = self._add_crypts(self.hex_output, self.output.inputs['Geometry'])
         bpy.ops.object.modifier_apply(modifier=self.name)
+        self._cut_geometry(self.crypt)
 
         # rescale crypt for correct size (TODO change in the future directly in generation)
         self.crypt.scale.x = 10
@@ -154,3 +155,56 @@ class build_crypt():
             links.new(subdivide.outputs['Mesh'], out_link)
             
         return extrude.inputs['Mesh'], subdivide.outputs['Mesh']
+    
+    def _cut_geometry(self, mesh_object, size=1):
+        # Ensure the context is correct
+        bpy.ops.object.mode_set(mode='OBJECT')
+
+        # 1. Create a helper cube
+        bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, 0))
+        helper_cube = bpy.context.object
+
+        # 2. Apply a Boolean Modifier to 'mesh'
+        boolean_modifier = mesh_object.modifiers.new(name='BooleanOp', type='BOOLEAN')
+        boolean_modifier.solver = 'FAST'
+        boolean_modifier.object = helper_cube
+        boolean_modifier.operation = 'INTERSECT' 
+
+        # 3. Apply the modifier
+        bpy.context.view_layer.objects.active = mesh_object
+        bpy.ops.object.modifier_apply(modifier=boolean_modifier.name)
+
+        # 4. Delete the helper cube
+        bpy.data.objects.remove(helper_cube, do_unlink=True)
+    
+
+
+
+class build_muscosa():
+    def __init__(self, crypt, name='muscosa', buffer=(0.2, 0.2, 0.1)):
+        self.name = name
+        self.buffer = buffer
+        self.size = crypt.dimensions
+        self.crypt = crypt
+        self.muscosa = self._add_geometry()
+        self._remove_crypts()
+
+    def _add_geometry(self):
+        bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, self.size[2]/2))
+        geometry = bpy.context.active_object
+        geometry.name = self.name
+        geometry.scale = (self.size[0]*(1-self.buffer[0]), self.size[1]*(1-self.buffer[1]), self.size[2]*(1+self.buffer[2]))
+        bpy.context.scene.cursor.location = (0, 0, 0)
+        bpy.ops.object.origin_set(type='ORIGIN_CURSOR', center='MEDIAN')
+        bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+        return geometry
+    
+    def _remove_crypts(self):
+        # Apply a Boolean Modifier to 'mesh'
+        boolean_modifier = self.muscosa.modifiers.new(name='BooleanOp', type='BOOLEAN')
+        boolean_modifier.object = self.crypt
+        boolean_modifier.operation = 'DIFFERENCE' 
+
+        # Apply the modifier
+        bpy.context.view_layer.objects.active = self.muscosa
+        bpy.ops.object.modifier_apply(modifier=boolean_modifier.name)

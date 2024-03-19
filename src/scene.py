@@ -60,6 +60,10 @@ class BioMedicalScene:
     def add_tissue(self, tissue):
         self.tissue = tissue
         bpy.context.view_layer.objects.active = bpy.context.scene.objects['tissue']
+        self.tissue.hide_viewport = True
+        self.tissue.hide_render = True
+
+        # add tissue empty for final slicing
         self.tissue_empty = tissue.copy()
         self.tissue_empty.data = tissue.data.copy()
         bpy.context.collection.objects.link(self.tissue_empty)
@@ -67,7 +71,41 @@ class BioMedicalScene:
         self.tissue_empty.hide_viewport = True
         self.tissue_empty.hide_render = True
         self.tissue_empty.scale.z = 1.001
-    
+
+        # add bounding box for omitting objects outside of tissue
+        self.tissue_bound = tissue.copy()
+        self.tissue_bound.data = tissue.data.copy()
+        bpy.context.collection.objects.link(self.tissue_bound)
+        self.tissue_bound.name = 'tissue_bound'
+        self.tissue_bound.hide_viewport = True
+        self.tissue_bound.hide_render = True
+        self.tissue_bound.scale.x = 1.4
+        self.tissue_bound.scale.y = 1.4
+        self.tissue_bound.scale.z = 1.4
+
+    def bound_architecture(self, volumes, surfaces):
+        self.volumes = volumes
+        self.surfaces = surfaces
+        for v in self.volumes:
+            boolean = v.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
+            boolean.operation = 'INTERSECT'
+            boolean.object = self.tissue_bound
+            bpy.context.view_layer.objects.active = v
+            bpy.ops.object.modifier_apply(modifier=boolean.name)
+        for s in self.surfaces:
+            boolean = s.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
+            boolean.operation = 'INTERSECT'
+            boolean.object = self.tissue_bound
+            bpy.context.view_layer.objects.active = s
+            bpy.ops.object.modifier_apply(modifier=boolean.name)
+
+    def cut_tissue(self):
+        for v in self.volumes:
+            boolean = v.modifiers.new(name="Boolean Modifier 2", type='BOOLEAN')
+            boolean.operation = 'INTERSECT'
+            boolean.object = self.tissue
+            #bpy.ops.object.modifier_apply(modifier=boolean.name)
+
     def cut_cells(self):
         for cell in self.cell_objects:
             boolean = cell.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
@@ -80,12 +118,23 @@ class BioMedicalScene:
             mod = cell.modifiers['Boolean Modifier']
             cell.modifiers.remove(mod)
 
-    def cut_tissue(self):
+    def cut_cells_in_tissue(self):
         for cell in self.cell_objects:
             boolean = self.tissue.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
             boolean.operation = 'DIFFERENCE'
             boolean.object = cell
 
+    def add_tissue_staining(self, materials):
+        '''
+        adds materials to each macroscopic tissue volume
+        by matching the material to the volume by name
+        '''
+        for m in materials:
+            for v in self.volumes:
+                if m.name in v.name:
+                    v.data.materials.append(m)
+                    v.active_material = m
+    
     def add_staining(self, material):
         for cell in self.cell_objects:
             cell.data.materials.append(material)

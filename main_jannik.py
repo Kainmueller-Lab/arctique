@@ -17,6 +17,7 @@ import src.utils as utils
 import src.utils.geometry as geom
 import src.utils.surface_filling as sf
 import src.objects.macro_structures as macro
+import src.objects.tissue_architecture as arch
 
 # this next part forces a reload in case you edit the source after you first start the blender session
 #import imp
@@ -30,6 +31,7 @@ imp.reload(utils)
 imp.reload(geom)
 imp.reload(sf)
 imp.reload(macro)
+imp.reload(arch)
 
 ###################  PARAMETER  #####################
 # args_camera = {'pos'} # no change just test
@@ -48,7 +50,7 @@ scene.BioMedicalScene.clear()
     
 # add microscope objects
 my_materials = shading.Material()
-my_tissue = tissue.Tissue(my_materials.tissue_staining, thickness=TISSUE_THICKNESS, size=TISSUE_SIZE, location=TISSUE_LOCATION) # thickness and location of tissue should encapsulate min and max z-coordinates of cells 
+my_tissue = tissue.Tissue(my_materials.muscosa, thickness=TISSUE_THICKNESS, size=TISSUE_SIZE, location=TISSUE_LOCATION) # thickness and location of tissue should encapsulate min and max z-coordinates of cells 
 my_light_source = scene.LightSource(material=my_materials.light_source)
 my_camera = scene.Camera()
 
@@ -60,17 +62,17 @@ my_scene = scene.BioMedicalScene(my_light_source, my_camera)
 vol_scale = (0.6, 0.3, 1)
 surf_scale = (0.8, 0.5, 1)
 
-
-
 # TODO add macrostructure
-macro.build_crypt()
+tissue_arch = arch.TissueArch()
+SURF_OBJ, VOL_OBJ = tissue_arch.get_architecture()
+
+# Add tissue
+my_scene.add_tissue(tissue=my_tissue.tissue)
+my_scene.bound_architecture(volumes=[VOL_OBJ], surfaces=[SURF_OBJ])
 
 
 
-
-
-
-VOL_OBJ, SURF_OBJ = utils.geometry.add_dummy_objects(my_tissue, TISSUE_PADDING, vol_scale, surf_scale)
+# VOL_OBJ, SURF_OBJ = utils.geometry.add_dummy_objects(my_tissue, TISSUE_PADDING, vol_scale, surf_scale)
 
 # NOTE: For some very weird reason you need to create the surface filling before the volume filling.
 # Otherwise the surface filling won't work and it won't even refine the mesh. :/ - ck
@@ -83,16 +85,17 @@ VOL_OBJ, SURF_OBJ = utils.geometry.add_dummy_objects(my_tissue, TISSUE_PADDING, 
 #my_scene.add_arrangement(surface_fill)
 
 # Add volume filling
-#NUMBER = 40
-#ATTRIBUTES = [cells.CellAttributeA(), cells.CellAttributeB(), cells.CellAttributeC()]
-#RATIOS = [0.05, 0.15, 0.8]
-#volume_fill = arr.VolumeFill(VOL_OBJ, NUMBER, ATTRIBUTES, RATIOS, strict_boundary=False)
-#my_scene.add_arrangement(volume_fill)
+NUMBER = 100
+ATTRIBUTES = [cells.CellAttributeA(), cells.CellAttributeB(), cells.CellAttributeC()]
+RATIOS = [0.05, 0.15, 0.8]
+volume_fill = arr.VolumeFill(VOL_OBJ, NUMBER, ATTRIBUTES, RATIOS, strict_boundary=False)
+my_scene.add_arrangement(volume_fill)
 
-# Add tissue
-my_scene.add_tissue(tissue=my_tissue.tissue)
-#my_scene.cut_cells()
-#my_scene.add_staining(material=my_materials.nuclei_staining)
+# FINAL CUTTING
+my_scene.cut_cells()
+my_scene.cut_tissue()
+my_scene.add_tissue_staining(materials=[my_materials.muscosa])
+my_scene.add_staining(material=my_materials.nuclei_staining)
 
 # render scene
 #RENDER_PATH = 'renders/'
