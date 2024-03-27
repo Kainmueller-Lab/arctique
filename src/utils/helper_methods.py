@@ -51,5 +51,7 @@ def get_objects_with(string):
             object_list.append(obj)
     return object_list
 
-def get_type_from_cell_name(name):
-    return name.split('_')[2]
+def get_info_from_cell_name(name):
+    id = name.split('_')[1]
+    type = name.split('_')[3]
+    return id, type

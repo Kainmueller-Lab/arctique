@@ -121,7 +121,7 @@ def fill_surface(obj, max_point_count, attribute, filler_scale):
     First refines the mesh of the object until the edges are sufficiently small.
     Then samples the maximal number of vertices on the refined mesh such that intersection free placement of nuclei is possible.
     '''
-    min_dist = 2 * attribute.size * attribute.scale[1] # NOTE: Use medium radius of scale, as max radius is for normal direction. - ck
+    min_dist = 2 * attribute.radius * attribute.scale[1] # NOTE: Use medium radius of scale, as max radius is for normal direction. - ck
     # NOTE: That's the best idea so far for creating packed surfaces. Is there better way? - ck
     fill_dist = min_dist * filler_scale # Smaller radius of nucleus to fill the gaps between large ones
     # NOTE: Find optimal value, min_dist/3 looks good? - ck

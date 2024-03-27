@@ -6,6 +6,7 @@ from src.objects.cells import Cell
 from src.utils.geometry import *
 from src.utils.helper_methods import *
 from src.utils.surface_filling import fill_surface
+from src.utils.volume_filling import fill_volume
 from src.utils.voronoi import *
 
 class CellArrangement:
@@ -14,12 +15,14 @@ class CellArrangement:
 
     def __init__(self):
         self.objects = [] # Contains the nuclei objects
-        self.auxiliary_objects = [] # These will be hidden in viewport and rendering but can be used for further computing.
         self.name = None
         self.id = CellArrangement.count
         CellArrangement.count += 1
 
 class CellList(CellArrangement):
+    '''
+    A cell list arrangement. Given a list of locations and attributes, places cells with given attributes at those locations.
+    '''
     def __init__(self, cell_attributes, locations):
         """
         Initializes a new instance of the CellArrangement class.
@@ -35,8 +38,7 @@ class CellList(CellArrangement):
 
     def add(self):
         for location in self.locations:
-            # TODO: Make sure the ids are not just from the same range in different lists.
-            # They need to be unique for each scene. - ck
+            # TODO: This is old code, and needs an update if CellLists turn out to be relevant. - ck 
             cell = Cell(location, self.id, self.type, self.cell_attributes)
             self.objects.append(cell)
         for cell in self.objects:
@@ -44,6 +46,12 @@ class CellList(CellArrangement):
         
 # TODO: Add blowup algorithm (Monte Carlo)
 class VolumeFill(CellArrangement):
+    '''
+    A volume fill arrangement. Given a volume mesh, fills the volume with randomly placed nuclei of different attributes without intersection.
+    A maximal number of nuclei to place must be given, if number is set too high, Nnuclei are filled until not additional nucleus can be placed into the volume.
+    Ratios of corresponding attributes must be given and determine how many nuclei of each type should be placed.
+    If strict_boundary is set to true, nuclei objects will be placed only inside the mesh, otherwise only their locations will be inside the mesh.
+    '''
     def __init__(self, mesh, number, attributes, ratios, strict_boundary = True):
         """
         Initializes a CellArrangement object with the given parameters.
@@ -54,6 +62,7 @@ class VolumeFill(CellArrangement):
             - number: number of total nuclei to populate
             - attributes: list of nuclei type attributes that should appear
             - ratios: list of ratios of nuclei types to populate
+            - strict_boundary: if true will place nuclei fully inside the mesh, if false only centroids will be placed fully inside the mesh
         """
         super().__init__()
         self.name = "VolumeFill"
@@ -69,7 +78,7 @@ class VolumeFill(CellArrangement):
         self.counts = [int(ratio*number) for ratio in normalized_ratios]
         # Generate points inside mesh with given minimum distance
         # TODO: Generate based on Mahalanobis distance for scaled spheres
-        self.points_per_type = generate_points_per_type(self.counts, self.attributes, self.mesh, self.strict_boundary)
+        self.points_per_type = fill_volume(self.counts, self.attributes, self.mesh, self.strict_boundary)
 
     def add(self):
         for points, radius, type in self.points_per_type:
@@ -103,6 +112,10 @@ class VolumeFill(CellArrangement):
         return res
 
 class SurfaceFill(CellArrangement):
+    '''
+    A surface fill arrangement. Given a surface mesh, fills the surface with randomly placed nuclei of different attributes.
+    Also takes into account the maximal number of nuclei to place and their occuring ratios.
+    '''
     def __init__(self, mesh, number, attribute, filler_scale):
         """
         Initializes a CellArrangement object with the given parameters.
@@ -136,7 +149,7 @@ class SurfaceFill(CellArrangement):
 
     def add_nuclei(self, points, normals, attribute, name=""):
         for idx, (pt, dir) in enumerate(zip(points, normals)):
-            radius = attribute.size if name == "" else attribute.size * self.filler_scale
+            radius = attribute.radius if name == "" else attribute.radius * self.filler_scale
             bpy.ops.mesh.primitive_ico_sphere_add(radius=radius)
             nucleus = bpy.context.active_object
             # TODO: add deform. Is it more eficcient to deform after adding? Can loop through all objects

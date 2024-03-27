@@ -2,6 +2,7 @@ import bpy
 import json
 
 import src.arrangement.arrangement as arr
+import src.utils.geometry as geo
 import src.utils.helper_methods as hm
 import src.utils.plot_helpers as ph
 #import imp
@@ -10,6 +11,7 @@ from pathlib import Path
 import time
 import numpy as np
 imp.reload(arr)
+imp.reload(geo)
 imp.reload(hm)
 imp.reload(ph)
 
@@ -146,6 +148,13 @@ class BioMedicalScene:
         print(f"Added arrangement {cell_arrangement.name} with {len(cell_arrangement.objects)} objects.")
         self.cell_objects = self.cell_objects + cell_arrangement.objects
 
+    def rename_nuclei(self):
+        for idx, cell in enumerate(self.cell_objects):
+            parts = cell.name.split("_")
+            cell.name = f"{parts[0]}_{idx}_{parts[1]}_{parts[2]}"
+
+
+
     def hide_everything(self): 
         '''hide all objects in the scene'''
         # hide tissue 
@@ -171,6 +180,13 @@ class BioMedicalScene:
         for cell in self.cell_objects: 
             cell.hide_viewport = False
             cell.hide_render = False
+
+    def hide_non_cell_objects(self):
+        '''hide all objects except cells in the scene'''
+        for obj in self.scene.objects:
+            if not obj.name.startswith('Nucleus'):
+                obj.hide_viewport = True
+                obj.hide_render = True
 
     def setup_scene_render_mask(self, output_shape = (500, 500)): 
         '''specify settings for the rendering of the individual cell masks '''
@@ -224,11 +240,9 @@ class BioMedicalScene:
         create a list of dictionaries wich contains for each cell its type and ID 
         ''' 
         self.cell_info = []
-        for idx, cell in enumerate(self.cell_objects): 
-            cell_id = idx
+        for cell in self.cell_objects: 
             cell_name = cell.name 
-
-            cell_type = hm.get_type_from_cell_name(cell_name)
+            cell_id, cell_type = hm.get_info_from_cell_name(cell_name)
             mask_name = f"{cell_name}.png"
             cell_filename = self.filepath + mask_name
             cell_info_tuple = {"ID": cell_id, "Type": cell_type, "Filename": cell_filename, "Cellname":cell_name}
@@ -379,13 +393,6 @@ class BioMedicalScene:
         bpy.app.handlers.render_complete.remove(fn_print_time_when_render_done)
         print("rendering completed")
 
-
-    def hide_auxiliary_objects(self):
-        for arr in self.arrangements:
-            for obj in arr.auxiliary_objects:
-                obj.hide_render = True
-                obj.hide_viewport = True
-
     def render3d(self, 
                filepath: str, 
                scene: bool = False, 
@@ -511,4 +518,41 @@ class BioMedicalScene:
         ph.build_gif(self.semantic_mask_names, Path(self.filepath).joinpath("semantic_mask.gif"))
         ph.build_gif(self.instance_mask_names, Path(self.filepath).joinpath("instance_mask.gif"))
         print("done combining masks to gif")
+
+        
+    def add_dummy_objects(self, tissue, padding, vol_scale, surf_scale):
+        # Create temporarily padded tissue
+        tissue.tissue.scale = tuple(1+padding for _ in range(3))
+
+        bpy.ops.mesh.primitive_cylinder_add() # Example bounding torus mesh
+        cylinder = bpy.context.active_object
+        #vol_obj.location = Vector(tissue.tissue.location) + Vector((0, 0, 0.5))
+        cylinder.scale = vol_scale
+        # NOTE: Necessary to transform the vertices of the mesh according to scale
+        # It should be used when the object is created, but maybe there's a better place in the methds for it. ck
+        bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+        # Intersect with tissue
+        bpy.ops.mesh.primitive_cube_add(location=tissue.location)
+        box = bpy.context.active_object
+        box.scale = (1.1, 1.1, tissue.thickness/tissue.size)
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+        vol_obj = geo.subtract_object([box], cylinder)[0]
+        geo.remove_top_and_bottom_faces(vol_obj)
+        geo.remove_objects([cylinder])
+        vol_obj.name = "Volume"
+
+        bpy.ops.mesh.primitive_cylinder_add()
+        surf_obj = bpy.context.active_object
+        #surf_obj.location = Vector(tissue.tissue.location) + Vector((0, 0, 0.5))
+        surf_obj.scale = surf_scale
+        # NOTE: Necessary to transform the vertices of the mesh according to scale
+        # It should be used when the object is created, but maybe there's a better place in the methds for it. ck
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True) 
+        # Intersect with tissue
+        geo.intersect_with_object([surf_obj], tissue.tissue)
+        geo.remove_top_and_bottom_faces(surf_obj)
+        surf_obj.name = "Surface"
+        # Rescale tissue to original scale
+        tissue.tissue.scale = (1,1,1)
+        return vol_obj, surf_obj
 
