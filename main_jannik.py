@@ -62,12 +62,13 @@ my_scene = scene.BioMedicalScene(my_light_source, my_camera)
 vol_scale = (0.6, 0.3, 1)
 surf_scale = (0.8, 0.5, 1)
 
-# TODO add macrostructure
-tissue_arch = arch.TissueArch()
-SURF_OBJ, VOL_OBJ = tissue_arch.get_architecture()
-
 # Add tissue
 my_scene.add_tissue(tissue=my_tissue.tissue)
+
+# TODO add macrostructure
+tissue_arch = arch.TissueArch()
+tissue_arch.random_crop(my_tissue.tissue)
+SURF_OBJ, VOL_OBJ = tissue_arch.get_architecture()
 my_scene.bound_architecture(volumes=[VOL_OBJ], surfaces=[SURF_OBJ])
 
 
@@ -85,7 +86,7 @@ my_scene.bound_architecture(volumes=[VOL_OBJ], surfaces=[SURF_OBJ])
 #my_scene.add_arrangement(surface_fill)
 
 # Add volume filling
-NUMBER = 100
+NUMBER = 200
 ATTRIBUTES = [cells.CellAttributeA(), cells.CellAttributeB(), cells.CellAttributeC()]
 RATIOS = [0.05, 0.15, 0.8]
 volume_fill = arr.VolumeFill(VOL_OBJ, NUMBER, ATTRIBUTES, RATIOS, strict_boundary=False)
