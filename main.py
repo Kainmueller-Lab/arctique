@@ -49,9 +49,9 @@ TISSUE_THICKNESS = 0.2
 TISSUE_SIZE = 2
 TISSUE_LOCATION = (0, 0, 0.5)
 TISSUE_PADDING = 0.5
-SURF_NUMBER = 80 #80
+SURF_NUMBER = 80 
 FILLER_SCALE = 0.8 # Scale of the size of smaller filler nuclei w.r.t to the original nuclei size
-NUMBER = 80 #80
+NUMBER = 80 
 RATIOS = [0.6, 0.2, 0.2]
 vol_scale = (1, 0.7, 1)
 surf_scale = (0.8, 0.5, 1)
@@ -64,7 +64,7 @@ def parse_dataset_args():
     
     parser.add_argument("--output_dir", type=str, default="/Users/vguarin/Desktop/rendered_HE/dataset", help="Set output folder")
     parser.add_argument("--n_samples", type=int, default=1, help="Dataset size")
-    #other default value for --output_dir: "/Volumes/ag_kainmueller/vguarin/synthetic_H&E" via internal VPN
+    #other default value for --output_dir: "/Volumes/ag_kainmueller/vguarin/synthetic_HE" via internal VPN
     
     args = parser.parse_args()
     
