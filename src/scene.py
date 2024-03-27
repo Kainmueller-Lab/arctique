@@ -85,7 +85,7 @@ class BioMedicalScene:
         self.tissue_bound.scale.y = 1.4
         self.tissue_bound.scale.z = 1.4
 
-    def bound_architecture(self, volumes, surfaces):
+    def bound_architecture(self, volumes=[], surfaces=[]):
         self.volumes = volumes
         self.surfaces = surfaces
         for v in self.volumes:

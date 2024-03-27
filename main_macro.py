@@ -65,7 +65,7 @@ surf_scale = (0.8, 0.5, 1)
 # Add tissue
 my_scene.add_tissue(tissue=my_tissue.tissue)
 
-# TODO add macrostructure
+# add macrostructure
 tissue_arch = arch.TissueArch()
 tissue_arch.random_crop(my_tissue.tissue)
 SURF_OBJ, VOL_OBJ = tissue_arch.get_architecture()
