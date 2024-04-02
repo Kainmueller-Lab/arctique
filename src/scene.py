@@ -178,7 +178,7 @@ class BioMedicalScene:
         unique_type_counter = 0
         unique_type_dict = {}
         for idx, cell in enumerate(self.cell_objects): 
-            cell_id = idx
+            cell_id = idx +1
             cell_name = cell.name 
 
             cell_type = hm.get_type_from_cell_name(cell_name)
