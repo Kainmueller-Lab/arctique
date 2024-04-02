@@ -16,6 +16,7 @@ import src.scene as scene
 import src.utils as utils
 import src.utils.geometry as geom
 import src.utils.surface_filling as sf
+import src.utils.volume_filling as vf
 
 # this next part forces a reload in case you edit the source after you first start the blender session
 #import imp
@@ -28,6 +29,7 @@ imp.reload(scene)
 imp.reload(utils)
 imp.reload(geom)
 imp.reload(sf)
+imp.reload(vf)
 
 ###################  PARAMETER  #####################
 # args_camera = {'pos'} # no change just test
@@ -59,35 +61,33 @@ my_scene = scene.BioMedicalScene(my_light_source, my_camera)
 # NOTE: In the end the volume and surface objects should come from the epithelial tissue macrostructure. - ck
 vol_scale = (1, 0.7, 1)
 surf_scale = (0.8, 0.5, 1)
-VOL_OBJ, SURF_OBJ = utils.geometry.add_dummy_objects(my_tissue, TISSUE_PADDING, vol_scale, surf_scale)
+VOL_OBJ, SURF_OBJ = my_scene.add_dummy_objects(my_tissue, TISSUE_PADDING, vol_scale, surf_scale)
 
-# NOTE: For some very weird reason you need to create the surface filling before the volume filling.
-# Otherwise the surface filling won't work and it won't even refine the mesh. :/ - ck
-# TODO: Fix that
-# Add surface filling
-SURF_NUMBER = 80
-SURF_ATTRIBUTE = cells.CellAttributeEpi()
-FILLER_SCALE = 0.8 # Scale of the size of smaller filler nuclei w.r.t to the original nuclei size
-surface_fill = arr.SurfaceFill(SURF_OBJ, SURF_NUMBER, SURF_ATTRIBUTE, FILLER_SCALE)
-my_scene.add_arrangement(surface_fill)
-
-# Add volume filling
-NUMBER = 80
+# Create arrangements
+NUMBER = 100
 ATTRIBUTES = [cells.CellAttributeA(), cells.CellAttributeB(), cells.CellAttributeC()]
 RATIOS = [0.6, 0.2, 0.2]
 volume_fill = arr.VolumeFill(VOL_OBJ, NUMBER, ATTRIBUTES, RATIOS, strict_boundary=False)
-my_scene.add_arrangement(volume_fill)
+# NOTE: For some very weird reason you need to create the surface filling before the volume filling.
+# Otherwise the surface filling won't work and it won't even refine the mesh. :/ - ck
+# Add surface filling
+SURF_NUMBER = 40 # NOTE: The double amount of nuclei is added to the scene here due to additional filler nuclei. Might fix this if necessary. Prolly won't. Live with it and enjoy this humble life while you can. - ck
+SURF_ATTRIBUTE = cells.CellAttributeEpi()
+FILLER_SCALE = 0.8 # Scale of the size of smaller filler nuclei w.r.t to the original nuclei size
+surface_fill = arr.SurfaceFill(SURF_OBJ, SURF_NUMBER, SURF_ATTRIBUTE, FILLER_SCALE)
 
-# Hide macro objects
-VOL_OBJ.hide_viewport = True
-VOL_OBJ.hide_render = True
-SURF_OBJ.hide_viewport = True
-SURF_OBJ.hide_render = True
+# Add arrangements and rename nuclei with unique IDs
+my_scene.add_arrangement(volume_fill)
+my_scene.add_arrangement(surface_fill)
+my_scene.rename_nuclei()
 
 # Add tissue
 my_scene.add_tissue(tissue=my_tissue.tissue)
 my_scene.cut_cells()
 my_scene.add_staining(material=my_materials.nuclei_staining)
+
+# Hide non cell objects
+my_scene.hide_non_cell_objects()
 
 # render scene
 RENDER_PATH = 'C:/Users/cwinklm/Documents/Alpacathon/rendered_HE/renders2d_test/'
