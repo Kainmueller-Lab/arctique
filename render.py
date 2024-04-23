@@ -9,6 +9,7 @@ import cv2
 import numpy as np
 import time
 import glob
+import matplotlib.pyplot as plt
 
 from os import listdir
 from os.path import isfile, join
@@ -79,6 +80,7 @@ def main():
     
     #To continue creating samples from where we left off, use the following two lines of code, otherwise comment out 
     dir = render_path + '/train_combined_masks/semantic'
+    #dir = 'J:/jannik/GitHub/rendered_HE/rendered/train_combined_masks/semantic'
 
     if not os.path.exists(dir):
             os.makedirs(dir)
@@ -89,7 +91,14 @@ def main():
 
     for i in tqdm(range(max_n_samples, max_n_samples + args.n_samples)):
         scene.BioMedicalScene.clear()
-            
+
+        # TODO add everywhere
+        bpy.context.scene.cycles.samples = 4096
+        bpy.context.scene.render.engine = 'CYCLES'
+        bpy.context.scene.cycles.device = 'CPU'
+        #bpy.context.preferences.addons['cycles'].preferences.compute_device_type = "CUDA"
+        #bpy.context.preferences.addons['cycles'].preferences.devices[0].use = True
+
         # add microscope objects
         my_materials = shading.Material()
 
@@ -104,7 +113,8 @@ def main():
         # TODO: Add documentation and docstrings
         # Define volume and surface objects
         # NOTE: In the end the volume and surface objects should come from the epithelial tissue macrostructure. - ck
-        VOL_OBJ, SURF_OBJ = utils.geometry.add_dummy_objects(my_tissue, TISSUE_PADDING, vol_scale, surf_scale)
+        #VOL_OBJ, SURF_OBJ = utils.geometry.add_dummy_objects(my_tissue, TISSUE_PADDING, vol_scale, surf_scale)
+        VOL_OBJ, SURF_OBJ = my_scene.add_dummy_objects(my_tissue, TISSUE_PADDING, vol_scale, surf_scale)
 
         # NOTE: For some very weird reason you need to create the surface filling before the volume filling.
         # Otherwise the surface filling won't work and it won't even refine the mesh. :/ - ck
@@ -139,13 +149,13 @@ def main():
 
         my_scene.render(filepath = render_path,  # where to save renders
                     scene = True, # if true scene is rendered
-                    single_masks = True, # if true single cell masks are rendered
+                    single_masks = False, # if true single cell masks are rendered
                     semantic_mask = True, # if true semantic mask is generated
                     instance_mask = True, # if true instance mask is generated
                     depth_mask = False, # if true depth mask is generated
                     obj3d = False, # if true scene is saved as 3d object
                     output_shape = (500, 500), # dimensions of output
-                    max_samples = 10) # number of samples for rendering. Fewer samples will render more quickly. Default is 1024
+                    max_samples = 4096) # number of samples for rendering. Fewer samples will render more quickly. Default is 1024
 
         bpy.ops.wm.read_factory_settings(use_empty=True)
 

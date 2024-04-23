@@ -27,5 +27,5 @@ def get_objects_with(string):
 
 def get_info_from_cell_name(name):
     id = name.split('_')[1]
-    type = name.split('_')[3]
+    type = name.split('_')[2]
     return id, type
