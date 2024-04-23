@@ -114,8 +114,3 @@ my_scene.render(filepath = RENDER_PATH,  # where to save renders
 #                obj3d = True, # if true scene is saved as 3d object
 #                output_shape = (500, 500), # dimensions of output
 #                max_samples = 10) # number of samples for rendering. Fewer samples will render more quickly. Default is 1024
-
-
-
-
-
