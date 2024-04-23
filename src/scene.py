@@ -4,9 +4,11 @@ import os
 from PIL import Image
 
 import src.arrangement.arrangement as arr
+import src.utils.geometry as geo
 import src.utils.helper_methods as hm
 import src.utils.plot_helpers as ph
 import src.utils.camera_utils as cu
+import matplotlib.pyplot as plt
 
 #import imp
 import importlib as imp # imp module is deprecated since python 3.12
@@ -15,6 +17,7 @@ import time
 import numpy as np
 import random
 imp.reload(arr)
+imp.reload(geo)
 imp.reload(hm)
 imp.reload(ph)
 
@@ -103,6 +106,13 @@ class BioMedicalScene:
         print(f"Added arrangement {cell_arrangement.name} with {len(cell_arrangement.objects)} objects.")
         self.cell_objects = self.cell_objects + cell_arrangement.objects
 
+    def rename_nuclei(self):
+        for idx, cell in enumerate(self.cell_objects):
+            parts = cell.name.split("_")
+            cell.name = f"{parts[0]}_{idx}_{parts[1]}_{parts[2]}"
+
+
+
     def hide_everything(self): 
         '''hide all objects in the scene'''
         # hide tissue 
@@ -128,6 +138,13 @@ class BioMedicalScene:
         for cell in self.cell_objects: 
             cell.hide_viewport = False
             cell.hide_render = False
+
+    def hide_non_cell_objects(self):
+        '''hide all objects except cells in the scene'''
+        for obj in self.scene.objects:
+            if not obj.name.startswith('Nucleus'):
+                obj.hide_viewport = True
+                obj.hide_render = True
 
     def setup_scene_render_mask(self, output_shape = (500, 500)): 
         '''specify settings for the rendering of the individual cell masks '''
@@ -202,7 +219,7 @@ class BioMedicalScene:
             cell_id = idx + 1
             cell_name = cell.name 
 
-            cell_type = hm.get_type_from_cell_name(cell_name)
+            _, cell_type = hm.get_info_from_cell_name(cell_name)
             
             if cell_type not in unique_type_dict.keys(): 
                 unique_type_counter +=1 
@@ -292,7 +309,8 @@ class BioMedicalScene:
         self.mask_type = type
 
         self.setup_node_tree_full_masks()
-        self.scene.render.filepath = " "
+        self.scene.render.filepath = "J:/jannik/GitHub/rendered_HE/rendered/train_combined_masks/semantic/empty.png" 
+
         bpy.ops.render.render('EXEC_DEFAULT', write_still=True) # render single cell mask
 
         # the exported image is a BW-png with the pixel values corresponding to the cell types/cell instances
@@ -300,9 +318,9 @@ class BioMedicalScene:
         # we assign colors to to pixels to ensure visibility
 
         palette = self.define_palette(type=type)
-        colored_instance_mask = Image.open(self.semantic_path + f"/tmp_{self.sample_name}0001.png")
+        with Image.open(self.semantic_path + f"/tmp_{self.sample_name}0001.png") as im:
+            colored_instance_mask = Image.fromarray(np.array(im).astype(np.uint8))
         os.remove(self.semantic_path + f"/tmp_{self.sample_name}0001.png")
-        colored_instance_mask = Image.fromarray(np.array(colored_instance_mask).astype(np.uint8))
         colored_instance_mask.putpalette(palette)
         colored_instance_mask.save(str(Path(self.semantic_path).joinpath(f"{self.sample_name}.png")))
 
@@ -504,7 +522,7 @@ class BioMedicalScene:
             self.enable_depth_output()
             # self.export_depth()
             
-        if single_masks or semantic_mask or instance_mask:
+        if single_masks:# or semantic_mask or instance_mask:
             self.setup_scene_render_mask(output_shape=output_shape)
             self.export_masks()
                 
@@ -526,12 +544,6 @@ class BioMedicalScene:
 
         bpy.app.handlers.render_complete.remove(fn_print_time_when_render_done)
         print("rendering completed")
-
-    # def hide_auxiliary_objects(self):
-    #     for arr in self.arrangements:
-    #         for obj in arr.auxiliary_objects:
-    #             obj.hide_render = True
-    #             obj.hide_viewport = True
 
     def render3d(self, 
                filepath: str, 
@@ -656,3 +668,41 @@ class BioMedicalScene:
         ph.build_gif(self.semantic_mask_names, Path(self.filepath).joinpath("semantic_mask.gif"))
         ph.build_gif(self.instance_mask_names, Path(self.filepath).joinpath("instance_mask.gif"))
         print("done combining masks to gif")
+
+        
+    def add_dummy_objects(self, tissue, padding, vol_scale, surf_scale):
+        # Create temporarily padded tissue
+        tissue.tissue.scale = tuple(1+padding for _ in range(3))
+
+        bpy.ops.mesh.primitive_cylinder_add() # Example bounding torus mesh
+        cylinder = bpy.context.active_object
+        #vol_obj.location = Vector(tissue.tissue.location) + Vector((0, 0, 0.5))
+        cylinder.scale = vol_scale
+        # NOTE: Necessary to transform the vertices of the mesh according to scale
+        # It should be used when the object is created, but maybe there's a better place in the methds for it. ck
+        bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+        # Intersect with tissue
+        bpy.ops.mesh.primitive_cube_add(location=tissue.location)
+        box = bpy.context.active_object
+        box.scale = (1.1, 1.1, tissue.thickness/tissue.size)
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+        vol_obj = geo.subtract_object([box], cylinder)[0]
+        geo.remove_top_and_bottom_faces(vol_obj)
+        geo.remove_objects([cylinder])
+        vol_obj.name = "Volume"
+
+        bpy.ops.mesh.primitive_cylinder_add()
+        surf_obj = bpy.context.active_object
+        #surf_obj.location = Vector(tissue.tissue.location) + Vector((0, 0, 0.5))
+        surf_obj.scale = surf_scale
+        # NOTE: Necessary to transform the vertices of the mesh according to scale
+        # It should be used when the object is created, but maybe there's a better place in the methds for it. ck
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True) 
+        # Intersect with tissue
+        geo.intersect_with_object([surf_obj], tissue.tissue)
+        geo.remove_top_and_bottom_faces(surf_obj)
+        surf_obj.name = "Surface"
+        # Rescale tissue to original scale
+        tissue.tissue.scale = (1,1,1)
+        return vol_obj, surf_obj
+

@@ -93,4 +93,3 @@ pytest
   $ /Applications/Blender.app/Contents/Resources/3.6/python/bin/python3.10 main.py --output_dir <user directory> --n_sample 10
   ```
 
-
