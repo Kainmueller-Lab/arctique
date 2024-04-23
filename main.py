@@ -62,7 +62,7 @@ surf_scale = (0.8, 0.5, 1)
 def parse_dataset_args():
     parser = argparse.ArgumentParser()
     
-    parser.add_argument("--output_dir", type=str, default="/Users/vguarin/Desktop/rendered_HE/dataset", help="Set output folder")
+    parser.add_argument("--output_dir", type=str, default="J:/jannik/GitHub/rendered_HE/rendered", help="Set output folder")
     parser.add_argument("--n_samples", type=int, default=1, help="Dataset size")
     #other default value for --output_dir: "/Volumes/ag_kainmueller/vguarin/synthetic_HE" via internal VPN
     
