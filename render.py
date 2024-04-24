@@ -63,6 +63,7 @@ surf_scale = (0.8, 0.5, 1)
 def parse_dataset_args():
     parser = argparse.ArgumentParser()
     
+    
     parser.add_argument("--output_dir", type=str, default="J:/jannik/GitHub/rendered_HE/rendered", help="Set output folder")
     parser.add_argument("--n_samples", type=int, default=10, help="Dataset size")
     #other default value for --output_dir: "/Volumes/ag_kainmueller/vguarin/synthetic_HE" via internal VPN
@@ -98,8 +99,11 @@ def main():
         bpy.context.preferences.addons['cycles'].preferences.compute_device_type = "CUDA"
         bpy.context.preferences.addons["cycles"].preferences.get_devices()
         print(bpy.context.preferences.addons["cycles"].preferences.compute_device_type)
-        for d in bpy.context.preferences.addons["cycles"].preferences.devices:
-            d["use"] = True # Using all devices, include GPU and CPU
+        for j, d in enumerate(bpy.context.preferences.addons["cycles"].preferences.devices):
+            if j in (0, 1): # Using only the first two devices
+                d["use"] = True
+            else:
+                d["use"] = False
             print(d["name"], d["use"])
 
         #bpy.context.preferences.addons['cycles'].preferences.devices[0].use = True
@@ -160,7 +164,7 @@ def main():
                     depth_mask = False, # if true depth mask is generated
                     obj3d = False, # if true scene is saved as 3d object
                     output_shape = (500, 500), # dimensions of output
-                    max_samples = 200) # number of samples for rendering. Fewer samples will render more quickly. Default is 1024
+                    max_samples = 1024) # number of samples for rendering. Fewer samples will render more quickly. Default is 1024
 
         bpy.ops.wm.read_factory_settings(use_empty=True)
 
