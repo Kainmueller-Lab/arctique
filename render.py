@@ -64,7 +64,7 @@ def parse_dataset_args():
     parser = argparse.ArgumentParser()
     
     parser.add_argument("--output_dir", type=str, default="J:/jannik/GitHub/rendered_HE/rendered", help="Set output folder")
-    parser.add_argument("--n_samples", type=int, default=1, help="Dataset size")
+    parser.add_argument("--n_samples", type=int, default=10, help="Dataset size")
     #other default value for --output_dir: "/Volumes/ag_kainmueller/vguarin/synthetic_HE" via internal VPN
     
     args = parser.parse_args()
@@ -93,10 +93,15 @@ def main():
         scene.BioMedicalScene.clear()
 
         # TODO add everywhere
-        bpy.context.scene.cycles.samples = 4096
         bpy.context.scene.render.engine = 'CYCLES'
-        bpy.context.scene.cycles.device = 'CPU'
-        #bpy.context.preferences.addons['cycles'].preferences.compute_device_type = "CUDA"
+        bpy.context.scene.cycles.device = 'GPU'
+        bpy.context.preferences.addons['cycles'].preferences.compute_device_type = "CUDA"
+        bpy.context.preferences.addons["cycles"].preferences.get_devices()
+        print(bpy.context.preferences.addons["cycles"].preferences.compute_device_type)
+        for d in bpy.context.preferences.addons["cycles"].preferences.devices:
+            d["use"] = True # Using all devices, include GPU and CPU
+            print(d["name"], d["use"])
+
         #bpy.context.preferences.addons['cycles'].preferences.devices[0].use = True
 
         # add microscope objects
@@ -155,7 +160,7 @@ def main():
                     depth_mask = False, # if true depth mask is generated
                     obj3d = False, # if true scene is saved as 3d object
                     output_shape = (500, 500), # dimensions of output
-                    max_samples = 4096) # number of samples for rendering. Fewer samples will render more quickly. Default is 1024
+                    max_samples = 200) # number of samples for rendering. Fewer samples will render more quickly. Default is 1024
 
         bpy.ops.wm.read_factory_settings(use_empty=True)
 
