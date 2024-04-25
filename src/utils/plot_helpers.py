@@ -4,7 +4,6 @@ from pathlib import Path
 
 import os
 
-
 def make_color_palette(n_colors, bg_col = (0,0,0)): 
     colors = [bg_col]
     for i in range(n_colors): 
@@ -33,7 +32,7 @@ def reduce_single_masks(source_folder, file_names):
         file_names (list): List of names of the single masks
  
     """
-
+    
     for file_name in file_names: 
         mask_png = Image.open(file_name)
         mask_np = np.array(mask_png)
@@ -42,12 +41,13 @@ def reduce_single_masks(source_folder, file_names):
 
         mask_np = mask_np[:, :, -1] # keep only alpha channel
         
-        
         mask_png_small = Image.fromarray(mask_np)
         mask_png_small.save(file_name)
+        mask_png_small.close()
+
     
 
-def build_semantic_mask(source_folder, cell_info_dicts, file_name="semantic_mask", palette = None): 
+def build_semantic_mask(source_folder, cell_info_dicts, file_name:int=0, palette = None): 
     """
     Combines individual cell masks to a semantic map of the full scene. 
  
@@ -62,8 +62,10 @@ def build_semantic_mask(source_folder, cell_info_dicts, file_name="semantic_mask
 
     unique_cell_types = set([cit["Type"] for cit in cell_info_dicts]) # identify unique cell types 
     cell_type_dict = {uct : (i+1) for i, uct in enumerate(unique_cell_types)} # assign unique id to each cell type
-
-
+        
+    if not os.path.exists(source_folder + f'/train/{file_name}/masks/'):
+        raise TypeError('The creation of masks might have been unsuccessful')
+    
     for cell_counter, cell_info_tuple in enumerate(cell_info_dicts): 
         cell_mask_file = cell_info_tuple["Filename"]
         cell_type = cell_info_tuple["Type"]
@@ -75,9 +77,7 @@ def build_semantic_mask(source_folder, cell_info_dicts, file_name="semantic_mask
     
         # assign pixel value based on cell class
         semantic_mask += mask_np*(cell_type_dict[cell_type]/255.) # in mask the object has pixel value 255 (backgrund is 0)
-
-        np.save(str(Path(source_folder).joinpath(f"{file_name}.npy")), semantic_mask)
-
+        
         # generate unique colors for each class (background is black by default)
         if palette is None: 
             palette = make_color_palette(len(cell_type_dict.keys()))
@@ -86,7 +86,13 @@ def build_semantic_mask(source_folder, cell_info_dicts, file_name="semantic_mask
         # assign color palette to image
         colored_instance_mask.putpalette(palette)
         # save to png
-        colored_instance_mask.save(str(Path(source_folder).joinpath(f"{file_name}.png")))
+    
+    new_source_folder = source_folder + '/train_combined_masks/semantic/'
+    if not os.path.exists(new_source_folder):
+        os.makedirs(new_source_folder)
+    np.save(str(Path(new_source_folder).joinpath(f"{file_name}.npy")), semantic_mask)
+    colored_instance_mask.save(str(Path(new_source_folder).joinpath(f"{file_name}.png")))
+    # colored_instance_mask.close()
 
 
 # this works for 2d but must be adapted for 3d
@@ -126,7 +132,7 @@ def build_semantic_mask(source_folder, cell_info_dicts, file_name="semantic_mask
 #     colored_instance_mask.save(str(Path(source_folder).joinpath("instance_mask.png")))
         
 
-def build_instance_mask(source_folder, cell_info_dicts, file_name="semantic_mask", palette=None): 
+def build_instance_mask(source_folder, cell_info_dicts, file_name:int=0, palette=None): 
    # source_folder, cell_info_tuples, file_name="semantic_mask", palette = None): 
     """
     Combines individual cell masks to an instance map of the full scene. 
@@ -140,10 +146,12 @@ def build_instance_mask(source_folder, cell_info_dicts, file_name="semantic_mask
     Returns:
         instance_mask: A png file where each cell object has a different pixel value
     """
-
     cell_ID_list = [c["ID"] for c in cell_info_dicts] # make list of all cell ids 
     cell_ID_dict = {cid : (i+1) for i, cid in enumerate(cell_ID_list)} # assign unique integer to each cell id
 
+    if not os.path.exists(source_folder + f'/train/{file_name}/masks/'):
+        raise TypeError('The creation of masks might have been unsuccessful')
+    
     #print(cell_info_dicts)
     #for file_idx, file_name in enumerate(file_names):   ´
     for cell_counter, cell_info_tuple in enumerate(cell_info_dicts): 
@@ -154,11 +162,13 @@ def build_instance_mask(source_folder, cell_info_dicts, file_name="semantic_mask
 
         if cell_counter==0: 
             instance_mask = np.zeros_like(mask_np) # instance_mask has same shape as the masks
-
     
         instance_mask += mask_np*((cell_ID_dict[cell_id])/255.) # in mask the object has pixel value 255 (backgrund is 0)
 
-    np.save(str(Path(source_folder).joinpath("instance_mask.npy")), instance_mask)
+    new_source_folder = source_folder + "/train_combined_masks/instance/"
+    if not os.path.exists(new_source_folder):
+        os.makedirs(new_source_folder)
+    np.save(str(Path(new_source_folder).joinpath(f"{file_name}.npy")), instance_mask)
 
     # generate unique colors for each instance (background is black by default)
     # palette = make_color_palette(len(np.unique(instance_mask)))
@@ -167,15 +177,8 @@ def build_instance_mask(source_folder, cell_info_dicts, file_name="semantic_mask
     # assign color palette to image 
     colored_instance_mask.putpalette(palette)
     # save to png
-    colored_instance_mask.save(str(Path(source_folder).joinpath(f"{file_name}.png")))
-
-
-
-
-
-
-
-
+    colored_instance_mask.save(str(Path(new_source_folder).joinpath(f"{file_name}.png")))
+    # colored_instance_mask.close()
 
 
 def remove_single_masks(file_names): 
@@ -185,7 +188,6 @@ def remove_single_masks(file_names):
 
     for file_name in file_names: 
         os.remove(file_name)
-
 
 
 def build_gif(png_file_names, gif_file_name): 

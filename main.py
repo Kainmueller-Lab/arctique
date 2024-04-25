@@ -118,8 +118,3 @@ my_scene.add_staining(material=my_materials.nuclei_staining)
 #                obj3d = True, # if true scene is saved as 3d object
 #                output_shape = (500, 500), # dimensions of output
 #                max_samples = 10) # number of samples for rendering. Fewer samples will render more quickly. Default is 1024
-
-
-
-
-
