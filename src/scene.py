@@ -8,7 +8,6 @@ import src.utils.geometry as geo
 import src.utils.helper_methods as hm
 import src.utils.plot_helpers as ph
 import src.utils.camera_utils as cu
-import matplotlib.pyplot as plt
 
 #import imp
 import importlib as imp # imp module is deprecated since python 3.12
