@@ -18,6 +18,7 @@ import src.scene as scene
 import src.utils as utils
 import src.utils.geometry as geom
 import src.utils.surface_filling as sf
+import src.objects.tissue_architecture as arch
 
 # this next part forces a reload in case you edit the source after you first start the blender session
 #import imp
@@ -30,6 +31,7 @@ imp.reload(scene)
 imp.reload(utils)
 imp.reload(geom)
 imp.reload(sf)
+imp.reload(arch)
 
 
 
@@ -77,7 +79,7 @@ def create_scene(
         tissue_location: tuple, location of the tissue [unit: 10 micrometers]
         tissue_padding: float, padding of the tissue [unit: 10 micrometers]
         surf_number: int, number of surface cells
-        filler_scale: float, scale of the size of smaller filler nuclei w.r.t to the original nuclei size
+        filler_scale: float, scale of size of smaller filler nuclei w.r.t to original nuclei size
         number: int, number of volume cells
         ratios: list, ratios of different cell types
         vol_scale: tuple, volume scale
@@ -86,23 +88,28 @@ def create_scene(
         my_scene: BioMedicalScene object
     '''
     scene.BioMedicalScene.clear()
-    
+        
     # 1) initialize microscope objects and add to scene
     my_materials = shading.Material()
-    my_tissue = tissue.Tissue(my_materials.tissue_staining, thickness=tissue_thickness, size=tissue_size, location=tissue_location) # thickness and location of tissue should encapsulate min and max z-coordinates of cells 
+    my_tissue = tissue.Tissue(
+        my_materials.muscosa, thickness=tissue_thickness,
+        size=tissue_size, location=tissue_location)
     my_light_source = scene.LightSource(material=my_materials.light_source)
     my_camera = scene.Camera()
     my_scene = scene.BioMedicalScene(my_light_source, my_camera)
+    my_scene.add_tissue(tissue=my_tissue.tissue)
 
     # 2) create macrostructures in tissue block, rotate and scale them and cut them
-    VOL_OBJ, SURF_OBJ = my_scene.add_dummy_objects(my_tissue, tissue_padding, vol_scale, surf_scale)
-    my_scene.add_tissue(tissue=my_tissue.tissue)
+    tissue_arch = arch.TissueArch()
+    tissue_arch.random_crop(my_tissue.tissue)
+    SURF_OBJ, VOL_OBJ = tissue_arch.get_architecture()
+    my_scene.bound_architecture(volumes=[VOL_OBJ], surfaces=[SURF_OBJ])
 
     # 3) populate scene with nuclei/cells
     # Add surface filling -> crypts
-    SURF_ATTRIBUTE = cells.CellAttributeEpi()
-    surface_fill = arr.SurfaceFill(SURF_OBJ, surf_number, SURF_ATTRIBUTE, filler_scale)  # NOTE: For some very weird reason you need to create the surface filling before the volume filling. TODO: Fix that
-    my_scene.add_arrangement(surface_fill)
+    # SURF_ATTRIBUTE = cells.CellAttributeEpi()
+    # surface_fill = arr.SurfaceFill(SURF_OBJ, surf_number, SURF_ATTRIBUTE, filler_scale)  # NOTE: For some very weird reason you need to create the surface filling before the volume filling. TODO: Fix that
+    # my_scene.add_arrangement(surface_fill)
 
     # Add volume filling
     ATTRIBUTES = [cells.CellAttributeA(), cells.CellAttributeB(), cells.CellAttributeC()]
@@ -111,11 +118,13 @@ def create_scene(
 
     # 4) cut objects and add staining
     my_scene.cut_cells()
+    my_scene.cut_tissue()
+    my_scene.add_tissue_staining(materials=[my_materials.muscosa])
     my_scene.add_staining(material=my_materials.nuclei_staining)
 
     # 5) hide non cell objects
-    VOL_OBJ.hide_viewport = True
-    VOL_OBJ.hide_render = True
+    #VOL_OBJ.hide_viewport = True
+    #VOL_OBJ.hide_render = True
     SURF_OBJ.hide_viewport = True
     SURF_OBJ.hide_render = True
 
