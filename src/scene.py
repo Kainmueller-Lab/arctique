@@ -25,7 +25,7 @@ def fn_print_time_when_render_done(dummy):
     print("----- the time is: ", time.time())
 
 class Camera:
-    def __init__(self, name='camera 1', pos = (0, 0, 2), rot = (0, 0, 0), size = (2, 2)):
+    def __init__(self, name='camera 1', pos = (0, 0, 2), rot = (0, 0, 0), size = 2):
         self.scene = bpy.context.scene
         cam = bpy.data.cameras.new(name)
         cam.lens = 18
@@ -33,6 +33,8 @@ class Camera:
         self.cam_obj = bpy.data.objects.new(name, cam)
         self.cam_obj.location = pos
         self.cam_obj.rotation_euler = rot
+        self.cam_obj.data.type = 'ORTHO'
+        self.cam_obj.data.ortho_scale = size
         #self.scene.collection.objects.link(self.cam_obj)
 
 
@@ -218,11 +220,11 @@ class BioMedicalScene:
         self.scene.render.engine = "CYCLES"
         self.scene.cycles.samples = max_samples
         
-        filepath = self.filepath + f"/train"
+        filepath = self.filepath
         if not os.path.exists(filepath):
             os.makedirs(filepath)
         
-        self.scene.render.filepath = filepath + f"/{self.sample_name}/images/{self.sample_name}.png"
+        self.scene.render.filepath = filepath + f"/images/img_{self.sample_name}.png"
 
     def export_scene(self): 
         '''Generates a png image of the complete scene using the specifications defined in setup_scene_render_default'''
@@ -234,10 +236,10 @@ class BioMedicalScene:
         '''
         self.hide_everything()
         
-        filepath = self.filepath + f"/train"
+        filepath = self.filepath
         if not os.path.exists(filepath):
             os.makedirs(filepath)
-        self.new_filepath = filepath + f"/{self.sample_name}/masks/"
+        self.new_filepath = filepath + f"masks/instance_individual/{self.sample_name}/"
         
         for cell_info_dict in self.cell_info: 
             cell_object = bpy.data.objects[cell_info_dict["Cellname"]] # get cell object
@@ -254,15 +256,17 @@ class BioMedicalScene:
         
     def create_cell_info(self):    
         ''''
+        TODO change to metadata
         create a list of dictionaries wich contains for each cell its type and ID 
         ''' 
         self.cell_info = []
         unique_type_counter = 0
         unique_type_dict = {}
         
-        masks_path = self.filepath + f'/train/{self.sample_name}/masks'
-        if not os.path.exists(masks_path):
-            os.makedirs(masks_path)
+        masks_path = self.filepath + f"masks/instance_individual/{self.sample_name}/"
+        metadata_path = self.filepath + f'/metadata'
+        if not os.path.exists(metadata_path):
+            os.makedirs(metadata_path)
             
         for idx, cell in enumerate(self.cell_objects): 
             cell_id = idx + 1
@@ -279,7 +283,7 @@ class BioMedicalScene:
             cell_info_tuple = {"ID": cell_id, "Type": cell_type, "Filename": cell_filename, "Cellname":cell_name, "ID_Type": unique_type_dict[cell_type]}
             self.cell_info.append(cell_info_tuple)
 
-        with open(Path(masks_path).joinpath('data.json'), 'w') as f:
+        with open(Path(metadata_path).joinpath(f'metadata_{self.sample_name}.json'), 'w') as f:
             cell_info_dict = {i:info for i, info in enumerate(self.cell_info)}
             json.dump(cell_info_dict, f)
 
@@ -330,7 +334,7 @@ class BioMedicalScene:
         math_node.inputs[1].default_value = 255
 
         output_node = nodes.new("CompositorNodeOutputFile")
-        output_node.base_path = self.filepath + f'/train_combined_masks/{self.mask_type}'
+        output_node.base_path = self.filepath + f'/masks/{self.mask_type}'
         self.semantic_path = output_node.base_path
 
         output_node.file_slots[0].path = f"tmp_{self.sample_name}"
@@ -358,14 +362,15 @@ class BioMedicalScene:
         self.mask_type = type
 
         self.setup_node_tree_full_masks()
-        self.scene.render.filepath = "J:/jannik/GitHub/rendered_HE/rendered/train_combined_masks/semantic/empty.png" 
+        self.scene.render.filepath = str(Path(self.semantic_path).joinpath("empty.png"))
+        print(self.scene.render.filepath)
 
         bpy.ops.render.render('EXEC_DEFAULT', write_still=True) # render single cell mask
 
         # the exported image is a BW-png with the pixel values corresponding to the cell types/cell instances
         # typically most pixel values are close to 0 and not well visible in a typical image viewer. Theerfore 
         # we assign colors to to pixels to ensure visibility
-
+        print(self.scene.render.filepath)
         palette = self.define_palette(type=type)
         with Image.open(self.semantic_path + f"/tmp_{self.sample_name}0001.png") as im:
             colored_instance_mask = Image.fromarray(np.array(im).astype(np.uint8))
@@ -451,7 +456,7 @@ class BioMedicalScene:
         self.enable_depth_output_render_setup()
         self.enable_depth_graph_node()
         
-        output_path = self.filepath + f'/train_combined_masks/depth'
+        output_path = self.filepath + f'/masks/depth'
         if not os.path.exists(output_path):
             os.makedirs(output_path)
         self.scene.render.filepath = output_path + f'/{self.sample_name}.png'
@@ -544,7 +549,7 @@ class BioMedicalScene:
                instance_mask: bool = False,
                depth_mask: bool = False, 
                obj3d: bool = True,
-               output_shape = (500, 500), 
+               output_shape = (512, 512), 
                max_samples = 10):
         '''
         filepath: the folder where all outputs will be stored

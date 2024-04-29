@@ -39,13 +39,15 @@ def parse_dataset_args():
     parser = argparse.ArgumentParser()
     
     # RENDERING PARAMETERS
-    parser.add_argument("--gpu_device")
-    parser.add_argument("--output_dir", type=str, default="J:/jannik/GitHub/rendered_HE/rendered", help="Set output folder")
+    # add argument with list of all gpu devices
+    parser.add_argument("--gpu_devices", type=list, default=[0], help="List of GPU devices to use for rendering")
+    parser.add_argument("--gpu", type=bool, default=True, help="Use GPU for rendering")
+    parser.add_argument("--output_dir", type=str, default="rendered", help="Set output folder")
     parser.add_argument("--n_samples", type=int, default=10, help="Dataset size")
    
     # DATASET PARAMETERS
     # tissue
-    parser.add_argument("--tissue_thickness", type=float, default=0.2, help="Tissue thickness")
+    parser.add_argument("--tissue_thickness", type=float, default=0.05, help="Tissue thickness")
     parser.add_argument("--tissue_size", type=float, default=2, help="Tissue size")
     parser.add_argument("--tissue_location", type=tuple, default=(0, 0, 0.5), help="Tissue location")
     parser.add_argument("--tissue_padding", type=float, default=0.5, help="Tissue padding")
@@ -53,7 +55,7 @@ def parse_dataset_args():
     # nuclei
     parser.add_argument("--surf_number", type=int, default=80, help="number of surface cells")
     parser.add_argument("--filler_scale", type=float, default=0.8, help="Scale of the size of smaller filler nuclei w.r.t to the original nuclei size")
-    parser.add_argument("--number", type=int, default=80, help="number of volume cells")
+    parser.add_argument("--number", type=int, default=300, help="number of volume cells")
     parser.add_argument("--ratios", type=list, default=[0.6, 0.2, 0.2], help="ratios of different cell types")
     parser.add_argument("--vol_scale", type=tuple, default=(1, 0.7, 1), help="Volume scale")
     parser.add_argument("--surf_scale", type=tuple, default=(0.8, 0.5, 1), help="Surface scale")
@@ -68,7 +70,7 @@ def parse_dataset_args():
 
 
 def create_scene(
-        tissue_thickness = 0.2, tissue_size = 2, tissue_location = (0, 0, 0.5),
+        tissue_thickness = 0.05, tissue_size = 2, tissue_location = (0, 0, 0.5),
         tissue_padding = 0.5, surf_number = 80, filler_scale = 0.8, number = 80, 
         ratios = [0.6, 0.2, 0.2], vol_scale = (1, 0.7, 1), surf_scale = (0.8, 0.5, 1)):
     '''
@@ -131,16 +133,44 @@ def create_scene(
     return my_scene
 
 
-def render_scene(my_scene, render_path, sample_name, output_shape=(500, 500), max_samples=1024):
+def recreate_scene(parameters):
+    '''
+    recreates a scene from parameters
+    Args:
+        parameters: dict, parameters of the scene
+    Returns:
+        my_scene: BioMedicalScene object
+    '''
+    my_scene = create_scene(
+        tissue_thickness = parameters['tissue_thickness'], tissue_size = parameters['tissue_size'], 
+        tissue_location = parameters['tissue_location'], tissue_padding = parameters['tissue_padding'],
+        surf_number = parameters['surf_number'], filler_scale = parameters['filler_scale'], number = parameters['number'], 
+        ratios = parameters['ratios'], vol_scale = parameters['vol_scale'], surf_scale = parameters['surf_scale'])
+    return my_scene
+
+
+def render_scene(my_scene, render_path, sample_name, gpu=True, devices=[0], output_shape=(512, 512), max_samples=1024):
+    '''
+    renders a scene
+    Args:
+        my_scene: BioMedicalScene object
+        render_path: str, path to save renders
+        sample_name: int, sample name
+        gpu: bool, use gpu for rendering
+        devices: list, list of gpu devices to use for rendering
+        output_shape: tuple, dimensions of output
+        max_samples: int, number of samples for rendering
+    '''
     
     # set render engine
     bpy.context.scene.render.engine = 'CYCLES'
-    bpy.context.scene.cycles.device = 'GPU'
+    if gpu:
+        bpy.context.scene.cycles.device = 'GPU'
     bpy.context.preferences.addons['cycles'].preferences.compute_device_type = "CUDA"
     bpy.context.preferences.addons["cycles"].preferences.get_devices()
     print(bpy.context.preferences.addons["cycles"].preferences.compute_device_type)
     for j, d in enumerate(bpy.context.preferences.addons["cycles"].preferences.devices):
-        if j in (0, 1): # Using only the first two devices
+        if j in devices:
             d["use"] = True
         else:
             d["use"] = False
@@ -163,7 +193,10 @@ def main():
     args = parse_dataset_args() 
     
     # create output directory
-    render_path = args.output_dir #render scene
+    if args.output_dir == 'rendered':
+        render_path = os.getcwd() + '/rendered'
+    else:
+        render_path = args.output_dir
     print(render_path) 
     dir = render_path + '/train_combined_masks/semantic'
     if not os.path.exists(dir):
@@ -177,7 +210,7 @@ def main():
             tissue_location = args.tissue_location, tissue_padding = args.tissue_padding,
             surf_number = args.surf_number, filler_scale = args.filler_scale, number = args.number, 
             ratios = args.ratios, vol_scale = args.vol_scale, surf_scale = args.surf_scale)
-        render_scene(my_scene, render_path, i+1)
+        render_scene(my_scene, render_path, i+1, gpu=args.gpu, devices=args.gpu_devices)
         bpy.ops.wm.read_factory_settings(use_empty=True)
 
 
