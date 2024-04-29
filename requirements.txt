@@ -1,0 +1,4 @@
+bpy==3.4.0
+scipy
+Pillow
+tqdm
