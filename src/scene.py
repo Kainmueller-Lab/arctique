@@ -177,6 +177,8 @@ class BioMedicalScene:
             cell.hide_viewport = True
             cell.hide_render = True
 
+        self.hide_non_cell_objects()
+
     def unhide_everything(self): 
         '''unhide all objects in the scene'''
         # unhide tissue
@@ -239,7 +241,7 @@ class BioMedicalScene:
         filepath = self.filepath
         if not os.path.exists(filepath):
             os.makedirs(filepath)
-        self.new_filepath = filepath + f"masks/instance_individual/{self.sample_name}/"
+        self.new_filepath = filepath + f"/masks/instance_individual/{self.sample_name}/"
         
         for cell_info_dict in self.cell_info: 
             cell_object = bpy.data.objects[cell_info_dict["Cellname"]] # get cell object
@@ -263,7 +265,7 @@ class BioMedicalScene:
         unique_type_counter = 0
         unique_type_dict = {}
         
-        masks_path = self.filepath + f"masks/instance_individual/{self.sample_name}/"
+        masks_path = self.filepath + f"/masks/instance_individual/{self.sample_name}/"
         metadata_path = self.filepath + f'/metadata'
         if not os.path.exists(metadata_path):
             os.makedirs(metadata_path)
