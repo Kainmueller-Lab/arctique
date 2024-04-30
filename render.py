@@ -40,7 +40,7 @@ def parse_dataset_args():
     
     # RENDERING PARAMETERS
     # add argument with list of all gpu devices
-    parser.add_argument("--gpu_devices", type=list, default=[0], help="List of GPU devices to use for rendering")
+    parser.add_argument("--gpu_devices", type=list, default=[0, 1], help="List of GPU devices to use for rendering")
     parser.add_argument("--gpu", type=bool, default=True, help="Use GPU for rendering")
     parser.add_argument("--output_dir", type=str, default="rendered", help="Set output folder")
     parser.add_argument("--n_samples", type=int, default=10, help="Dataset size")
@@ -55,7 +55,7 @@ def parse_dataset_args():
     # nuclei
     parser.add_argument("--surf_number", type=int, default=80, help="number of surface cells")
     parser.add_argument("--filler_scale", type=float, default=0.8, help="Scale of the size of smaller filler nuclei w.r.t to the original nuclei size")
-    parser.add_argument("--number", type=int, default=300, help="number of volume cells")
+    parser.add_argument("--number", type=int, default=250, help="number of volume cells")
     parser.add_argument("--ratios", type=list, default=[0.6, 0.2, 0.2], help="ratios of different cell types")
     parser.add_argument("--vol_scale", type=tuple, default=(1, 0.7, 1), help="Volume scale")
     parser.add_argument("--surf_scale", type=tuple, default=(0.8, 0.5, 1), help="Surface scale")
@@ -72,7 +72,8 @@ def parse_dataset_args():
 def create_scene(
         tissue_thickness = 0.05, tissue_size = 2, tissue_location = (0, 0, 0.5),
         tissue_padding = 0.5, surf_number = 80, filler_scale = 0.8, number = 80, 
-        ratios = [0.6, 0.2, 0.2], vol_scale = (1, 0.7, 1), surf_scale = (0.8, 0.5, 1)):
+        ratios = [0.6, 0.2, 0.2], vol_scale = (1, 0.7, 1), surf_scale = (0.8, 0.5, 1),
+        seed=0):
     '''
     creates a tissue crop with cells and nuclei
     Args:
@@ -102,7 +103,7 @@ def create_scene(
     my_scene.add_tissue(tissue=my_tissue.tissue)
 
     # 2) create macrostructures in tissue block, rotate and scale them and cut them
-    tissue_arch = arch.TissueArch()
+    tissue_arch = arch.TissueArch(seed=seed)
     tissue_arch.random_crop(my_tissue.tissue)
     SURF_OBJ, VOL_OBJ = tissue_arch.get_architecture()
     my_scene.bound_architecture(volumes=[VOL_OBJ], surfaces=[SURF_OBJ])
@@ -209,7 +210,8 @@ def main():
             tissue_thickness = args.tissue_thickness, tissue_size = args.tissue_size, 
             tissue_location = args.tissue_location, tissue_padding = args.tissue_padding,
             surf_number = args.surf_number, filler_scale = args.filler_scale, number = args.number, 
-            ratios = args.ratios, vol_scale = args.vol_scale, surf_scale = args.surf_scale)
+            ratios = args.ratios, vol_scale = args.vol_scale, surf_scale = args.surf_scale,
+            seed=i)
         render_scene(my_scene, render_path, i+1, gpu=args.gpu, devices=args.gpu_devices)
         bpy.ops.wm.read_factory_settings(use_empty=True)
 

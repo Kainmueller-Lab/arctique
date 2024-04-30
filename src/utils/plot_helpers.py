@@ -4,7 +4,8 @@ from pathlib import Path
 
 import os
 
-def make_color_palette(n_colors, bg_col = (0,0,0)): 
+def make_color_palette(n_colors, bg_col = (0,0,0), seed=42): 
+    np.random.seed(seed)
     colors = [bg_col]
     for i in range(n_colors): 
         not_unique = True
