@@ -301,7 +301,7 @@ class BioMedicalScene:
         unique_type_counter = 0
         unique_type_dict = {}
         
-        masks_path = self.filepath + f"masks/instance_individual/{self.sample_name}/"
+        masks_path = self.filepath + f"/masks/instance_individual/{self.sample_name}/"
         metadata_path = self.filepath + f'/metadata'
         if not os.path.exists(metadata_path):
             os.makedirs(metadata_path)
