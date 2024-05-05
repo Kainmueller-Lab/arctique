@@ -25,17 +25,46 @@ def fn_print_time_when_render_done(dummy):
     print("----- the time is: ", time.time())
 
 class Camera:
-    def __init__(self, name='camera 1', pos = (0, 0, 2), rot = (0, 0, 0), size = 2):
+    def __init__(
+            self, name='camera 1', pos=(0, 0, 1.5622), rot=(0, 0, 0), size=2,
+            focus_pos=(0, 0, 0.62), fstop=0.8, sensor_width=36):
         self.scene = bpy.context.scene
+        
+        # add camera to scene
         cam = bpy.data.cameras.new(name)
         cam.lens = 18
-        
         self.cam_obj = bpy.data.objects.new(name, cam)
         self.cam_obj.location = pos
         self.cam_obj.rotation_euler = rot
         self.cam_obj.data.type = 'ORTHO'
         self.cam_obj.data.ortho_scale = size
-        #self.scene.collection.objects.link(self.cam_obj)
+        self.cam_obj.data.sensor_width = sensor_width
+        self.cam_obj.data.dof.aperture_fstop = fstop
+
+        # add focus plane to scene
+        bpy.ops.mesh.primitive_plane_add(size=2.5, location=focus_pos)
+        self.focus = bpy.context.active_object
+        self.focus.name = 'focus'
+        self.focus.hide_viewport = True
+        self.focus.hide_render = True
+
+        # set camera focus
+        self.cam_obj.data.dof.use_dof = True
+        self.cam_obj.data.dof.focus_object = self.focus
+
+        # add camera for mask rendering
+        cam2 = bpy.data.cameras.new(name)
+        self.cam_obj_mask = bpy.data.objects.new(name + '_mask', cam2)
+        self.cam_obj_mask.location = pos
+        self.cam_obj_mask.rotation_euler = rot
+        self.cam_obj_mask.data.type = 'ORTHO'
+        self.cam_obj_mask.data.ortho_scale = size
+
+    def switch_to_mask_camera(self, scene):
+        scene.camera = self.cam_obj_mask
+
+    def switch_to_main_camera(self, scene):
+        scene.camera = self.cam_obj
 
 
 class LightSource:
@@ -177,6 +206,8 @@ class BioMedicalScene:
             cell.hide_viewport = True
             cell.hide_render = True
 
+        self.hide_non_cell_objects()
+
     def unhide_everything(self): 
         '''unhide all objects in the scene'''
         # unhide tissue
@@ -189,6 +220,13 @@ class BioMedicalScene:
         for cell in self.cell_objects: 
             cell.hide_viewport = False
             cell.hide_render = False
+        # unhide volumes and surfaces
+        for v in self.volumes:
+            v.hide_viewport = False
+            v.hide_render = False
+        for s in self.surfaces:
+            s.hide_viewport = False
+            s.hide_render = False
 
     def hide_non_cell_objects(self):
         '''hide all objects except cells in the scene'''
@@ -239,7 +277,7 @@ class BioMedicalScene:
         filepath = self.filepath
         if not os.path.exists(filepath):
             os.makedirs(filepath)
-        self.new_filepath = filepath + f"masks/instance_individual/{self.sample_name}/"
+        self.new_filepath = filepath + f"/masks/instance_individual/{self.sample_name}/"
         
         for cell_info_dict in self.cell_info: 
             cell_object = bpy.data.objects[cell_info_dict["Cellname"]] # get cell object
@@ -252,7 +290,7 @@ class BioMedicalScene:
 
         self.unhide_everything()
         
-        ph.reduce_single_masks(self.filepath, [cell_info_dict["Filename"] for cell_info_dict in self.cell_info])# reduce RGBA image to only alpha channel
+        #ph.reduce_single_masks(self.filepath, [cell_info_dict["Filename"] for cell_info_dict in self.cell_info])# reduce RGBA image to only alpha channel
         
     def create_cell_info(self):    
         ''''
@@ -562,7 +600,6 @@ class BioMedicalScene:
         output_shape = width and height of output pngs
         max_samples: number of samples for rendering. Fewer samples will render more quickly
         '''
-        
         self.filepath = filepath
         self.create_cell_info()
         
@@ -572,6 +609,10 @@ class BioMedicalScene:
             self.setup_scene_render_default(output_shape=output_shape, max_samples=max_samples)
             self.export_scene()
         
+        # switch to non focus camera and switch material of nuclei
+        self.camera.switch_to_mask_camera(self.scene)
+        self.add_staining(bpy.data.materials.get("nuclei_mask"))
+
         if depth_mask: 
             self.enable_depth_output()
             # self.export_depth()

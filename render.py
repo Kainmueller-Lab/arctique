@@ -13,7 +13,7 @@ if not dir in sys.path:
 import src.arrangement.arrangement as arr 
 import src.objects.cells as cells
 import src.objects.tissue as tissue
-import src.shading.shading as shading
+import src.shading.materials as materials
 import src.scene as scene
 import src.utils as utils
 import src.utils.geometry as geom
@@ -26,7 +26,7 @@ import importlib as imp # imp module is deprecated since python 3.12
 imp.reload(arr)
 imp.reload(cells)
 imp.reload(tissue)
-imp.reload(shading)
+imp.reload(materials)
 imp.reload(scene)
 imp.reload(utils)
 imp.reload(geom)
@@ -93,7 +93,7 @@ def create_scene(
     scene.BioMedicalScene.clear()
         
     # 1) initialize microscope objects and add to scene
-    my_materials = shading.Material()
+    my_materials = materials.Material(seed=seed)
     my_tissue = tissue.Tissue(
         my_materials.muscosa, thickness=tissue_thickness,
         size=tissue_size, location=tissue_location)
@@ -123,6 +123,7 @@ def create_scene(
     my_scene.cut_cells()
     my_scene.cut_tissue()
     my_scene.add_tissue_staining(materials=[my_materials.muscosa])
+    my_scene.add_staining(material=my_materials.nuclei_mask)
     my_scene.add_staining(material=my_materials.nuclei_staining)
 
     # 5) hide non cell objects
@@ -181,7 +182,7 @@ def render_scene(my_scene, render_path, sample_name, gpu=True, devices=[0], outp
     
     my_scene.render(filepath = render_path,  # where to save renders
                     scene = True, # if true scene is rendered
-                    single_masks = False, # if true single cell masks are rendered
+                    single_masks = True, # if true single cell masks are rendered
                     semantic_mask = True, # if true semantic mask is generated
                     instance_mask = True, # if true instance mask is generated
                     depth_mask = False, # if true depth mask is generated

@@ -7,7 +7,7 @@ from typing import Optional
 
 from mathutils import Vector
 
-from src.shading.shading import Material
+from src.shading.materials import Material
 from src.utils.geometry import set_orientation
 
 class CellAttribute():
