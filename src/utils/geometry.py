@@ -417,6 +417,7 @@ def remove_top_and_bottom_faces(obj):
     bm.to_mesh(obj.data)
     bm.free()
 
+# NOTE: Can be deleted in the future. - ck
 def add_dummy_objects(tissue, padding, vol_scale, surf_scale):
     # Create temporarily padded tissue
     tissue.tissue.scale = tuple(1+padding for _ in range(3))
@@ -452,3 +453,43 @@ def add_dummy_objects(tissue, padding, vol_scale, surf_scale):
 
     tissue.tissue.scale = (1,1,1)
     return vol_obj, surf_obj
+
+
+# NOTE: Can be deleted in the future. - ck
+def add_dummy_volumes(tissue, padding):
+    bpy.ops.mesh.primitive_cube_add(size=tissue.size, location=tissue.location) 
+    mix_vol = bpy.context.active_object
+    mix_vol.name = "Mix_Volume"
+    mix_vol.scale = (1 + padding, 1 + padding, tissue.thickness/tissue.size + padding)
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+
+    bpy.ops.mesh.primitive_cylinder_add()
+    epi_vol = bpy.context.active_object
+    epi_vol.name = "Epi_Volume"
+    epi_vol.scale = (0.6, 0.9, 1)
+    bpy.ops.mesh.primitive_cylinder_add()
+    inner_cylinder = bpy.context.active_object
+    inner_cylinder.scale = (0.5, 0.7, 1)
+    boolean = epi_vol.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
+    boolean.operation = 'DIFFERENCE'
+    boolean.object = inner_cylinder
+    bpy.ops.object.modifier_apply({"object": epi_vol}, modifier="Boolean Modifier")
+
+    # MIX_VOL
+    boolean = epi_vol.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
+    boolean.operation = 'INTERSECT'
+    boolean.object = mix_vol
+    bpy.ops.object.modifier_apply({"object": epi_vol}, modifier="Boolean Modifier")
+
+    # EPI_VOL
+    bpy.ops.mesh.primitive_cylinder_add()
+    outer_cylinder = bpy.context.active_object
+    outer_cylinder.scale = (0.6, 0.9, 1)
+    boolean = mix_vol.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
+    boolean.operation = 'DIFFERENCE'
+    boolean.object = outer_cylinder
+    bpy.ops.object.modifier_apply({"object": mix_vol}, modifier="Boolean Modifier")
+    remove_objects([inner_cylinder, outer_cylinder])
+    remove_top_and_bottom_faces(mix_vol)
+    remove_top_and_bottom_faces(epi_vol)
+    return mix_vol, epi_vol

@@ -37,7 +37,7 @@ imp.reload(sf)
 TISSUE_THICKNESS = 0.2
 TISSUE_SIZE = 2
 TISSUE_LOCATION = (0, 0, 0.5)
-TISSUE_PADDING = 0.5
+TISSUE_PADDING = 0.04
 
 
 ###################  MAIN  METHOD  #####################
@@ -54,34 +54,42 @@ my_camera = scene.Camera()
 # create scene
 my_scene = scene.BioMedicalScene(my_light_source, my_camera)
 
-# Define volume and surface objects
-# NOTE: In the end the volume and surface objects should come from the epithelial tissue macrostructure. - ck
-vol_scale = (1, 0.7, 1)
-surf_scale = (0.8, 0.5, 1)
-VOL_OBJ, SURF_OBJ = utils.geometry.add_dummy_objects(my_tissue, TISSUE_PADDING, vol_scale, surf_scale)
+# add bounding volumes
+# NOTE: MIX_VOL bounds the volume for the mixed cell types
+# NOTE: EPI_VOL bounds the volume for the epithelial cell types.
+MIX_VOL, EPI_VOL = utils.geometry.add_dummy_volumes(my_tissue, TISSUE_PADDING)
+
+# add mix volume filling
+# TODO: Add a CellAttributeMix attribute which takes two strict attributes and a mix parameter between 0 and 1.
+# The parameter is used to mix the two attributes and shapes lerpstyle
+MIX_COUNT = 80
+ATTRIBUTES = [cells.CellAttributeA(), cells.CellAttributeB(), cells.CellAttributeC()]
+RATIOS = [0.05, 0.15, 0.8]
+volume_fill = arr.VolumeFill(MIX_VOL, MIX_COUNT, ATTRIBUTES, RATIOS, strict_boundary=True)
+my_scene.add_arrangement(volume_fill)
+
+# add epi volume filling
+EPI_COUNT = 80
+EPI_ATTRIBUTE = cells.CellAttributeEpi(size=0.1, scale=(1, 0.5, 0.5))
+#crypt_fill = arr.VoronoiFill(EPI_VOL, EPI_COUNT, EPI_ATTRIBUTE) # TODO
+#my_scene.add_arrangement(crypt_fill)
 
 # NOTE: For some very weird reason you need to create the surface filling before the volume filling.
 # Otherwise the surface filling won't work and it won't even refine the mesh. :/ - ck
 # TODO: Fix that
 # Add surface filling
-SURF_NUMBER = 80
-SURF_ATTRIBUTE = cells.CellAttributeEpi(size=0.1, scale=(1, 0.5, 0.5))
-FILLER_SCALE = 0.8 # Scale of the size of smaller filler nuclei w.r.t to the original nuclei size
-surface_fill = arr.SurfaceFill(SURF_OBJ, SURF_NUMBER, SURF_ATTRIBUTE, FILLER_SCALE)
-my_scene.add_arrangement(surface_fill)
+# SURF_NUMBER = 80
+# SURF_ATTRIBUTE = cells.CellAttributeEpi(size=0.1, scale=(1, 0.5, 0.5))
+# FILLER_SCALE = 0.8 # Scale of the size of smaller filler nuclei w.r.t to the original nuclei size
+# surface_fill = arr.SurfaceFill(SURF_OBJ, SURF_NUMBER, SURF_ATTRIBUTE, FILLER_SCALE)
+# my_scene.add_arrangement(surface_fill)
 
-# Add volume filling
-NUMBER = 80
-ATTRIBUTES = [cells.CellAttributeA(), cells.CellAttributeB(), cells.CellAttributeC()]
-RATIOS = [0.05, 0.15, 0.8]
-volume_fill = arr.VolumeFill(VOL_OBJ, NUMBER, ATTRIBUTES, RATIOS, strict_boundary=False)
-my_scene.add_arrangement(volume_fill)
-
-# # Hide macro objects
-# VOL_OBJ.hide_viewport = True
-# VOL_OBJ.hide_render = True
-# SURF_OBJ.hide_viewport = True
-# SURF_OBJ.hide_render = True
+# # Add volume filling
+# NUMBER = 80
+# ATTRIBUTES = [cells.CellAttributeA(), cells.CellAttributeB(), cells.CellAttributeC()]
+# RATIOS = [0.05, 0.15, 0.8]
+# volume_fill = arr.VolumeFill(VOL_OBJ, NUMBER, ATTRIBUTES, RATIOS, strict_boundary=False)
+# my_scene.add_arrangement(volume_fill)
 
 # Add tissue
 my_scene.add_tissue(tissue=my_tissue.tissue)
@@ -92,15 +100,15 @@ my_scene.add_staining(material=my_materials.nuclei_staining)
 RENDER_PATH = 'C:/Users/cwinklm/Documents/Alpacathon/rendered_HE/renders/'
 #RENDER_PATH = 'renders/'
 
-my_scene.render(filepath = RENDER_PATH,  # where to save renders
-               scene = True, # if true scene is rendered
-               single_masks = True, # if true singel cell masks are rendered
-               semantic_mask = True, # if true semantic mask is generated
-               instance_mask = True, # if true instance mask is generated
-               depth_mask = True, # if true depth mask is generated
-               obj3d = True, # if true scene is saved as 3d object
-               output_shape = (500, 500), # dimensions of output
-               max_samples = 10) # number of samples for rendering. Fewer samples will render more quickly. Default is 1024
+# my_scene.render(filepath = RENDER_PATH,  # where to save renders
+#                scene = True, # if true scene is rendered
+#                single_masks = True, # if true singel cell masks are rendered
+#                semantic_mask = True, # if true semantic mask is generated
+#                instance_mask = True, # if true instance mask is generated
+#                depth_mask = True, # if true depth mask is generated
+#                obj3d = True, # if true scene is saved as 3d object
+#                output_shape = (500, 500), # dimensions of output
+#                max_samples = 10) # number of samples for rendering. Fewer samples will render more quickly. Default is 1024
 
 
 
