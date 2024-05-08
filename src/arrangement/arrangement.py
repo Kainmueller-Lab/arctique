@@ -83,7 +83,7 @@ class VolumeFill(CellArrangement):
         for idx, location in enumerate(locations):
             bpy.ops.mesh.primitive_ico_sphere_add(radius=radius)
             nucleus = bpy.context.active_object
-            deform_mesh(nucleus, attribute)
+            #deform_mesh(nucleus, attribute)
             nucleus.name = f"Nucleus_Type_{type}_{idx}"
             nucleus.location = location
             nucleus.scale = attribute.scale
@@ -173,8 +173,9 @@ class VoronoiFill(CellArrangement):
         self.mesh_obj = mesh_obj
         self.count = count
         self.attribute = attribute
-        self.radius = 0.06 # TODO: Add later: self.attribute.size * self.attribute.scale[1] # We need the secong largest radius as tesselation distance between seed points
-        self.subdivision_level = 3 # Reduce level for computation speed, increase for finer tessellation
+        self.size_coeff = 0.7 # This can be adjusted. It scales the icospheres w.r.t. to the surrounding compartment. If it is set to 1 it maximally fits into the compartment but can lead to overlaps of meshes. - ck
+        self.radius = self.attribute.size * self.attribute.scale[1] # We need the secong largest radius as tesselation distance between seed points
+        self.subdivision_level = 4 # Reduce level for computation speed, increase for finer tessellation
 
         # Compute seeds for icospherical nuclei
         self.nuclei_seeds = self.compute_seeds()
@@ -217,10 +218,10 @@ class VoronoiFill(CellArrangement):
             diam = diameter(prism_coords)
             c = centroid(prism_coords)
             height = np.sqrt(diam*diam - 4*self.radius*self.radius)
-            size_coeff = 0.7
-            scale = (0.5*size_coeff*height, size_coeff*self.radius, size_coeff*self.radius)
+            scale = (0.5*self.size_coeff*height, self.size_coeff*self.radius, self.size_coeff*self.radius)
             direction = (c - choice[idx]) / np.linalg.norm((c - choice[idx]))
-            seeds.append(NucleusSeed(centroid=c, scale=scale, direction=direction))
+            if height < 5 * self.radius: # NOTE: Need this artifact check for now since sometimes a very long icosphere is created. - ck
+                seeds.append(NucleusSeed(centroid=c, scale=scale, direction=direction))
         remove_objects(region_objects + [surface_obj])
         return seeds
 
