@@ -69,11 +69,12 @@ volume_fill = arr.VolumeFill(MIX_VOL, MIX_COUNT, ATTRIBUTES, RATIOS, strict_boun
 my_scene.add_arrangement(volume_fill)
 
 # add epi volume filling
-EPI_COUNT = 80
+EPI_COUNT = 200
 EPI_ATTRIBUTE = cells.CellAttributeEpi(size=0.1, scale=(1, 0.5, 0.5))
-#crypt_fill = arr.VoronoiFill(EPI_VOL, EPI_COUNT, EPI_ATTRIBUTE) # TODO
-#my_scene.add_arrangement(crypt_fill)
+crypt_fill = arr.VoronoiFill(EPI_VOL, EPI_COUNT, EPI_ATTRIBUTE)
+my_scene.add_arrangement(crypt_fill)
 
+# OLD VERSION
 # NOTE: For some very weird reason you need to create the surface filling before the volume filling.
 # Otherwise the surface filling won't work and it won't even refine the mesh. :/ - ck
 # TODO: Fix that

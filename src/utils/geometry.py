@@ -11,6 +11,13 @@ from src.utils.helper_methods import *
 def lerp(a, b, t):
     return a*(1-t) + b*t
 
+
+def diameter(coords):
+    return max([np.linalg.norm(v-w) for v,w in combinations(coords,2)])
+
+def centroid(coords):
+    return sum(coords, Vector((0.0, 0.0, 0.0))) / len(coords)
+
 # Function to set the local x-axis orientation of an object along a direction vector
 def set_orientation(obj, direction_vector):
     # Calculate the rotation matrix to align the object  with the direction vector
@@ -395,6 +402,7 @@ def deform_mesh(obj, attribute):
 
 
 def remove_top_and_bottom_faces(obj):
+    mesh = bpy.data.meshes.new(name="ModifiedMesh")
     bm = bmesh.new()
     bm.from_mesh(obj.data)
 
@@ -402,20 +410,23 @@ def remove_top_and_bottom_faces(obj):
     # Deselect all faces
     for face in bm.faces:
         face.select_set(False)
-    
     # Select faces with vertical normals
     for face in bm.faces:
         normal = face.normal
         # Check if the z-component of the normal is close to -1 or 1
         if abs(normal.z) > 1-epsilon:
             face.select_set(True)
-    
     # Delete selected faces
     bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.select], context='FACES')
-    
     # Update the mesh data
-    bm.to_mesh(obj.data)
+    bm.to_mesh(mesh)
     bm.free()
+    # Create a new object and link it to the scene
+    new_obj = bpy.data.objects.new("ModifiedObject", mesh)
+    new_obj.location = obj.location
+    new_obj.scale = obj.scale
+    bpy.context.collection.objects.link(new_obj)
+    return new_obj
 
 # NOTE: Can be deleted in the future. - ck
 def add_dummy_objects(tissue, padding, vol_scale, surf_scale):
@@ -490,6 +501,4 @@ def add_dummy_volumes(tissue, padding):
     boolean.object = outer_cylinder
     bpy.ops.object.modifier_apply({"object": mix_vol}, modifier="Boolean Modifier")
     remove_objects([inner_cylinder, outer_cylinder])
-    remove_top_and_bottom_faces(mix_vol)
-    remove_top_and_bottom_faces(epi_vol)
     return mix_vol, epi_vol

@@ -1,5 +1,6 @@
 import random
 
+from collections import namedtuple
 from mathutils import Vector
 
 from src.objects.cells import Cell
@@ -147,4 +148,127 @@ class SurfaceFill(CellArrangement):
             nucleus.matrix_world = rotation_matrix
             nucleus.scale = attribute.scale
             nucleus.name = f"Surface_Nucleus_Type_{attribute.cell_type}_{idx}{name}"
+            self.objects.append(nucleus)
+
+NucleusSeed = namedtuple('NucleusSeed', 'centroid scale direction')
+# NOTE: A NucleusSeed object is a 3d-ellipsoid defined by its 3d centroid, its scale
+# (3d vector containing the length of axes in x, y and z direction), and its direction
+# (3d normalized vector to which the x-axis will point).
+
+class VoronoiFill(CellArrangement):
+    def __init__(self, mesh_obj, count, attribute):
+        """
+        Initializes a CellArrangement object with the given parameters.
+        Takes as input a mesh_obj which needs to consist of an outer and an inner wall mesh, e.g. an annulus.
+        Then the volume is cut into quasi-hexagonal compartments whose size depend on the given attributes.
+        Insides each compartment will then be placed a icosphere that fits into this compartment.
+
+        Parameters:
+            - mesh_obj: object of volume to populate with nuclei
+            - count: number of total nuclei to populate
+            - attribute: nuclei type attribute that should populate the mesh
+        """
+        super().__init__()
+        self.name = "VoronoiFill"
+        self.mesh_obj = mesh_obj
+        self.count = count
+        self.attribute = attribute
+        self.radius = 0.06 # TODO: Add later: self.attribute.size * self.attribute.scale[1] # We need the secong largest radius as tesselation distance between seed points
+        self.subdivision_level = 3 # Reduce level for computation speed, increase for finer tessellation
+
+        # Compute seeds for icospherical nuclei
+        self.nuclei_seeds = self.compute_seeds()
+
+    def compute_seeds(self):
+        surface_obj = remove_top_and_bottom_faces(self.mesh_obj)
+        subdivide_object(surface_obj, self.subdivision_level)
+        mesh = surface_obj.data
+        _, outer_vs = self.split_vertices(mesh)
+
+        # Sort for sampling
+        outer_data = [(surface_obj.matrix_world @ v.co, v.normal) for v in outer_vs]
+        root = outer_data[0][0]
+        sorted_data = self.sort_data_by_root_dist(outer_data, root)
+        sorted_vs = [v for v, _ in sorted_data]
+        choice, _ = self.sample_centers(sorted_vs, 2*self.radius, self.count)
+        #choice_normals = [sorted_data[idx][1] for idx in choice_ids]
+        
+        # Create Voronoi regions
+        min_coords = [min([v[0] for v in choice]), min([v[1] for v in choice]), min([v[2] for v in choice])]
+        max_coords = [max([v[0] for v in choice]), max([v[1] for v in choice]), max([v[2] for v in choice])]
+        padding = 1.0
+        auxiliary_points = get_lattice_points(min_coords, max_coords, padding)
+        vor = Voronoi(choice + auxiliary_points)
+        fr_points = finite_region_points(vor)
+        ridges = compute_faces_by_seeds(vor, fr_points)
+
+        region_objects = []
+        for point_idx in fr_points:
+            region = add_region(vertices = vor.vertices,
+                               faces = ridges[point_idx],
+                               idx = point_idx)
+            region_objects.append(region)
+        region_objects = intersect_with_object(region_objects, self.mesh_obj)
+
+        # Place icospheres into Voronoi regions
+        seeds = []
+        for idx, obj in enumerate(region_objects):
+            prism_coords = [obj.matrix_world @ v.co for v in obj.data.vertices]
+            diam = diameter(prism_coords)
+            c = centroid(prism_coords)
+            height = np.sqrt(diam*diam - 4*self.radius*self.radius)
+            size_coeff = 0.7
+            scale = (0.5*size_coeff*height, size_coeff*self.radius, size_coeff*self.radius)
+            direction = (c - choice[idx]) / np.linalg.norm((c - choice[idx]))
+            seeds.append(NucleusSeed(centroid=c, scale=scale, direction=direction))
+        remove_objects(region_objects + [surface_obj])
+        return seeds
+
+    def split_vertices(self, mesh):
+        inner, outer = [], []
+        for v in mesh.vertices:
+            prod = np.dot(v.co, v.normal)
+            if prod > 0:
+                outer.append(v)
+            else:
+                inner.append(v)
+        return inner, outer
+    
+    def sort_data_by_root_dist(self, data, v):
+        def distance_to_v(v1, v2):
+            return np.linalg.norm(v1 - v2)
+        return sorted(data, key=lambda tuple: distance_to_v(tuple[0], v))
+    
+    def sample_centers(self, verts, dist, max_count):
+        sampled_verts = []
+        sampled_ids = []
+        for idx, v in enumerate(verts):
+            can_be_placed = True
+            for q in sampled_verts:
+                if (v-q).length < dist:
+                    can_be_placed = False
+                    break
+            if can_be_placed:
+                sampled_verts.append(v)
+                sampled_ids.append(idx)
+            if len(sampled_verts) == max_count:
+                break
+        return sampled_verts, sampled_ids
+
+    def add(self):
+        for idx, s in enumerate(self.nuclei_seeds):
+            bpy.ops.mesh.primitive_ico_sphere_add()
+            nucleus = bpy.context.active_object
+            nucleus.name = f"Nucleus_Type_{self.attribute.cell_type}_{idx}"
+            set_orientation(nucleus, s.direction)
+            nucleus.location = s.centroid
+            nucleus.scale = s.scale
+            bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+            
+            #deform_mesh(nucleus)
+            
+            bpy.ops.object.modifier_add(type='SUBSURF')
+            bpy.context.object.modifiers["Subdivision"].levels = 1
+            bpy.ops.object.modifier_apply(modifier="Subdivision")
+
             self.objects.append(nucleus)
