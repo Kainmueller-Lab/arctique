@@ -60,10 +60,10 @@ my_scene = scene.BioMedicalScene(my_light_source, my_camera)
 MIX_VOL, EPI_VOL = utils.geometry.add_dummy_volumes(my_tissue, TISSUE_PADDING)
 
 # add mix volume filling
-# TODO: Add a CellAttributeMix attribute which takes two strict attributes and a mix parameter between 0 and 1.
-# The parameter is used to mix the two attributes and shapes lerpstyle
 MIX_COUNT = 240
-ATTRIBUTES = [cells.CellAttributeA(), cells.CellAttributeB(), cells.CellAttributeC()]
+# NOTE: Create nuclei of type A which are mixed with nuclei of type C with a factor of 0.3.
+# A mix factor of 0 produces the pure true attribute, mix factor 1 produces the pure mixing attribute.
+ATTRIBUTES = [cells.MixAttribute(cells.CellAttributeA(), cells.CellAttributeC(), 0.3), cells.CellAttributeB(), cells.CellAttributeC()]
 RATIOS = [0.2, 0.3, 0.5]
 volume_fill = arr.VolumeFill(MIX_VOL, MIX_COUNT, ATTRIBUTES, RATIOS, strict_boundary=True)
 my_scene.add_arrangement(volume_fill) # NOTE: 240 nuclei take about 15 s
@@ -73,24 +73,6 @@ EPI_COUNT = 200
 EPI_ATTRIBUTE = cells.CellAttributeEpi(size=0.1, scale=(1, 0.5, 0.5))
 crypt_fill = arr.VoronoiFill(EPI_VOL, EPI_COUNT, EPI_ATTRIBUTE)
 my_scene.add_arrangement(crypt_fill) # NOTE: 200 nuclei take about 30 s
-
-# OLD VERSION
-# NOTE: For some very weird reason you need to create the surface filling before the volume filling.
-# Otherwise the surface filling won't work and it won't even refine the mesh. :/ - ck
-# TODO: Fix that
-# Add surface filling
-# SURF_NUMBER = 80
-# SURF_ATTRIBUTE = cells.CellAttributeEpi(size=0.1, scale=(1, 0.5, 0.5))
-# FILLER_SCALE = 0.8 # Scale of the size of smaller filler nuclei w.r.t to the original nuclei size
-# surface_fill = arr.SurfaceFill(SURF_OBJ, SURF_NUMBER, SURF_ATTRIBUTE, FILLER_SCALE)
-# my_scene.add_arrangement(surface_fill)
-
-# # Add volume filling
-# NUMBER = 80
-# ATTRIBUTES = [cells.CellAttributeA(), cells.CellAttributeB(), cells.CellAttributeC()]
-# RATIOS = [0.05, 0.15, 0.8]
-# volume_fill = arr.VolumeFill(VOL_OBJ, NUMBER, ATTRIBUTES, RATIOS, strict_boundary=False)
-# my_scene.add_arrangement(volume_fill)
 
 # Add tissue
 my_scene.add_tissue(tissue=my_tissue.tissue)
