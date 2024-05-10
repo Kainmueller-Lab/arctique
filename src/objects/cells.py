@@ -3,7 +3,7 @@ import bmesh
 import random
 import math
 
-from typing import List, Optional
+from typing import Optional
 
 from mathutils import Vector
 
@@ -13,19 +13,21 @@ from src.utils.geometry import set_orientation
 class CellAttribute():
     def __init__(self):
         self.cell_type = None
-        self.size = None
+        self.radius = None
         self.scale = None
         self.deformation_strength = None
         self.attribute_name = None
         self.max_bending_strength = None
 
-# NOTE: The scale of an attribute should always be normalized such that 1 is the max size. 
-# This ensures that the maximal diameter of a cell nucleus is twice its size.
+# NOTE: The radius and scale convention for CellAttributes is as follows:
+# - radius: is the maximal ellipsoid radius of the nucleus 
+# - scale: is the ellipsoid scale of the nucleus
+# The scale of an attribute should always be normalized such the maximal scale value is 1. 
+# This ensures that the maximal diameter of a cell nucleus is twice its radius.
 class CellAttributeA(CellAttribute):
-    # TODO: should defo_strength be relative to size, maybe always 40%? Would make defaulting easier. - ck
-    def __init__(self, cell_type = "A", size = 0.03, scale = (1,1,1), deformation_strength = 0.6, attribute_name = "Cell Type A", max_bending_strength = 0.2):
+    def __init__(self, cell_type = "A", radius = 0.03, scale = (1,1,1), deformation_strength = 0.8, attribute_name = "Cell Type A", max_bending_strength = 0.2):
         self.cell_type = cell_type
-        self.size = size
+        self.radius = radius
         self.scale = scale
         self.deformation_strength = deformation_strength
         self.attribute_name = attribute_name
@@ -34,16 +36,16 @@ class CellAttributeA(CellAttribute):
 class CellAttributeB(CellAttribute):
     def __init__(self, cell_type = "B", size = 0.08, scale = (1, 0.5, 0.4), deformation_strength = 0.6, attribute_name = "Cell Type B", max_bending_strength = 0.3):
         self.cell_type = cell_type
-        self.size = size
+        self.radius = radius
         self.scale = scale
         self.deformation_strength = deformation_strength
         self.attribute_name = attribute_name
         self.max_bending_strength = max_bending_strength
 
 class CellAttributeC(CellAttribute):
-    def __init__(self, cell_type = "C", size = 0.04, scale = (1, 1, 0.5), deformation_strength = 0.6, attribute_name = "Cell Type B", max_bending_strength = 0.3):
+    def __init__(self, cell_type = "C", radius = 0.04, scale = (1, 1, 0.5), deformation_strength = 0.8, attribute_name = "Cell Type C", max_bending_strength = 0.3):
         self.cell_type = cell_type
-        self.size = size
+        self.radius = radius
         self.scale = scale
         self.deformation_strength = deformation_strength
         self.attribute_name = attribute_name
@@ -53,7 +55,7 @@ class CellAttributeEpi(CellAttribute):
     # TODO: Make cell type a fixed value
     def __init__(self, cell_type = "Epi", size = 0.1, scale = (1, 0.6, 0.6), deformation_strength = 0.2, attribute_name = "Epithelial cell", max_bending_strength = 0.3):
         self.cell_type = cell_type
-        self.size = size
+        self.radius = radius
         self.scale = scale
         self.deformation_strength = deformation_strength
         self.attribute_name = attribute_name
@@ -101,15 +103,15 @@ class Cell:
 
     def add(self):
         """
-        Adds a cube object to the scene with the specified size, location, and scale.
-        Sets the pass index of the cube object to the specified pass index.
-        Orients the cube object according to the specified orientation.
-        Applies two levels of subdivision surface to the cube object.
-        Deforms the mesh of the cube object randomly.
-        Bends the cube object along the z axis.
+        Adds a sphere object to the scene with the specified radius, location, and scale.
+        Sets the pass index of the sphere object to the specified pass index.
+        Orients the sphere object according to the specified orientation.
+        Applies two levels of subdivision surface to the sphere object.
+        Deforms the mesh of the sphere object randomly.
+        Bends the sphere object along the z axis.
         """
-        # Create a cube
-        bpy.ops.mesh.primitive_cube_add(size=self.cell_attributes.size, location=self.location, scale=self.cell_attributes.scale)
+        # Create a sphere
+        bpy.ops.mesh.primitive_ico_sphere_add(radius=self.cell_attributes.radius, location=self.location, scale=self.cell_attributes.scale)
         self.cell_object = bpy.context.active_object
         self.cell_object.name = self.cell_name
         
@@ -130,7 +132,7 @@ class Cell:
         # 2) Use deform_mesh() and bend_mesh() afterwards. Not stable, Blender crashes after generating a random number of objects. But the deformations look good.
         # 3) Use a different approach using Voronoi diagrams. TBD.
 
-        # Deform the cube mesh randomly
+        # Deform the sphere mesh randomly
         self.deform_mesh()
         # Bend mesh along the z axis
         self.bend_mesh()

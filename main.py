@@ -16,6 +16,7 @@ import src.scene as scene
 import src.utils as utils
 import src.utils.geometry as geom
 import src.utils.surface_filling as sf
+import src.utils.volume_filling as vf
 
 # this next part forces a reload in case you edit the source after you first start the blender session
 #import imp
@@ -28,6 +29,7 @@ imp.reload(scene)
 imp.reload(utils)
 imp.reload(geom)
 imp.reload(sf)
+imp.reload(vf)
 
 ###################  PARAMETER  #####################
 # args_camera = {'pos'} # no change just test
@@ -46,8 +48,7 @@ scene.BioMedicalScene.clear()
     
 # add microscope objects
 my_materials = shading.Material()
-
-my_tissue = tissue.Tissue(my_materials.tissue_staining, thickness=TISSUE_THICKNESS, size=TISSUE_SIZE, location=TISSUE_LOCATION) # thickness and location of tissue should encapsulate min and max z-coordinates of cells 
+my_tissue = tissue.Tissue(my_materials.muscosa, thickness=TISSUE_THICKNESS, size=TISSUE_SIZE, location=TISSUE_LOCATION) # thickness and location of tissue should encapsulate min and max z-coordinates of cells 
 my_light_source = scene.LightSource(material=my_materials.light_source)
 my_camera = scene.Camera()
 
@@ -68,7 +69,7 @@ RATIOS = [0.2, 0.2, 0.2, 0.4]
 volume_fill = arr.VolumeFill(MIX_VOL, MIX_COUNT, ATTRIBUTES, RATIOS, strict_boundary=True)
 my_scene.add_arrangement(volume_fill) # NOTE: 240 nuclei take about 15 s
 
-add epi volume filling
+# add epi volume filling
 EPI_COUNT = 200
 EPI_ATTRIBUTE = cells.CellAttributeEpi(size=0.1, scale=(1, 0.5, 0.5))
 crypt_fill = arr.VoronoiFill(EPI_VOL, EPI_COUNT, EPI_ATTRIBUTE)
@@ -76,27 +77,39 @@ my_scene.add_arrangement(crypt_fill) # NOTE: 200 nuclei take about 30 s
 
 # Add tissue
 my_scene.add_tissue(tissue=my_tissue.tissue)
+bpy.ops.mesh.primitive_cube_add(size=2)
+placeholder = bpy.context.active_object
+my_scene.bound_architecture(volumes=[placeholder]) # TODO adjust like in main macro
+placeholder.name = 'muscosa'
 my_scene.cut_cells()
+my_scene.add_tissue_staining(materials=[my_materials.muscosa])
 my_scene.add_staining(material=my_materials.nuclei_staining)
 
+# Hide non cell objects
+# my_scene.hide_non_cell_objects()
+
 # render scene
-RENDER_PATH = 'C:/Users/cwinklm/Documents/Alpacathon/rendered_HE/renders/'
-#RENDER_PATH = 'renders/'
+#RENDER_PATH = 'C:/Users/cwinklm/Documents/Alpacathon/rendered_HE/renders2d_test/'
+# RENDER_PATH = 'renders/'
 
-my_scene.render(filepath = RENDER_PATH,  # where to save renders
-               scene = True, # if true scene is rendered
-               single_masks = True, # if true singel cell masks are rendered
-               semantic_mask = True, # if true semantic mask is generated
-               instance_mask = True, # if true instance mask is generated
-               depth_mask = True, # if true depth mask is generated
-               obj3d = True, # if true scene is saved as 3d object
-               output_shape = (500, 500), # dimensions of output
-               max_samples = 10) # number of samples for rendering. Fewer samples will render more quickly. Default is 1024
-
-
+# my_scene.render(filepath = RENDER_PATH,  # where to save renders
+#               scene = True, # if true scene is rendered
+#               single_masks = True, # if true singel cell masks are rendered
+#               semantic_mask = True, # if true semantic mask is generated
+#               instance_mask = True, # if true instance mask is generated
+#               depth_mask = True, # if true depth mask is generated
+#               obj3d = True, # if true scene is saved as 3d object
+#               output_shape = (500, 500), # dimensions of output
+#               max_samples = 10) # number of samples for rendering. Fewer samples will render more quickly. Default is 1024
 
 
 
-
-
-
+# my_scene.render3d(filepath = RENDER_PATH,  # where to save renders
+#                scene = True, # if true scene is rendered
+#                n_slices = 10,
+#                semantic_mask = True, # if true semantic mask is generated
+#                instance_mask = True, # if true instance mask is generated
+#                depth_mask = True, # if true depth mask is generated
+#                obj3d = True, # if true scene is saved as 3d object
+#                output_shape = (500, 500), # dimensions of output
+#                max_samples = 10) # number of samples for rendering. Fewer samples will render more quickly. Default is 1024

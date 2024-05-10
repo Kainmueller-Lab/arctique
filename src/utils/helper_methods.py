@@ -1,5 +1,31 @@
 import bpy
 
+
+def clear_scene():
+    # Deselect all objects
+    bpy.ops.object.select_all(action='DESELECT')
+
+    # Delete all objects in the scene
+    for obj in bpy.context.scene.objects:
+        bpy.data.objects.remove(obj, do_unlink=True)
+
+    # Clear all meshes (geometry data)
+    for mesh in bpy.data.meshes:
+        bpy.data.meshes.remove(mesh, do_unlink=True)
+
+    # Clear all materials
+    for material in bpy.data.materials:
+        bpy.data.materials.remove(material, do_unlink=True)
+
+    # Clear all textures
+    for texture in bpy.data.textures:
+        bpy.data.textures.remove(texture, do_unlink=True)
+
+    # Clear all node groups (includes Geometry Node trees)
+    for node_group in bpy.data.node_groups:
+        bpy.data.node_groups.remove(node_group, do_unlink=True)
+
+
 def delete_objects():
     # Select all objects 
     for obj in bpy.context.scene.objects:
@@ -33,5 +59,7 @@ def subdivide_object(obj, level, type='SIMPLE'):
     bpy.ops.object.modifier_set_active(modifier="Subdivision")
     bpy.ops.object.modifier_apply(modifier="Subdivision")
 
-def get_type_from_cell_name(name):
-    return name.split('_')[2]
+def get_info_from_cell_name(name):
+    id = name.split('_')[1]
+    type = name.split('_')[2]
+    return id, type

@@ -81,3 +81,15 @@ pytest
 - depth masks (or 3D labels), with more information useful to uncertainty quantification
 5) Post processing / add. rendering
 
+## Dataset creation from the command line - In testing phase
+1) Open the local Git repo in an IDE (commonly VS code)  
+2) Via terminal install any missing packages in the Phyton bin folder of the Blender App. Example for Macos:
+  ```    
+  $ /Applications/Blender.app/Contents/Resources/3.6/python/bin/python3.10 -m pip install <package name>
+  ```
+4) For a proper functioning, Blender 3.6 and bpy 3.4.0 are required
+5) Execute the Python script ```main.py``` with the argument -h to display the options to insert. Recommended line for testing purposes: 
+  ```    
+  $ /Applications/Blender.app/Contents/Resources/3.6/python/bin/python3.10 main.py --output_dir <user directory> --n_sample 10
+  ```
+
