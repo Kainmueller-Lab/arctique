@@ -59,6 +59,24 @@ class CellAttributeEpi(CellAttribute):
         self.attribute_name = attribute_name
         self.max_bending_strength = max_bending_strength
 
+class MixAttribute:
+    def __init__(self, true_attribute: CellAttribute, mixing_attribute: CellAttribute, mix: float):
+        '''
+        Produces a cell attribute that is a combination of two cell attributes in terms of numerical values.
+        Mix is the mixing strength of the true attribute and is a number between 0 and 1.
+        Mix 0 produces the true attribute, mix 1 produces the mixing attribute.
+        '''
+        self.true_attribute = true_attribute
+        self.mixing_attribute = mixing_attribute
+        self.mix = mix
+
+        self.cell_type = f"{true_attribute.cell_type}_Mix_{mix}_{mixing_attribute.cell_type}"
+        self.size = (1-mix)*true_attribute.size + mix*mixing_attribute.size
+        self.scale = tuple((1-mix)*true_attribute.scale[i] + mix*mixing_attribute.scale[i] for i in range(3))
+        self.deformation_strength = (1-mix)*true_attribute.deformation_strength + mix*mixing_attribute.deformation_strength
+        self.attribute_name = f"{1-mix} {true_attribute.attribute_name} + {mix} {mixing_attribute.attribute_name}"
+        self.max_bending_strength = (1-mix)*true_attribute.max_bending_strength + mix*mixing_attribute.max_bending_strength
+
 class Cell:
     cell_count = 0
 

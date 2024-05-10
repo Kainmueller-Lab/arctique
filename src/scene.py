@@ -177,8 +177,8 @@ class BioMedicalScene:
             cell_type = hm.get_type_from_cell_name(cell.name)
             mask_name = f"{cell.name}.png"
             cell_filename = self.filepath + mask_name
-            cell_info_tuple = {"ID": cell_id, "Type": cell_type, "Filename": cell_filename}
-            self.cell_info.append(cell_info_tuple)
+            cell_info_dict = {"ID": cell_id, "Type": cell_type, "Filename": cell_filename}
+            self.cell_info.append(cell_info_dict)
 
     def define_palette(self, type=""):
         '''
