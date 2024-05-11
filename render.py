@@ -40,10 +40,10 @@ def parse_dataset_args():
     
     # RENDERING PARAMETERS
     # add argument with list of all gpu devices
-    parser.add_argument("--gpu_devices", type=list, default=[0, 1], help="List of GPU devices to use for rendering")
+    parser.add_argument("--gpu_devices", type=list, default=[0], help="List of GPU devices to use for rendering")
     parser.add_argument("--gpu", type=bool, default=True, help="Use GPU for rendering")
     parser.add_argument("--output_dir", type=str, default="rendered", help="Set output folder")
-    parser.add_argument("--n_samples", type=int, default=10, help="Dataset size")
+    parser.add_argument("--n_samples", type=int, default=500, help="Dataset size")
    
     # DATASET PARAMETERS
     # tissue
@@ -118,6 +118,7 @@ def create_scene(
     ATTRIBUTES = [cells.CellAttributeA(), cells.CellAttributeB(), cells.CellAttributeC()]
     volume_fill = arr.VolumeFill(VOL_OBJ, number, ATTRIBUTES, ratios, strict_boundary=False)
     my_scene.add_arrangement(volume_fill)
+    my_scene.cut_cells(boolean_object=VOL_OBJ)
 
     # 4) cut objects and add staining
     my_scene.cut_cells()
