@@ -2,6 +2,7 @@ import bpy
 import json
 import os
 from PIL import Image
+import matplotlib.pyplot as plt
 
 import src.arrangement.arrangement as arr
 import src.utils.geometry as geo
@@ -331,9 +332,12 @@ class BioMedicalScene:
         Assign unique color to each inidividual cell or to each cell type
         '''
         if type == "semantic": 
-            unique_cell_types = set([c["Type"] for c in self.cell_info]) # identify unique cell types 
+            unique_cell_types = set([c["Type"] for c in self.cell_info]) # identify unique cell types
+            print(unique_cell_types)
             cell_type_dict = {uct : (i+1) for i, uct in enumerate(unique_cell_types)} # assign unique id to each cell type
+            print(cell_type_dict)
             palette = ph.make_color_palette(len(cell_type_dict.keys())) # create color palette with one color per cell type 
+            print(palette)
 
         if type == "instance":
             self.instance_mask_names = []
@@ -400,6 +404,7 @@ class BioMedicalScene:
                 cell_object.pass_index = cell_info_dict["ID_Type"]
 
     def export_full_mask(self, type: str = None): 
+        self.hide_non_cell_objects()
         self.set_object_pass_idx(type)
         self.scene.view_layers["ViewLayer"].use_pass_object_index = True
         self.mask_type = type
@@ -416,11 +421,15 @@ class BioMedicalScene:
         print(self.scene.render.filepath)
         palette = self.define_palette(type=type)
         with Image.open(self.semantic_path + f"/tmp_{self.sample_name}0001.png") as im:
-            colored_instance_mask = Image.fromarray(np.array(im).astype(np.uint8))
+            colored_instance_mask = np.array(im)
+        if type == "semantic":
+            self.semantic_ids = np.unique(im)
+        if type == "instance":
+            self.instance_ids = np.unique(im)
+        colored_instance_mask = ph.put_palette(colored_instance_mask, palette)
+        colored_instance_mask = Image.fromarray(colored_instance_mask.astype(np.uint8))
         os.remove(self.semantic_path + f"/tmp_{self.sample_name}0001.png")
-        colored_instance_mask.putpalette(palette)
         colored_instance_mask.save(str(Path(self.semantic_path).joinpath(f"{self.sample_name}.png")))
-
         self._clear_compositor()
     
     def enable_depth_output_render_setup(self):
@@ -540,6 +549,14 @@ class BioMedicalScene:
         # switch to non focus camera and switch material of nuclei
         self.camera.switch_to_mask_camera(self.scene)
         self.add_staining(bpy.data.materials.get("nuclei_mask"))
+
+        if semantic_mask: 
+            self.setup_scene_render_full_masks(output_shape=output_shape, max_samples=max_samples)
+            self.export_full_mask(type = "semantic")
+            
+        if instance_mask: 
+            self.setup_scene_render_full_masks(output_shape=output_shape, max_samples=max_samples)
+            self.export_full_mask(type = "instance")
             
         if single_masks:# or semantic_mask or instance_mask:
             self.scan_through_tissue(
@@ -548,14 +565,6 @@ class BioMedicalScene:
 
             # self.setup_scene_render_mask(output_shape=output_shape)
             # self.export_masks()
-                
-        if semantic_mask: 
-            self.setup_scene_render_full_masks(output_shape=output_shape, max_samples=max_samples)
-            self.export_full_mask(type = "semantic")
-            
-        if instance_mask: 
-            self.setup_scene_render_full_masks(output_shape=output_shape, max_samples=max_samples)
-            self.export_full_mask(type = "instance")
 
         if obj3d: 
             self.setup_scene_render_default(output_shape=output_shape, max_samples=max_samples)
@@ -615,11 +624,12 @@ class BioMedicalScene:
             # colorize mask
             palette = self.define_palette(type=type)
             with Image.open(filepath + f"/{name}0001.png") as im:
-                colored_instance_mask = Image.fromarray(np.array(im).astype(np.uint8))
+                colored_instance_mask = np.array(im)
+            colored_instance_mask = ph.put_palette(colored_instance_mask, palette, ids=self.instance_ids)
             os.remove(filepath + f"/{name}0001.png")
             os.remove(self.scene.render.filepath)
-            colored_instance_mask.putpalette(palette)
             instance_mask_3d.append(colored_instance_mask)
+            colored_instance_mask = Image.fromarray(colored_instance_mask.astype(np.uint8))
             colored_instance_mask.save(str(Path(filepath).joinpath(f"slice_{self.sample_name}_{idx}.png")))
             
         # combine to numpy stack

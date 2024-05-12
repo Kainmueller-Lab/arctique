@@ -152,7 +152,7 @@ def recreate_scene(parameters):
     return my_scene
 
 
-def render_scene(my_scene, render_path, sample_name, gpu=True, devices=[0], output_shape=(512, 512), max_samples=1024):
+def render_scene(my_scene, render_path, sample_name, gpu=True, devices=[0], output_shape=(512, 512), max_samples=10):
     '''
     renders a scene
     Args:
