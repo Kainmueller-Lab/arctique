@@ -66,6 +66,8 @@ MIX_COUNT = 240
 # A mix factor of 0 produces the pure true attribute, mix factor 1 produces the pure mixing attribute.
 ATTRIBUTES = [cells.MixAttribute(cells.CellAttributeA(), cells.CellAttributeB(), 0.3), cells.CellAttributeA(), cells.CellAttributeB(), cells.CellAttributeC()]
 RATIOS = [0.2, 0.2, 0.2, 0.4]
+# TODO: Add deformations
+# TODO: Fix singular nuclei inside epi volume
 volume_fill = arr.VolumeFill(MIX_VOL, MIX_COUNT, ATTRIBUTES, RATIOS, strict_boundary=True)
 my_scene.add_arrangement(volume_fill) # NOTE: 240 nuclei take about 15 s
 
@@ -86,10 +88,10 @@ my_scene.add_tissue_staining(materials=[my_materials.muscosa])
 my_scene.add_staining(material=my_materials.nuclei_staining)
 
 # Hide non cell objects
-# my_scene.hide_non_cell_objects()
+my_scene.hide_non_cell_objects()
 
-# render scene
-#RENDER_PATH = 'C:/Users/cwinklm/Documents/Alpacathon/rendered_HE/renders2d_test/'
+# # render scene
+# RENDER_PATH = 'C:/Users/cwinklm/Documents/Alpacathon/rendered_HE/renders2d_test/'
 # RENDER_PATH = 'renders/'
 
 # my_scene.render(filepath = RENDER_PATH,  # where to save renders

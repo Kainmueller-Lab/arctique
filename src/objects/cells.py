@@ -13,21 +13,21 @@ from src.utils.geometry import set_orientation
 class CellAttribute():
     def __init__(self):
         self.cell_type = None
-        self.radius = None
+        self.size = None
         self.scale = None
         self.deformation_strength = None
         self.attribute_name = None
         self.max_bending_strength = None
 
-# NOTE: The radius and scale convention for CellAttributes is as follows:
-# - radius: is the maximal ellipsoid radius of the nucleus 
+# NOTE: The size and scale convention for CellAttributes is as follows:
+# - size: is the maximal ellipsoid radius of the nucleus 
 # - scale: is the ellipsoid scale of the nucleus
 # The scale of an attribute should always be normalized such the maximal scale value is 1. 
-# This ensures that the maximal diameter of a cell nucleus is twice its radius.
+# This ensures that the maximal diameter of a cell nucleus is twice its size.
 class CellAttributeA(CellAttribute):
-    def __init__(self, cell_type = "A", radius = 0.03, scale = (1,1,1), deformation_strength = 0.8, attribute_name = "Cell Type A", max_bending_strength = 0.2):
+    def __init__(self, cell_type = "A", size = 0.03, scale = (1,1,1), deformation_strength = 0.8, attribute_name = "Cell Type A", max_bending_strength = 0.2):
         self.cell_type = cell_type
-        self.radius = radius
+        self.size = size
         self.scale = scale
         self.deformation_strength = deformation_strength
         self.attribute_name = attribute_name
@@ -36,16 +36,16 @@ class CellAttributeA(CellAttribute):
 class CellAttributeB(CellAttribute):
     def __init__(self, cell_type = "B", size = 0.08, scale = (1, 0.5, 0.4), deformation_strength = 0.6, attribute_name = "Cell Type B", max_bending_strength = 0.3):
         self.cell_type = cell_type
-        self.radius = radius
+        self.size = size
         self.scale = scale
         self.deformation_strength = deformation_strength
         self.attribute_name = attribute_name
         self.max_bending_strength = max_bending_strength
 
 class CellAttributeC(CellAttribute):
-    def __init__(self, cell_type = "C", radius = 0.04, scale = (1, 1, 0.5), deformation_strength = 0.8, attribute_name = "Cell Type C", max_bending_strength = 0.3):
+    def __init__(self, cell_type = "C", size = 0.04, scale = (1, 1, 0.5), deformation_strength = 0.8, attribute_name = "Cell Type C", max_bending_strength = 0.3):
         self.cell_type = cell_type
-        self.radius = radius
+        self.size = size
         self.scale = scale
         self.deformation_strength = deformation_strength
         self.attribute_name = attribute_name
@@ -55,7 +55,7 @@ class CellAttributeEpi(CellAttribute):
     # TODO: Make cell type a fixed value
     def __init__(self, cell_type = "Epi", size = 0.1, scale = (1, 0.6, 0.6), deformation_strength = 0.2, attribute_name = "Epithelial cell", max_bending_strength = 0.3):
         self.cell_type = cell_type
-        self.radius = radius
+        self.size = size
         self.scale = scale
         self.deformation_strength = deformation_strength
         self.attribute_name = attribute_name
@@ -111,7 +111,7 @@ class Cell:
         Bends the sphere object along the z axis.
         """
         # Create a sphere
-        bpy.ops.mesh.primitive_ico_sphere_add(radius=self.cell_attributes.radius, location=self.location, scale=self.cell_attributes.scale)
+        bpy.ops.mesh.primitive_ico_sphere_add(radius=self.cell_attributes.size, location=self.location, scale=self.cell_attributes.scale)
         self.cell_object = bpy.context.active_object
         self.cell_object.name = self.cell_name
         

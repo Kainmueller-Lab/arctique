@@ -47,7 +47,7 @@ def generate_points(num_points, min_distance, mesh, padding=True):
     return points
 
 def fill_volume(counts, attributes, mesh, padding):
-    radii = [attribute.radius for attribute in attributes]
+    radii = [attribute.size for attribute in attributes]
     types = [attribute.cell_type for attribute in attributes]
     assert len(counts) == len(radii), "Counts and radii must have the same length"
 
