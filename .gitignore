@@ -4,6 +4,8 @@ test
 Images
 testing_ideas
 rendered
+scripting_mucosa.blend
+scripting_mucosa.blend1
 
 # IntelliJ
 .idea
@@ -146,3 +148,8 @@ dmypy.json
 .PNG
 .jpg
 
+/renderedmasks
+/testing_ideas
+/testing_ideas
+*.blend
+*.blend1

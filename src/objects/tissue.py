@@ -1,5 +1,5 @@
 import bpy
-from src.shading.shading import Material
+from src.shading.materials import Material
 
 
 class Tissue():

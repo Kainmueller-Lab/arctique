@@ -4,9 +4,11 @@ import numpy as np
 
 
 class TissueArch():
-    def __init__(self):
+    def __init__(self, seed=0):
         # 1) build epithelial layer
         # 1a) build crypt
+        self.seed = seed
+        np.random.seed(self.seed)
         self.crypt = macro.build_crypt()
         # 1b) build surronding muscosa layer
         self.tissue = macro.build_muscosa(self.crypt.crypt)
