@@ -551,11 +551,11 @@ class BioMedicalScene:
         self.add_staining(bpy.data.materials.get("nuclei_mask"))
 
         if semantic_mask: 
-            self.setup_scene_render_full_masks(output_shape=output_shape, max_samples=max_samples)
+            self.setup_scene_render_full_masks(output_shape=output_shape, max_samples=1)
             self.export_full_mask(type = "semantic")
             
         if instance_mask: 
-            self.setup_scene_render_full_masks(output_shape=output_shape, max_samples=max_samples)
+            self.setup_scene_render_full_masks(output_shape=output_shape, max_samples=1)
             self.export_full_mask(type = "instance")
             
         if single_masks:# or semantic_mask or instance_mask:
