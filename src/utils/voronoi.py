@@ -116,6 +116,7 @@ def add_region(vertices, faces, idx = 0):
     # Update the mesh with the new geometry
     bm.to_mesh(mesh)
     bm.free()
+    return obj
 
 def get_cube_points(min_coords, max_coords, padding = 0):
     points = []
@@ -139,10 +140,10 @@ def get_octogon_points(min_coords, max_coords, padding = 0):
         points.append(point2)
     return points
 
-def get_lattice_points(min_coords, max_coords):
+def get_lattice_points(min_coords, max_coords, padding=0):
     points = []
     cube_center = Vector([0.5 * (i + j) for i, j in zip(min_coords, max_coords)])
-    diameter = Vector([j - i for i, j in zip(min_coords, max_coords)])
+    diameter = Vector([j - i + 2*padding for i, j in zip(min_coords, max_coords)])
     for i in [-1, 0, 1]:
         for j in [-1, 0, 1]:
             for k in [-1, 0, 1]:

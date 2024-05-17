@@ -10,7 +10,15 @@ from src.utils.helper_methods import *
 
 def lerp(a, b, t):
     return a*(1-t) + b*t
- 
+
+
+def diameter(coords):
+    return max([np.linalg.norm(v-w) for v,w in combinations(coords,2)])
+
+def centroid(coords):
+    return sum(coords, Vector((0.0, 0.0, 0.0))) / len(coords)
+
+# Function to set the local x-axis orientation of an object along a direction vector
 def set_orientation(obj, direction_vector):
     """
     Rotates an object such that its local x-axis is oriented along a direction vector.
@@ -202,7 +210,7 @@ def move_selection(offset_vector):
     selection = bpy.context.selected_objects
     for obj in selection:
         obj.location += offset_vector
-          
+
 def pos_value(x):
     return x if x>0 else 0
 
@@ -254,6 +262,7 @@ def deform_mesh(obj, attribute):
 
 
 def remove_top_and_bottom_faces(obj):
+    mesh = bpy.data.meshes.new(name="ModifiedMesh")
     bm = bmesh.new()
     bm.from_mesh(obj.data)
 
@@ -261,17 +270,94 @@ def remove_top_and_bottom_faces(obj):
     # Deselect all faces
     for face in bm.faces:
         face.select_set(False)
-    
     # Select faces with vertical normals
     for face in bm.faces:
         normal = face.normal
         # Check if the z-component of the normal is close to -1 or 1
         if abs(normal.z) > 1-epsilon:
             face.select_set(True)
-    
     # Delete selected faces
     bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.select], context='FACES')
-    
     # Update the mesh data
-    bm.to_mesh(obj.data)
+    bm.to_mesh(mesh)
     bm.free()
+    # Create a new object and link it to the scene
+    new_obj = bpy.data.objects.new("ModifiedObject", mesh)
+    new_obj.location = obj.location
+    new_obj.scale = obj.scale
+    bpy.context.collection.objects.link(new_obj)
+    return new_obj
+
+# NOTE: Can be deleted in the future. - ck
+def add_dummy_objects(tissue, padding, vol_scale, surf_scale):
+    # Create temporarily padded tissue
+    tissue.tissue.scale = tuple(1+padding for _ in range(3))
+
+    bpy.ops.mesh.primitive_cylinder_add() # Example bounding torus mesh
+    cylinder = bpy.context.active_object
+    #vol_obj.location = Vector(tissue.tissue.location) + Vector((0, 0, 0.5))
+    cylinder.scale = vol_scale
+    # NOTE: Necessary to transform the vertices of the mesh according to scale
+    # It should be used when the object is created, but maybe there's a better place in the methds for it. ck
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+    # Intersect with tissue
+    bpy.ops.mesh.primitive_cube_add(location=tissue.location)
+    box = bpy.context.active_object
+    box.scale = (1.1, 1.1, tissue.thickness/tissue.size)
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    vol_obj = subtract_object([box], cylinder)[0]
+    remove_top_and_bottom_faces(vol_obj)
+    remove_objects([cylinder])
+    vol_obj.name = "Volume"
+
+    bpy.ops.mesh.primitive_cylinder_add()
+    surf_obj = bpy.context.active_object
+    #surf_obj.location = Vector(tissue.tissue.location) + Vector((0, 0, 0.5))
+    surf_obj.scale = surf_scale
+    # NOTE: Necessary to transform the vertices of the mesh according to scale
+    # It should be used when the object is created, but maybe there's a better place in the methds for it. ck
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True) 
+    # Intersect with tissue
+    intersect_with_object([surf_obj], tissue.tissue)
+    remove_top_and_bottom_faces(surf_obj)
+    surf_obj.name = "Surface"
+
+    tissue.tissue.scale = (1,1,1)
+    return vol_obj, surf_obj
+
+
+def add_dummy_volumes(tissue, padding):
+    bpy.ops.mesh.primitive_cube_add(size=tissue.size, location=tissue.location) 
+    mix_vol = bpy.context.active_object
+    mix_vol.name = "Mix_Volume"
+    mix_vol.scale = (1 + padding, 1 + padding, tissue.thickness/tissue.size + padding)
+    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+
+    bpy.ops.mesh.primitive_cylinder_add()
+    epi_vol = bpy.context.active_object
+    epi_vol.name = "Epi_Volume"
+    epi_vol.scale = (0.6, 0.9, 1)
+    bpy.ops.mesh.primitive_cylinder_add()
+    inner_cylinder = bpy.context.active_object
+    inner_cylinder.scale = (0.5, 0.7, 1)
+    boolean = epi_vol.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
+    boolean.operation = 'DIFFERENCE'
+    boolean.object = inner_cylinder
+    bpy.ops.object.modifier_apply({"object": epi_vol}, modifier="Boolean Modifier")
+
+    # MIX_VOL
+    boolean = epi_vol.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
+    boolean.operation = 'INTERSECT'
+    boolean.object = mix_vol
+    bpy.ops.object.modifier_apply({"object": epi_vol}, modifier="Boolean Modifier")
+
+    # EPI_VOL
+    bpy.ops.mesh.primitive_cylinder_add()
+    outer_cylinder = bpy.context.active_object
+    outer_cylinder.scale = (0.6, 0.9, 1)
+    boolean = mix_vol.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
+    boolean.operation = 'DIFFERENCE'
+    boolean.object = outer_cylinder
+    bpy.ops.object.modifier_apply({"object": mix_vol}, modifier="Boolean Modifier")
+    remove_objects([inner_cylinder, outer_cylinder])
+    return mix_vol, epi_vol

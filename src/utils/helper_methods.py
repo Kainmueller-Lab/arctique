@@ -51,6 +51,14 @@ def get_objects_with(string):
             object_list.append(obj)
     return object_list
 
+def subdivide_object(obj, level, type='SIMPLE'):
+    bpy.context.view_layer.objects.active = obj
+    bpy.ops.object.modifier_add(type='SUBSURF')
+    bpy.context.object.modifiers["Subdivision"].subdivision_type = type
+    bpy.context.object.modifiers["Subdivision"].levels = level
+    bpy.ops.object.modifier_set_active(modifier="Subdivision")
+    bpy.ops.object.modifier_apply(modifier="Subdivision")
+
 def get_info_from_cell_name(name):
     id = name.split('_')[1]
     type = name.split('_')[2]

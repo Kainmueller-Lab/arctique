@@ -39,7 +39,7 @@ imp.reload(vf)
 TISSUE_THICKNESS = 0.2
 TISSUE_SIZE = 2
 TISSUE_LOCATION = (0, 0, 0.5)
-TISSUE_PADDING = 0.5
+TISSUE_PADDING = 0.04
 
 
 ###################  MAIN  METHOD  #####################
@@ -55,30 +55,27 @@ my_camera = scene.Camera()
 # create scene
 my_scene = scene.BioMedicalScene(my_light_source, my_camera)
 
-# TODO: Add documentation and docstrings
-# Define volume and surface objects
-# NOTE: In the end the volume and surface objects should come from the epithelial tissue macrostructure. - ck
-vol_scale = (1, 0.7, 1)
-surf_scale = (0.8, 0.5, 1)
-VOL_OBJ, SURF_OBJ = my_scene.add_dummy_objects(my_tissue, TISSUE_PADDING, vol_scale, surf_scale)
+# add bounding volumes
+# NOTE: MIX_VOL bounds the volume for the mixed cell types
+# NOTE: EPI_VOL bounds the volume for the epithelial cell types.
+MIX_VOL, EPI_VOL = utils.geometry.add_dummy_volumes(my_tissue, TISSUE_PADDING)
 
-# Create arrangements
-NUMBER = 20
-ATTRIBUTES = [cells.CellAttributeA(), cells.CellAttributeB(), cells.CellAttributeC()]
-RATIOS = [0.6, 0.2, 0.2]
-volume_fill = arr.VolumeFill(VOL_OBJ, NUMBER, ATTRIBUTES, RATIOS, strict_boundary=False)
-# NOTE: For some very weird reason you need to create the surface filling before the volume filling.
-# Otherwise the surface filling won't work and it won't even refine the mesh. :/ - ck
-# Add surface filling
-SURF_NUMBER = 20 # NOTE: The double amount of nuclei is added to the scene here due to additional filler nuclei. Might fix this if necessary. Prolly won't. Live with it and enjoy this humble life while you can. - ck
-SURF_ATTRIBUTE = cells.CellAttributeEpi()
-FILLER_SCALE = 0.8 # Scale of the size of smaller filler nuclei w.r.t to the original nuclei size
-surface_fill = arr.SurfaceFill(SURF_OBJ, SURF_NUMBER, SURF_ATTRIBUTE, FILLER_SCALE)
+# add mix volume filling
+MIX_COUNT = 240
+# NOTE: Create nuclei of type A which are mixed with nuclei of type C with a factor of 0.3.
+# A mix factor of 0 produces the pure true attribute, mix factor 1 produces the pure mixing attribute.
+ATTRIBUTES = [cells.MixAttribute(cells.CellAttributeA(), cells.CellAttributeB(), 0.3), cells.CellAttributeA(), cells.CellAttributeB(), cells.CellAttributeC()]
+RATIOS = [0.2, 0.2, 0.2, 0.4]
+# TODO: Add deformations
+# TODO: Fix singular nuclei inside epi volume
+volume_fill = arr.VolumeFill(MIX_VOL, MIX_COUNT, ATTRIBUTES, RATIOS, strict_boundary=True)
+my_scene.add_arrangement(volume_fill) # NOTE: 240 nuclei take about 15 s
 
-# Add arrangements and rename nuclei with unique IDs
-my_scene.add_arrangement(volume_fill)
-my_scene.add_arrangement(surface_fill)
-my_scene.rename_nuclei()
+# add epi volume filling
+EPI_COUNT = 200
+EPI_ATTRIBUTE = cells.CellAttributeEpi(size=0.1, scale=(1, 0.5, 0.5))
+crypt_fill = arr.VoronoiFill(EPI_VOL, EPI_COUNT, EPI_ATTRIBUTE)
+my_scene.add_arrangement(crypt_fill) # NOTE: 200 nuclei take about 30 s
 
 # Add tissue
 my_scene.add_tissue(tissue=my_tissue.tissue)
@@ -91,10 +88,10 @@ my_scene.add_tissue_staining(materials=[my_materials.muscosa])
 my_scene.add_staining(material=my_materials.nuclei_staining)
 
 # Hide non cell objects
-# my_scene.hide_non_cell_objects()
+my_scene.hide_non_cell_objects()
 
-# render scene
-#RENDER_PATH = 'C:/Users/cwinklm/Documents/Alpacathon/rendered_HE/renders2d_test/'
+# # render scene
+# RENDER_PATH = 'C:/Users/cwinklm/Documents/Alpacathon/rendered_HE/renders2d_test/'
 # RENDER_PATH = 'renders/'
 
 # my_scene.render(filepath = RENDER_PATH,  # where to save renders
