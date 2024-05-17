@@ -226,33 +226,27 @@ def move_selection(offset_vector):
     for obj in selection:
         obj.location += offset_vector
 
+def get_shrinked_copy(obj, shrink_value):
+    copied_obj = obj.copy()
+    copied_obj.data = obj.data.copy()
+    bpy.context.collection.objects.link(copied_obj)
+    for vertex in copied_obj.data.vertices:
+        vertex.co -= vertex.normal * shrink_value
+    return copied_obj 
         
-def get_shrinked_copy(mesh, shrink_value):
-    copied_mesh = mesh.data.copy()
-    copied_object = bpy.data.objects.new("Copied_Object", copied_mesh)
-    bpy.context.collection.objects.link(copied_object)
-    # Apply the shrink/fatten operation directly to the copied mesh data
-    for vertex in copied_object.data.vertices:
-        vertex.co += vertex.normal * shrink_value
-    return copied_object
-        
-        
-def generate_points(num_points, min_distance, mesh, padding=True):
+def generate_points(num_points, min_distance, mesh, use_strict_boundary=True):
     # Create shrinked copy of mesh
-    shrink_value = -min_distance / 2
-    bounding_mesh = get_shrinked_copy(mesh, shrink_value)  if padding else mesh
+    shrink_value = min_distance / 2
+    bounding_mesh = get_shrinked_copy(mesh, shrink_value)  if use_strict_boundary else mesh
     # Compute max number of iterations
-    bounding_box = get_bounding_box(bounding_mesh)
+    bbox = compute_bbox(bounding_mesh)
     max_radius = min_distance / 2
-    box_volume = get_box_volume(bounding_box)
+    box_volume = compute_bbox_volume(bbox)
     max_iterations = upper_limit_points(box_volume, max_radius)
-    print(f"Max point count: {max_iterations}")
-
     # Find num_points points inside the mesh that have at least min_distance
     points = []
-    iterations = 0
-    while len(points) < num_points and iterations < max_iterations:
-        new_point = random_point_in_bbox(bounding_box)	
+    random_points = random_points_in_bbox(bbox, max_iterations)
+    for new_point in random_points:	
         valid_point = True
         if is_inside(new_point, bounding_mesh):        
             for point in points:
@@ -264,12 +258,13 @@ def generate_points(num_points, min_distance, mesh, padding=True):
             valid_point = False
         if valid_point:
             points.append(new_point)
-        iterations += 1
-    if padding:
+        if len(points) == num_points:
+            break
+    if use_strict_boundary:
         bpy.data.objects.remove(bounding_mesh, do_unlink=True)
     return points
 
-def generate_points_per_type(counts, attributes, mesh, padding):
+def generate_points_per_type(counts, attributes, mesh, use_strict_boundary):
     radii = [attribute.size for attribute in attributes]
     types = [attribute.cell_type for attribute in attributes]
     assert len(counts) == len(radii), "Counts and radii must have the same length"
@@ -280,30 +275,28 @@ def generate_points_per_type(counts, attributes, mesh, padding):
     sorted_data = sorted(zipped_data, key=lambda x: x[0], reverse=True)
     for radius, count, type in sorted_data:
         # Create shrinked copy of mesh
-        shrink_value = -radius
-        bounding_mesh = get_shrinked_copy(mesh, shrink_value)  if padding else mesh
+        shrink_value = radius
+        bounding_mesh = get_shrinked_copy(mesh, shrink_value)  if use_strict_boundary else mesh
         # Compute max number of iterations
-        bounding_box = get_bounding_box(bounding_mesh) # NOTE: Apparently the bounding box is always centered in the origin
-        box_volume = get_box_volume(bounding_box)
+        bbox = compute_bbox(bounding_mesh)
+        box_volume = compute_bbox_volume(bbox)
         max_iterations = upper_limit_points(box_volume, radius)
 
         # TODO: test this
         points = []
-        iterations = 0
-        while len(points) < count and iterations < max_iterations:
-            new_point = random_point_in_bbox(bounding_box)
+        random_points = random_points_in_bbox(bbox, max_iterations)
+        for new_point in random_points:
             if is_inside(new_point, bounding_mesh):   
                 if is_far_from_points_per_type(new_point, points_per_type, radius):
                     if is_far_from_points(new_point, points, 2*radius):
                         points.append(new_point)
-            iterations += 1
-        if padding:
-            bpy.data.objects.remove(bounding_mesh, do_unlink=True)
+            if len(points) == count:
+                break
         points_per_type.append((points, radius, type))
+        if use_strict_boundary:
+            bpy.data.objects.remove(bounding_mesh, do_unlink=True)
     assert len(counts) == len(points_per_type), "List points_per_type is not the same length as list counts"
-    # NOTE: All points are generated with an origin centered mesh, so we need to translate them back. - ck
-    translated_points_per_type = [([pt + mesh.location for pt in points], radius, type) for points, radius, type in points_per_type]
-    return translated_points_per_type
+    return points_per_type
 
 def is_far_from_points(pt, points, min_distance):
     for point in points:
@@ -330,10 +323,22 @@ def is_inside(point, obj):
     _point = point - obj.location
     _, closest, nor, _ = obj.closest_point_on_mesh(_point)
     direction = closest - _point
-    return direction.dot(nor) > 0
+    return direction.dot(nor) > 0.011 # NOTE: Increase this threshold slightly if inner nuclei artifacts do appear.It should be closest possible to 0 though. - ck
 
-def get_bounding_box(mesh):
-    box_vertices = [Vector(vertex[:]) for vertex in mesh.bound_box]
+def random_point_in_bbox(obj):
+    xs, ys, zs = compute_bbox(obj)
+    return Vector((random.uniform(xs[0], xs[1]), random.uniform(ys[0], ys[1]), random.uniform(zs[0], zs[1])))
+
+def random_points_in_bbox(bbox, count):
+    xs, ys, zs = bbox
+    random_points = []
+    for _ in range(int(count)):
+        random_point = Vector((random.uniform(xs[0], xs[1]), random.uniform(ys[0], ys[1]), random.uniform(zs[0], zs[1])))
+        random_points.append(random_point)
+    return random_points
+
+def compute_bbox(obj):
+    box_vertices = [obj.matrix_world @ Vector(vertex[:]) for vertex in obj.bound_box]
     min_x = min(vertex[0] for vertex in box_vertices)
     max_x = max(vertex[0] for vertex in box_vertices)
     min_y = min(vertex[1] for vertex in box_vertices)
@@ -342,15 +347,10 @@ def get_bounding_box(mesh):
     max_z = max(vertex[2] for vertex in box_vertices)
     return ((min_x, max_x), (min_y, max_y), (min_z, max_z))
 
-def get_box_volume(bounding_box):
-    xs, ys, zs = bounding_box
-    return (xs[1]-xs[0]) * (ys[1]-ys[0]) * (zs[1]-zs[0])  
+def compute_bbox_volume(bbox):
+    xs, ys, zs = bbox
+    return (xs[1] - xs[0]) * (ys[1] - ys[0]) * (zs[1] - zs[0])
 
-def random_point_in_bbox(bounding_box):
-    xs, ys, zs = bounding_box
-    return Vector((random.uniform(xs[0], xs[1]), random.uniform(ys[0], ys[1]), random.uniform(zs[0], zs[1])))
-
-          
 def pos_value(x):
     return x if x>0 else 0
 
@@ -466,7 +466,6 @@ def add_dummy_objects(tissue, padding, vol_scale, surf_scale):
     return vol_obj, surf_obj
 
 
-# NOTE: Can be deleted in the future. - ck
 def add_dummy_volumes(tissue, padding):
     bpy.ops.mesh.primitive_cube_add(size=tissue.size, location=tissue.location) 
     mix_vol = bpy.context.active_object
