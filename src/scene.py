@@ -2,7 +2,6 @@ import bpy
 import json
 import os
 from PIL import Image
-import matplotlib.pyplot as plt
 
 import src.arrangement.arrangement as arr
 import src.utils.geometry as geo

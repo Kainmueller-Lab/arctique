@@ -11,16 +11,42 @@ class build_crypt():
         self.hex_input, self.hex_output = self._add_hexagon_structure(self.input.outputs['Geometry'])
         self.crypt_input, self.crypt_otput = self._add_crypts(self.hex_output, self.output.inputs['Geometry'])
         bpy.ops.object.modifier_apply(modifier=self.name)
-        self._cut_geometry(self.crypt)
 
-        # rescale crypt for correct size (TODO change in the future directly in generation)
-        self.crypt.scale.x = 10
-        self.crypt.scale.y = 10
-        self.crypt.scale.z = 10
-        bpy.context.view_layer.objects.active = self.crypt
+        # add crypt volumes
+        self.crypt_vol_in = self._make_crypt_vol(thickness=0.1, name='crypt_volume_inner')
+        self.crypt_vol_out = self._make_crypt_vol(thickness=0.2, name='crypt_volume_outer')
+
+        objects = [self.crypt, self.crypt_vol_in, self.crypt_vol_out]
+        for obj in objects:
+            self._cut_geometry(obj)
+            self._scale(obj, (10, 10, 10))
+            # bpy.context.view_layer.objects.active = obj
+            # obj.select_set(True)
+            # bpy.ops.object.modifier_apply(modifier="Solidify")
+
+    def _scale(self, obj, scale):
+        obj.scale.x = scale[0]
+        obj.scale.y = scale[1]
+        obj.scale.z = scale[2]
+        bpy.context.view_layer.objects.active = obj
         bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-
     
+    def _make_crypt_vol(self, thickness=0.1, name='crypt_vol'):
+        # copy the crypt
+        crypt_vol = self.crypt.copy()
+        crypt_vol.data = self.crypt.data.copy()
+        bpy.context.collection.objects.link(crypt_vol)
+        crypt_vol.name = name
+
+        # add solidification modifier
+        bpy.context.view_layer.objects.active = crypt_vol        
+        bpy.ops.object.modifier_add(type='SOLIDIFY')
+        bpy.context.object.modifiers['Solidify'].thickness = thickness
+        bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+        #bpy.ops.object.modifier_apply(modifier="Solidify")
+
+        return crypt_vol
+
     def _add_geometry(self):
         bpy.ops.mesh.primitive_plane_add(size=2, location=(0, 0, 0))
         geometry = bpy.context.active_object

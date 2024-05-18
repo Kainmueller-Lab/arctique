@@ -14,11 +14,11 @@ class TissueArch():
         self.tissue = macro.build_muscosa(self.crypt.crypt)
 
     def get_architecture(self):
-        return self.crypt.crypt, self.tissue.muscosa
+        return [self.crypt.crypt, self.crypt.crypt_vol_in, self.crypt.crypt_vol_out, self.tissue.muscosa]
     
     def random_crop(self, crop):
-        crypt, muscosa = self.get_architecture()
-        objects = [crypt, muscosa]
+        objects = self.get_architecture()
+        #objects = [crypt, muscosa]
         self.random_translate(objects)
         self.random_rotate(objects)
         for obj in objects:
