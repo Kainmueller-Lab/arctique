@@ -16,7 +16,7 @@ if not dir in sys.path:
 import src.arrangement.arrangement as arr 
 import src.objects.cells as cells
 import src.objects.tissue as tissue
-import src.shading.shading as shading
+import src.shading.materials as materials
 import src.scene as scene
 
 
@@ -26,7 +26,7 @@ import importlib as imp # imp module is deprecated since python 3.12
 imp.reload(arr)
 imp.reload(cells)
 imp.reload(tissue)
-imp.reload(shading)
+imp.reload(materials)
 imp.reload(scene)
 
 
@@ -39,7 +39,7 @@ imp.reload(scene)
 scene.BioMedicalScene.clear()
     
 # add microscope objects
-my_materials = shading.Material()
+my_materials = materials.Material()
 my_tissue = tissue.Tissue(my_materials.tissue_staining, thickness=0.2, size=2, location=(0, 0, 0.5)) # thickness and location of tissue should encapsulate min and max z-coordinates of cells 
 my_light_source = scene.LightSource(material=my_materials.light_source)
 my_camera = scene.Camera()

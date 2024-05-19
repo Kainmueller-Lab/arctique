@@ -1,5 +1,5 @@
 import bpy
-from src.shading.shading import Material
+from src.shading.materials import Material
 
 
 
@@ -148,7 +148,7 @@ class build_crypt():
         ### C) Increase details
         subdivide = nodes.new(type='GeometryNodeSubdivisionSurface')
         subdivide.location = (pos.location[0]+sep, pos.location[1])
-        subdivide.inputs['Level'].default_value = 2
+        subdivide.inputs['Level'].default_value = 3
         links.new(pos.outputs['Geometry'], subdivide.inputs['Mesh'])
         
         if out_link is not None:
