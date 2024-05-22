@@ -1,4 +1,5 @@
-bpy==3.4.0
+# first install python 3.10.0
+bpy==3.6.0  # or 3.4.0
 scipy
 Pillow
 tqdm

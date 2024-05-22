@@ -309,7 +309,7 @@ class BioMedicalScene:
             
         for idx, cell in enumerate(self.cell_objects): 
             cell_id = idx + 1
-            cell_name = cell.name 
+            cell_name = cell.name
 
             _, cell_type = hm.get_info_from_cell_name(cell_name)
             
@@ -419,7 +419,8 @@ class BioMedicalScene:
         # we assign colors to to pixels to ensure visibility
         print(self.scene.render.filepath)
         palette = self.define_palette(type=type)
-        with Image.open(self.semantic_path + f"/tmp_{self.sample_name}0001.png") as im:
+        path_temp = self.semantic_path + f"/tmp_{self.sample_name}0001.png"
+        with Image.open(path_temp) as im:
             colored_instance_mask = np.array(im)
         if type == "semantic":
             self.semantic_ids = np.unique(im)
@@ -427,7 +428,12 @@ class BioMedicalScene:
             self.instance_ids = np.unique(im)
         colored_instance_mask = ph.put_palette(colored_instance_mask, palette)
         colored_instance_mask = Image.fromarray(colored_instance_mask.astype(np.uint8))
-        os.remove(self.semantic_path + f"/tmp_{self.sample_name}0001.png")
+        if not os.path.exists(self.semantic_path+'_indexing'):
+            os.makedirs(self.semantic_path+'_indexing')
+        new_path = self.semantic_path+'_indexing'+ f"/{self.sample_name}.png"
+        if os.path.exists(new_path):
+            os.remove(new_path)
+        Path(path_temp).rename(new_path)
         colored_instance_mask.save(str(Path(self.semantic_path).joinpath(f"{self.sample_name}.png")))
         self._clear_compositor()
     
@@ -612,6 +618,7 @@ class BioMedicalScene:
         self.setup_node_tree_full_masks(filepath=filepath)
         self.scene.render.filepath = str(Path(filepath).joinpath("empty.png"))
         instance_mask_3d = []
+        instance_mask_3d_indexing = []
         print(self.scene.render.filepath)
         
         for idx, loc in enumerate(slices): # TODO turn off rendering scene
@@ -622,17 +629,28 @@ class BioMedicalScene:
             
             # colorize mask
             palette = self.define_palette(type=type)
-            with Image.open(filepath + f"/{name}0001.png") as im:
-                colored_instance_mask = np.array(im)
+            path_temp = filepath + f"/{name}0001.png"
+            with Image.open(path_temp) as im:
+                indexing = np.array(im)
+                colored_instance_mask = np.copy(indexing)
             colored_instance_mask = ph.put_palette(colored_instance_mask, palette, ids=self.instance_ids)
-            os.remove(filepath + f"/{name}0001.png")
+            new_filepath = self.filepath + f'/masks/instance_3d_indexing/{self.sample_name}/'
+            if not os.path.exists(new_filepath):
+                os.makedirs(new_filepath)
+            new_path = new_filepath + f"/slice_{self.sample_name}_{idx}.png"
+            if os.path.exists(new_path):
+                os.remove(new_path)
+            Path(path_temp).rename(new_path)
             os.remove(self.scene.render.filepath)
             instance_mask_3d.append(colored_instance_mask)
+            instance_mask_3d_indexing.append(indexing)
             colored_instance_mask = Image.fromarray(colored_instance_mask.astype(np.uint8))
             colored_instance_mask.save(str(Path(filepath).joinpath(f"slice_{self.sample_name}_{idx}.png")))
             
         # combine to numpy stack
         instance_mask_3d = np.stack(instance_mask_3d)
+        instance_mask_3d_indexing = np.stack(instance_mask_3d_indexing)
+        np.save(str(Path(new_filepath).joinpath(f"{self.sample_name}.npy")), instance_mask_3d_indexing)
         np.save(str(Path(filepath).joinpath(f"stack_{self.sample_name}.npy")), instance_mask_3d)
 
         # restore settings
