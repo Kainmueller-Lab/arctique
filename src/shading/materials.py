@@ -30,6 +30,7 @@ class Material():
         self.light_source = self.add_light_source()
         self.muscosa = self.add_mucosa_staining()
         self.nuclei_mask = self.add_nuclei_mask()
+        self.crypt_staining = self.add_crypt_staining()
         self.nuclei_staining = self.add_nuclei_staining()
 
     def add_light_source(self, brightness=60, name='light_source'):
@@ -67,14 +68,69 @@ class Material():
 
         return material
 
+    def add_crypt_staining(
+            self, name="crypt", color=(0.456, 0.011, 0.356, 1),
+            staining_intensity=170, start_pos=(0, 0), sep=200):
+        
+        material, nodes, links = shading_utils.initialize_material(name)
+        
+        ###### VOLUME
+        # add object centered coordinate system
+        node = coord = shading_utils.add_node_group(
+            nodes, self.custom_nodes.object_coord, pos=(0, 0))
+        loc = node.location
+
+        # add noisy intensity
+        node = noise = nodes.new('ShaderNodeTexNoise')
+        node.inputs['Scale'].default_value = 100
+        node.inputs['Detail'].default_value = 2
+        node.inputs['Roughness'].default_value = 0.5
+        node.inputs['Distortion'].default_value = 0
+        loc = node.location = (loc[0]+sep, loc[1])
+        node = intensity = nodes.new('ShaderNodeValToRGB')
+        loc = node.location = (loc[0]+sep, loc[1])
+        node.color_ramp.elements[0].color = (0.8, 0.8, 0.8, 1)
+        node.color_ramp.elements[1].color = (1, 1, 1, 1)
+        node.color_ramp.elements[0].position = 0.349
+        node.color_ramp.elements[1].position = 1
+        links.new(coord.outputs[0], noise.inputs['Vector'])
+        links.new(noise.outputs[0], intensity.inputs[0])
+
+        # multiply density
+        node = density = nodes.new('ShaderNodeMath')
+        node.operation = 'MULTIPLY'
+        node.inputs[1].default_value = staining_intensity
+        loc = node.location = (loc[0]+sep, loc[1])
+        links.new(intensity.outputs[0], density.inputs[0])
+
+        # add volume shader
+        node = volume = shading_utils.add_node_group(
+            nodes, self.custom_nodes.volume, pos=(loc[0]+sep, loc[1]))
+        loc = node.location
+        links.new(density.outputs[0], volume.inputs['AbsorptionDensity'])
+        volume.inputs['AbsorptionColor'].default_value = color
+        volume.inputs['ScatterDensity'].default_value = 0
+
+        ###### SURFACE
+        node = surface = nodes.new('ShaderNodeBsdfGlass')
+        loc = node.location = (loc[0], loc[1]+sep)
+
+        # link nodes
+        node = material_output = nodes.new('ShaderNodeOutputMaterial')
+        links.new(volume.outputs[0], material_output.inputs['Volume'])
+        links.new(surface.outputs[0], material_output.inputs['Surface'])
+        loc = node.location = (loc[0]+sep, loc[1])
+
+        return material
+    
     def add_nuclei_staining(
             self, name="tissue_staining", color=(0.315, 0.003, 0.631, 1),
-            staining_intensity=300, start_pos=(0, 0), sep=200):
+            staining_intensity=200, start_pos=(0, 0), sep=200):
         material, nodes, links = shading_utils.initialize_material(name)
 
         # add object centered coordinate system
         node = coord = shading_utils.add_node_group(
-            nodes, self.custom_nodes.object_coord, pos=(0, 0))
+            nodes, self.custom_nodes.object_coord, pos=start_pos)
         loc = node.location
 
         # add noisy intensity

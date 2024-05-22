@@ -13,8 +13,8 @@ class build_crypt():
         bpy.ops.object.modifier_apply(modifier=self.name)
 
         # add crypt volumes
-        self.crypt_vol_in = self._make_crypt_vol(thickness=0.1, name='crypt_volume_inner')
-        self.crypt_vol_out = self._make_crypt_vol(thickness=0.2, name='crypt_volume_outer')
+        self.crypt_vol_in = self._make_crypt_vol(thickness=0.01, name='crypt_volume_inner')
+        self.crypt_vol_out = self._make_crypt_vol(thickness=0.02, name='crypt')
 
         objects = [self.crypt, self.crypt_vol_in, self.crypt_vol_out]
         for obj in objects:
@@ -43,7 +43,7 @@ class build_crypt():
         bpy.ops.object.modifier_add(type='SOLIDIFY')
         bpy.context.object.modifiers['Solidify'].thickness = thickness
         bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-        #bpy.ops.object.modifier_apply(modifier="Solidify")
+        bpy.ops.object.modifier_apply(modifier="Solidify")
 
         return crypt_vol
 

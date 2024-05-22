@@ -54,7 +54,7 @@ def parse_dataset_args():
     # nuclei
     parser.add_argument("--surf_number", type=int, default=80, help="number of surface cells")
     parser.add_argument("--filler_scale", type=float, default=0.8, help="Scale of the size of smaller filler nuclei w.r.t to the original nuclei size")
-    parser.add_argument("--number", type=int, default=800, help="number of volume cells")
+    parser.add_argument("--number", type=int, default=8, help="number of volume cells")
     parser.add_argument("--ratios", type=list, default=[0.6, 0.2, 0.2], help="ratios of different cell types")
     parser.add_argument("--vol_scale", type=tuple, default=(1, 0.7, 1), help="Volume scale")
     parser.add_argument("--surf_scale", type=tuple, default=(0.8, 0.5, 1), help="Surface scale")
@@ -105,8 +105,8 @@ def create_scene(
     tissue_arch = arch.TissueArch(seed=seed)
     tissue_arch.random_crop(my_tissue.tissue)
     macro_structure = tissue_arch.get_architecture()
-    crypt, cryp_vol_1, crypt_vol_2, mucosa = macro_structure
-    my_scene.bound_architecture(volumes=[cryp_vol_1, crypt_vol_2, mucosa], surfaces=[crypt])
+    crypt, crypt_vol_1, crypt_vol_2, mucosa = macro_structure
+    my_scene.bound_architecture(volumes=[crypt_vol_1, crypt_vol_2, mucosa], surfaces=[crypt])
 
     # 3) populate scene with nuclei/cells
     # add bounding volumes
@@ -129,12 +129,12 @@ def create_scene(
     # 4) cut objects and add staining
     my_scene.cut_cells()
     my_scene.cut_tissue()
-    my_scene.add_tissue_staining(materials=[my_materials.muscosa])
+    my_scene.add_tissue_staining(materials=[my_materials.muscosa, my_materials.crypt_staining])
     my_scene.add_staining(material=my_materials.nuclei_mask)
     my_scene.add_staining(material=my_materials.nuclei_staining)
 
     # 5) hide non cell objects
-    for obj in [crypt]:
+    for obj in [crypt, crypt_vol_1]:
         obj.hide_viewport = True
         obj.hide_render = True
 
