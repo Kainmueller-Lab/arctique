@@ -92,7 +92,7 @@ class VolumeFill(CellArrangement):
         for idx, location in enumerate(locations):
             bpy.ops.mesh.primitive_ico_sphere_add(radius=radius)
             nucleus = bpy.context.active_object
-            #deform_mesh(nucleus, attribute)
+            deform_mesh(nucleus, attribute)
             nucleus.name = f"Nucleus_Type_{type}_{idx}"
             nucleus.location = location
             nucleus.scale = attribute.scale
@@ -153,7 +153,7 @@ class SurfaceFill(CellArrangement):
             radius = attribute.radius if name == "" else attribute.radius * self.filler_scale
             bpy.ops.mesh.primitive_ico_sphere_add(radius=radius)
             nucleus = bpy.context.active_object
-            # TODO: add deform. Is it more eficcient to deform after adding? Can loop through all objects
+            # TODO: add deform. Is it more efficient to deform after adding? Can loop through all objects
             deform_mesh(nucleus, attribute)
             # NOTE: Random small displacement along the normal axis
             nucleus.location = pt + random.uniform(-0.5*self.mesh_delta, self.mesh_delta) * dir
@@ -282,11 +282,9 @@ class VoronoiFill(CellArrangement):
             nucleus.location = s.centroid
             nucleus.scale = s.scale
             bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
-            
-            #deform_mesh(nucleus)
-            
+            deform_mesh(nucleus, self.attribute)
             bpy.ops.object.modifier_add(type='SUBSURF')
-            bpy.context.object.modifiers["Subdivision"].levels = 1
+            bpy.context.object.modifiers["Subdivision"].levels = 3
             bpy.ops.object.modifier_apply(modifier="Subdivision")
 
             self.objects.append(nucleus)

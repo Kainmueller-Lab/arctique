@@ -227,15 +227,11 @@ def perturb_vertices_old(mesh, deform_strength):
             w.co += direction * mu
 
 def perturb_vertices(mesh, scaled_deform_strength):
-    VERTS_TO_MOVE = 2 # TODO: Take care of magical number
-    PROPORTIONAL_SIZE = 0.7 # TODO: Necessary? If yes implement
-    # TODO: Test different deformations
+    VERTS_TO_MOVE = 10
     for _ in range(VERTS_TO_MOVE):
-        #source_v = mesh.vertices[random.randint(0, len(mesh.vertices) - 1)]
-        #direction = source_v.normal
         direction = Vector(random_unit_vector())
         for w in mesh.vertices:
-            mu = scaled_deform_strength * pos_value(np.dot(direction, w.normal)-PROPORTIONAL_SIZE)
+            mu = scaled_deform_strength * pos_value(np.dot(direction, w.normal)-0.8)
             w.co -= direction * mu
     
 def rescale_obj(obj, size, scale):
@@ -245,7 +241,7 @@ def rescale_obj(obj, size, scale):
         v.co = Vector([v/sc for v, sc in zip(v.co, scale)])
             
 def deform_mesh(obj, attribute):
-    size = attribute.radius
+    size = attribute.size
     scale = attribute.scale
     deform_strength = attribute.deformation_strength
     scaled_deform_strength = Vector(s*size*deform_strength for s in scale) 

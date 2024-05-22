@@ -69,13 +69,13 @@ RATIOS = [0.2, 0.2, 0.2, 0.4]
 # TODO: Add deformations
 # TODO: Fix singular nuclei inside epi volume
 volume_fill = arr.VolumeFill(MIX_VOL, MIX_COUNT, ATTRIBUTES, RATIOS, strict_boundary=True)
-my_scene.add_arrangement(volume_fill) # NOTE: 240 nuclei take about 15 s
+my_scene.add_arrangement(volume_fill) # NOTE: 240 nuclei take about 20 s
 
 # add epi volume filling
 EPI_COUNT = 200
 EPI_ATTRIBUTE = cells.CellAttributeEpi(size=0.1, scale=(1, 0.5, 0.5))
 crypt_fill = arr.VoronoiFill(EPI_VOL, EPI_COUNT, EPI_ATTRIBUTE)
-my_scene.add_arrangement(crypt_fill) # NOTE: 200 nuclei take about 30 s
+my_scene.add_arrangement(crypt_fill) # NOTE: 200 nuclei take about 40 s
 
 # Add tissue
 my_scene.add_tissue(tissue=my_tissue.tissue)
