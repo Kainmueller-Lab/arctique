@@ -106,7 +106,7 @@ def is_inside(point, obj):
     # if np.linalg.norm(_point) < 0.4:
     #     if direction.dot(nor) > 0.0:
     #         print(f"Outside pt: {point}, scp value: {direction.dot(nor)}, normal: {nor}")
-    return direction.dot(nor) > 0.02 # NOTE: Increase this threshold slightly if inner nuclei artifacts do appear.It should be closest possible to 0 though. - ck
+    return direction.dot(nor) > 0.03 # NOTE: Increase this threshold slightly if inner nuclei artifacts do appear.It should be closest possible to 0 though. - ck
 
 def random_points_in_bbox(bbox, count):
     xs, ys, zs = bbox
