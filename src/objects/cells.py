@@ -30,15 +30,7 @@ class CellAttribute():
         self.subdivision_levels = 1
 
     def add_nucleus_object(self, location, direction):
-        bpy.ops.mesh.primitive_ico_sphere_add(radius=self.size)
-        nucleus = bpy.context.active_object
-        # TODO: Apply a rotation to the volume nuclei such that they follow the tissue flow or smth like that I am no tissuologist how the hell should I know what that is I mean come on is there really someone who could answer that question yes maybe there is I will ask the Big Goose Of Enlightenment, quak.
-        deform_mesh(nucleus, self)
-        subdivide(nucleus, self.subdivision_levels)
-        set_orientation(nucleus, direction)
-        nucleus.location = location
-        nucleus.scale = self.scale
-        return nucleus
+        pass
 
     def from_type(cell_type):
         assert cell_type.name in cell_type_to_attribute.keys(), f"Unknown cell type {cell_type.name}."
@@ -53,9 +45,9 @@ class CellAttribute():
 class PLA(CellAttribute):
     def __init__(self, 
                  cell_type = CellType.PLA,
-                 size = 0.06,
-                 scale = (1,1,1),
-                 deformation_strength = 0.8,
+                 size = 0.07,
+                 scale = (1,0.6,0.5),
+                 deformation_strength = 0.5,
                  attribute_name = "Plasma Cell",
                  max_bending_strength = 0.2):
         super().__init__()
@@ -65,13 +57,23 @@ class PLA(CellAttribute):
         self.deformation_strength = deformation_strength
         self.attribute_name = attribute_name
         self.max_bending_strength = max_bending_strength
+    
+    def add_nucleus_object(self, location, direction):
+        bpy.ops.mesh.primitive_ico_sphere_add(radius=self.size)
+        nucleus = bpy.context.active_object
+        deform_mesh(nucleus, self)
+        subdivide(nucleus, self.subdivision_levels)
+        set_orientation(nucleus, direction)
+        nucleus.location = location
+        nucleus.scale = self.scale
+        return nucleus
 
 class LYM(CellAttribute):
     def __init__(self, 
                  cell_type = CellType.LYM,
-                 size = 0.03,
-                 scale = (1,1,1),
-                 deformation_strength = 0.8,
+                 size = 0.04,
+                 scale = (1, 0.9, 0.8),
+                 deformation_strength = 0.5,
                  attribute_name = "Lymphocyte",
                  max_bending_strength = 0.2):
         super().__init__()
@@ -81,13 +83,23 @@ class LYM(CellAttribute):
         self.deformation_strength = deformation_strength
         self.attribute_name = attribute_name
         self.max_bending_strength = max_bending_strength
+    
+    def add_nucleus_object(self, location, direction):
+        bpy.ops.mesh.primitive_ico_sphere_add(radius=self.size)
+        nucleus = bpy.context.active_object
+        deform_mesh(nucleus, self)
+        subdivide(nucleus, self.subdivision_levels)
+        set_orientation(nucleus, direction)
+        nucleus.location = location
+        nucleus.scale = self.scale
+        return nucleus
 
 class EOS(CellAttribute):
     def __init__(self, 
                  cell_type = CellType.EOS,
                  size = 0.06,
-                 scale = (1,0.3,0.3),
-                 deformation_strength = 0.8,
+                 scale = (1,1,1),
+                 deformation_strength = 0.2,
                  attribute_name = "Eosinophile",
                  max_bending_strength = 0.2):
         super().__init__()
@@ -98,14 +110,33 @@ class EOS(CellAttribute):
         self.attribute_name = attribute_name
         self.max_bending_strength = max_bending_strength
 
+
+    def add_nucleus_object(self, location, direction):
+        coeff = 0.36 # Controls the displacement between to metaballs, 0: no distance
+        delta = 2.0*coeff*self.size
+        rad1 = self.size*(1-coeff) + self.deformation_strength*self.size*random.uniform(-1,1)
+        rad2 = 2.0*self.size*(1-coeff) - rad1
+        assert rad1 > 0 and rad2 > 0, "Negative radius."
+        center = self.size - rad1
+        bpy.ops.object.metaball_add(type='BALL', radius=rad1, enter_editmode=False, align='WORLD', location=(0, 0, 0), scale=(1, 1, 1))
+        bpy.ops.object.metaball_add(type='BALL', radius=rad2, enter_editmode=False, align='WORLD', location=(delta, 0, 0), scale=(1, 1, 1))
+        bpy.ops.object.convert(target='MESH')
+        bpy.context.scene.cursor.location = (center, 0, 0)
+        bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
+        nucleus = bpy.context.active_object
+        set_orientation(nucleus, direction)
+        nucleus.location = location
+        nucleus.scale = self.scale
+        return nucleus
+
 class FIB(CellAttribute):
     def __init__(self, 
                  cell_type = CellType.FIB,
-                 size = 0.08,
-                 scale = (1,0.2,0.2),
-                 deformation_strength = 0.8,
+                 size = 0.1,
+                 scale = (1,0.4,0.3),
+                 deformation_strength = 0.2,
                  attribute_name = "Fibroblast",
-                 max_bending_strength = 0.2):
+                 max_bending_strength = 0.7):
         super().__init__()
         self.cell_type = cell_type
         self.size = size
@@ -113,6 +144,25 @@ class FIB(CellAttribute):
         self.deformation_strength = deformation_strength
         self.attribute_name = attribute_name
         self.max_bending_strength = max_bending_strength
+
+    def add_nucleus_object(self, location, direction):
+        coeff = 0.3 # Controls the displacement between to metaballs, 0: no distance
+        delta = 2.0*coeff*self.size
+        rad1 = self.size*(1-coeff) + self.deformation_strength*self.size*random.uniform(-1,1)
+        rad2 = 2.0*self.size*(1-coeff) - rad1
+        assert rad1 > 0 and rad2 > 0, "Negative radius."
+        center = self.size - rad1
+        bpy.ops.object.metaball_add(type='ELLIPSOID', radius=rad1, enter_editmode=False, align='WORLD', location=(0, 0, 0), scale=(1, 1, 1))
+        bpy.ops.object.metaball_add(type='ELLIPSOID', radius=rad2, enter_editmode=False, align='WORLD', location=(delta, 0, 0), scale=(1, 1, 1))
+        bpy.ops.object.convert(target='MESH')
+        bpy.context.scene.cursor.location = (center, 0, 0)
+        bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
+        nucleus = bpy.context.active_object
+        bend_mesh(nucleus, self.max_bending_strength)
+        set_orientation(nucleus, direction)
+        nucleus.location = location
+        nucleus.scale = self.scale
+        return nucleus
 
 class EPI(CellAttribute):
     def __init__(self, 
@@ -130,12 +180,22 @@ class EPI(CellAttribute):
         self.attribute_name = attribute_name
         self.max_bending_strength = max_bending_strength
 
+    def add_nucleus_object(self, location, direction):
+            bpy.ops.mesh.primitive_ico_sphere_add(radius=self.size)
+            nucleus = bpy.context.active_object
+            deform_mesh(nucleus, self)
+            subdivide(nucleus, self.subdivision_levels)
+            set_orientation(nucleus, direction)
+            nucleus.location = location
+            nucleus.scale = self.scale
+            return nucleus
+
 class GOB(CellAttribute):
     def __init__(self,
                  cell_type = CellType.GOB,
-                 size = 0.03,
-                 scale = (1,1,1),
-                 deformation_strength = 0.8,
+                 size = 0.15,
+                 scale = (1,0.8,0.7),
+                 deformation_strength = 0.4,
                  attribute_name = "Goblet Cell",
                  max_bending_strength = 0.2):
         super().__init__()
@@ -145,6 +205,17 @@ class GOB(CellAttribute):
         self.deformation_strength = deformation_strength
         self.attribute_name = attribute_name
         self.max_bending_strength = max_bending_strength
+
+    def add_nucleus_object(self, location, direction):
+            bpy.ops.mesh.primitive_ico_sphere_add(radius=self.size)
+            nucleus = bpy.context.active_object
+            deform_mesh(nucleus, self)
+            subdivide(nucleus, self.subdivision_levels)
+            set_orientation(nucleus, direction)
+            nucleus.location = location
+            nucleus.scale = self.scale
+            return nucleus
+
 
 
 class MixAttribute:

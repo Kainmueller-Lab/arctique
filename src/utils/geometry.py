@@ -253,15 +253,23 @@ def deform_mesh(obj, attribute):
     scaled_deform_strength = Vector(s*size*deform_strength for s in scale) 
     mesh = obj.data
     perturb_vertices(mesh, scaled_deform_strength)
-    # TODO: Old deform
-    # # TODO: Rescale such that diameter of mesh lies in bounding ball
-    # #rescale_obj(obj, size, scale)
-    # abs_deform_strength = size*deform_strength  
-    # mesh = obj.data
-    # perturb_vertices(mesh, abs_deform_strength)
-    # # TODO: Rescale such that diameter of mesh lies in bounding ball
-    # rescale_obj(obj, size, attribute.scale)
 
+def bend_mesh(obj, bend):
+        """
+        Bend mesh along Z axis.
+        """
+        modifier = obj.modifiers.new("Simple Deform Modifier", "SIMPLE_DEFORM")
+        modifier_index = len(obj.modifiers) - 1  # Index of the last added modifier
+        modifier = obj.modifiers[modifier_index]
+        modifier.deform_method = 'BEND'
+        bpy.ops.object.empty_add(type='ARROWS', align='WORLD', location=obj.location, scale=(1, 1, 1))
+        empty = bpy.context.active_object
+        # Set the origin and deform axis
+        modifier.origin = empty
+        modifier.deform_axis = 'Z'
+        bending_strength = random.uniform(-1,1)*bend
+        modifier.angle = 2*np.pi*bending_strength
+        bpy.data.objects.remove(empty, do_unlink=True)
 
 def remove_top_and_bottom_faces(obj):
     mesh = bpy.data.meshes.new(name="ModifiedMesh")
