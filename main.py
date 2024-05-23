@@ -19,6 +19,8 @@ import src.utils.geometry as geom
 import src.utils.surface_filling as sf
 import src.utils.volume_filling as vf
 
+from src.objects.cells import CellType
+
 # this next part forces a reload in case you edit the source after you first start the blender session
 #import imp
 import importlib as imp # imp module is deprecated since python 3.12
@@ -62,16 +64,19 @@ my_scene = scene.BioMedicalScene(my_light_source, my_camera)
 MIX_VOL, EPI_VOL = utils.geometry.add_dummy_volumes(my_tissue, TISSUE_PADDING)
 
 MIX_COUNT = 240
+MIX_TYPES = [CellType.PLA, CellType.LYM, CellType.EOS, CellType.FIB]
+# TODO: Mix types instead of attributes
 # NOTE: Create nuclei of type A which are mixed with nuclei of type C with a factor of 0.3.
 # A mix factor of 0 produces the pure true attribute, mix factor 1 produces the pure mixing attribute.
-ATTRIBUTES = [cells.MixAttribute(cells.CellAttributeA(), cells.CellAttributeB(), 0.3), cells.CellAttributeA(), cells.CellAttributeB(), cells.CellAttributeC()]
+#ATTRIBUTES = [cells.MixAttribute(cells.CellAttributeA(), cells.CellAttributeB(), 0.3), cells.CellAttributeA(), cells.CellAttributeB(), cells.CellAttributeC()]
 RATIOS = [0.2, 0.2, 0.2, 0.4]
 EPI_COUNT = 200
-EPI_ATTRIBUTE = cells.CellAttributeEpi(size=0.1, scale=(1, 0.5, 0.5))
+EPI_TYPE = CellType.EPI
+#EPI_ATTRIBUTE = cells.CellAttributeEpi(size=0.1, scale=(1, 0.5, 0.5))
 
 # add mix volume filling
 start = time.time()
-volume_fill = arr.VolumeFill(MIX_VOL, MIX_COUNT, ATTRIBUTES, RATIOS, strict_boundary=True)
+volume_fill = arr.VolumeFill(MIX_VOL, MIX_COUNT, MIX_TYPES, RATIOS, strict_boundary=True)
 end1 = time.time()
 print(f"Volume filling took {end1 - start} s")
 my_scene.add_arrangement(volume_fill) # NOTE: 240 nuclei take about 20 s
@@ -79,7 +84,7 @@ end2 = time.time()
 print(f"Volume adding took {time.time() - end1} s")
 
 # add epi volume filling
-crypt_fill = arr.VoronoiFill(EPI_VOL, EPI_COUNT, EPI_ATTRIBUTE)
+crypt_fill = arr.VoronoiFill(EPI_VOL, EPI_COUNT, EPI_TYPE)
 end3 = time.time()
 print(f"Voronoi filling took {end3 - end2} s")
 my_scene.add_arrangement(crypt_fill) # NOTE: 200 nuclei take about 40 s
