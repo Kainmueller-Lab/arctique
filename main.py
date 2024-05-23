@@ -1,5 +1,6 @@
 import bpy
 import sys
+import time
 import os
 
 
@@ -60,22 +61,30 @@ my_scene = scene.BioMedicalScene(my_light_source, my_camera)
 # NOTE: EPI_VOL bounds the volume for the epithelial cell types.
 MIX_VOL, EPI_VOL = utils.geometry.add_dummy_volumes(my_tissue, TISSUE_PADDING)
 
-# add mix volume filling
 MIX_COUNT = 240
 # NOTE: Create nuclei of type A which are mixed with nuclei of type C with a factor of 0.3.
 # A mix factor of 0 produces the pure true attribute, mix factor 1 produces the pure mixing attribute.
 ATTRIBUTES = [cells.MixAttribute(cells.CellAttributeA(), cells.CellAttributeB(), 0.3), cells.CellAttributeA(), cells.CellAttributeB(), cells.CellAttributeC()]
 RATIOS = [0.2, 0.2, 0.2, 0.4]
-# TODO: Add deformations
-# TODO: Fix singular nuclei inside epi volume
-volume_fill = arr.VolumeFill(MIX_VOL, MIX_COUNT, ATTRIBUTES, RATIOS, strict_boundary=True)
-my_scene.add_arrangement(volume_fill) # NOTE: 240 nuclei take about 20 s
-
-# add epi volume filling
 EPI_COUNT = 200
 EPI_ATTRIBUTE = cells.CellAttributeEpi(size=0.1, scale=(1, 0.5, 0.5))
+
+# add mix volume filling
+start = time.time()
+volume_fill = arr.VolumeFill(MIX_VOL, MIX_COUNT, ATTRIBUTES, RATIOS, strict_boundary=True)
+end1 = time.time()
+print(f"Volume filling took {end1 - start} s")
+my_scene.add_arrangement(volume_fill) # NOTE: 240 nuclei take about 20 s
+end2 = time.time()
+print(f"Volume adding took {time.time() - end1} s")
+
+# add epi volume filling
 crypt_fill = arr.VoronoiFill(EPI_VOL, EPI_COUNT, EPI_ATTRIBUTE)
+end3 = time.time()
+print(f"Voronoi filling took {end3 - end2} s")
 my_scene.add_arrangement(crypt_fill) # NOTE: 200 nuclei take about 40 s
+end4 = time.time()
+print(f"Voronoi adding took {end4 - end3} s")
 
 # Add tissue
 my_scene.add_tissue(tissue=my_tissue.tissue)

@@ -3,12 +3,21 @@ import bmesh
 import random
 import math
 
-from typing import Optional
-
+from enum import Enum
 from mathutils import Vector
+from typing import Optional
 
 from src.shading.shading import Material
 from src.utils.geometry import set_orientation
+
+class CellType(Enum):
+    PLA = 1
+    LYM = 2
+    EOS = 2
+    FIB = 3
+    EPI = 4
+    GOB = 5
+
 
 class CellAttribute():
     def __init__(self):
@@ -24,8 +33,94 @@ class CellAttribute():
 # - scale: is the ellipsoid scale of the nucleus
 # The scale of an attribute should always be normalized such the maximal scale value is 1. 
 # This ensures that the maximal diameter of a cell nucleus is twice its size.
+
+class PLA(CellAttribute):
+    def __init__(self, 
+                 size = 0.06,
+                 scale = (1,1,1),
+                 deformation_strength = 0.8,
+                 attribute_name = "Plasma Cell",
+                 max_bending_strength = 0.2):
+        self.size = size
+        self.scale = scale
+        self.deformation_strength = deformation_strength
+        self.attribute_name = attribute_name
+        self.max_bending_strength = max_bending_strength
+
+class LYM(CellAttribute):
+    def __init__(self, 
+                 size = 0.03,
+                 scale = (1,1,1),
+                 deformation_strength = 0.8,
+                 attribute_name = "Lymphocyte",
+                 max_bending_strength = 0.2):
+        self.size = size
+        self.scale = scale
+        self.deformation_strength = deformation_strength
+        self.attribute_name = attribute_name
+        self.max_bending_strength = max_bending_strength
+
+class EOS(CellAttribute):
+    def __init__(self, 
+                 size = 0.06,
+                 scale = (1,0.3,0.3),
+                 deformation_strength = 0.8,
+                 attribute_name = "Eosinophile",
+                 max_bending_strength = 0.2):
+        self.size = size
+        self.scale = scale
+        self.deformation_strength = deformation_strength
+        self.attribute_name = attribute_name
+        self.max_bending_strength = max_bending_strength
+
+class FIB(CellAttribute):
+    def __init__(self, 
+                 size = 0.08,
+                 scale = (1,0.2,0.2),
+                 deformation_strength = 0.8,
+                 attribute_name = "Fibroblast",
+                 max_bending_strength = 0.2):
+        self.size = size
+        self.scale = scale
+        self.deformation_strength = deformation_strength
+        self.attribute_name = attribute_name
+        self.max_bending_strength = max_bending_strength
+
+class EPI(CellAttribute):
+    def __init__(self, 
+                 size = 0.03,
+                 scale = (1,1,1),
+                 deformation_strength = 0.8,
+                 attribute_name = "Epithelial Cell",
+                 max_bending_strength = 0.2):
+        self.size = size
+        self.scale = scale
+        self.deformation_strength = deformation_strength
+        self.attribute_name = attribute_name
+        self.max_bending_strength = max_bending_strength
+
+class GOB(CellAttribute):
+    def __init__(self,
+                 size = 0.03,
+                 scale = (1,1,1),
+                 deformation_strength = 0.8,
+                 attribute_name = "Goblet Cell",
+                 max_bending_strength = 0.2):
+        self.size = size
+        self.scale = scale
+        self.deformation_strength = deformation_strength
+        self.attribute_name = attribute_name
+        self.max_bending_strength = max_bending_strength
+
+
+
 class CellAttributeA(CellAttribute):
-    def __init__(self, cell_type = "A", size = 0.03, scale = (1,1,1), deformation_strength = 0.8, attribute_name = "Cell Type A", max_bending_strength = 0.2):
+    def __init__(self, cell_type = "A",
+                 size = 0.03,
+                 scale = (1,1,1),
+                 deformation_strength = 0.8,
+                 attribute_name = "Cell Type A",
+                 max_bending_strength = 0.2):
         self.cell_type = cell_type
         self.size = size
         self.scale = scale
