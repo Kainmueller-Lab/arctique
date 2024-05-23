@@ -8,7 +8,7 @@ from mathutils import Vector
 from typing import Optional
 
 from src.shading.shading import Material
-from src.utils.geometry import set_orientation
+from src.utils.geometry import *
 
 class CellType(Enum):
     PLA = 1
@@ -27,6 +27,18 @@ class CellAttribute():
         self.deformation_strength = None
         self.attribute_name = None
         self.max_bending_strength = None
+        self.subdivision_levels = 1
+
+    def add_nucleus_object(self, location, direction):
+        bpy.ops.mesh.primitive_ico_sphere_add(radius=self.size)
+        nucleus = bpy.context.active_object
+        # TODO: Apply a rotation to the volume nuclei such that they follow the tissue flow or smth like that I am no tissuologist how the hell should I know what that is I mean come on is there really someone who could answer that question yes maybe there is I will ask the Big Goose Of Enlightenment, quak.
+        deform_mesh(nucleus, self)
+        subdivide(nucleus, self.subdivision_levels)
+        set_orientation(nucleus, direction)
+        nucleus.location = location
+        nucleus.scale = self.scale
+        return nucleus
 
     def from_type(cell_type):
         assert cell_type.name in cell_type_to_attribute.keys(), f"Unknown cell type {cell_type.name}."
@@ -62,6 +74,7 @@ class LYM(CellAttribute):
                  deformation_strength = 0.8,
                  attribute_name = "Lymphocyte",
                  max_bending_strength = 0.2):
+        super().__init__()
         self.cell_type = cell_type
         self.size = size
         self.scale = scale
@@ -77,6 +90,7 @@ class EOS(CellAttribute):
                  deformation_strength = 0.8,
                  attribute_name = "Eosinophile",
                  max_bending_strength = 0.2):
+        super().__init__()
         self.cell_type = cell_type
         self.size = size
         self.scale = scale
@@ -92,6 +106,7 @@ class FIB(CellAttribute):
                  deformation_strength = 0.8,
                  attribute_name = "Fibroblast",
                  max_bending_strength = 0.2):
+        super().__init__()
         self.cell_type = cell_type
         self.size = size
         self.scale = scale
@@ -107,6 +122,7 @@ class EPI(CellAttribute):
                  deformation_strength = 0.2,
                  attribute_name = "Epithelial Cell",
                  max_bending_strength = 0.3):
+        super().__init__()
         self.cell_type = cell_type
         self.size = size
         self.scale = scale
@@ -122,6 +138,7 @@ class GOB(CellAttribute):
                  deformation_strength = 0.8,
                  attribute_name = "Goblet Cell",
                  max_bending_strength = 0.2):
+        super().__init__()
         self.cell_type = cell_type
         self.size = size
         self.scale = scale

@@ -66,36 +66,14 @@ class VolumeFill(CellArrangement):
         self.points_per_type = fill_volume(self.counts, self.attributes, self.mesh, self.strict_boundary)
 
     def add(self):
-        for points, radius, type in self.points_per_type:
-            self.add_nuclei(points, radius, type)
-
-    def add_nuclei(self, locations, radius, type):
-        attribute = self.get_attribute_by_type(self.attributes, type)
-
-        # Create a small sphere object for each base point
-        for idx, location in enumerate(locations):
-            bpy.ops.mesh.primitive_ico_sphere_add(radius=radius)
-            nucleus = bpy.context.active_object
-            deform_mesh(nucleus, attribute)
-            nucleus.name = f"Nucleus_Type_{type}_{idx}"
-            nucleus.location = location
-            nucleus.scale = attribute.scale
-            # TODO: Apply a rotation to the volume nuclei such that they follow the tissue flow or smth like that I am no tissuologist how the hell should I know what that is I mean come on is there really someone who could answer that question yes maybe there is I will ask the Big Goose Of Enlightenment, quak.
-            nucleus.rotation_euler = [random.uniform(0, 2*math.pi) for _ in range(3)]
-            nucleus.modifiers.new(name="Subdivision", type='SUBSURF')
-            nucleus.modifiers["Subdivision"].levels = self.subdivision_levels
-            bpy.ops.object.modifier_apply({"object": nucleus}, modifier="Subdivision")
-            self.objects.append(nucleus)
-
-    def get_attribute_by_type(self, attributes, type):
-        res = None
-        for attribute in attributes:
-            if attribute.cell_type == type:
-                res = attribute
-                break
-        assert res is not None, "Type not found"
-        return res
-
+        for locations, radius, type in self.points_per_type:
+            attribute = CellAttribute.from_type(type)
+            for idx, location in enumerate(locations):
+                direction = Vector(random_unit_vector())
+                nucleus = attribute.add_nucleus_object(location, direction)
+                nucleus.name = f"Nucleus_Type_{type.name}_{idx}"
+                self.objects.append(nucleus)
+                
 
 class VoronoiFill(CellArrangement):
     def __init__(self, mesh_obj, count, type):

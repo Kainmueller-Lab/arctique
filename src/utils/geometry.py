@@ -206,6 +206,12 @@ def shrinkwrap(cell_objects, nuclei_scale=1):
         nucleus_objects.append(nucleus_object)
     return nucleus_objects
 
+def subdivide(obj, levels):
+    obj.modifiers.new(name="Subdivision", type='SUBSURF')
+    obj.modifiers["Subdivision"].levels = levels
+    bpy.ops.object.modifier_apply({"object": obj}, modifier="Subdivision")
+  
+
 def move_selection(offset_vector):
     selection = bpy.context.selected_objects
     for obj in selection:
