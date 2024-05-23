@@ -73,7 +73,7 @@ class VolumeFill(CellArrangement):
                 nucleus = attribute.add_nucleus_object(location, direction)
                 nucleus.name = f"Nucleus_Type_{type.name}_{idx}"
                 self.objects.append(nucleus)
-                
+
 
 class VoronoiFill(CellArrangement):
     def __init__(self, mesh_obj, count, type):
@@ -178,17 +178,25 @@ class VoronoiFill(CellArrangement):
         return sampled_verts, sampled_ids
 
     def add(self):
-        for idx, s in enumerate(self.nuclei_seeds):
-            bpy.ops.mesh.primitive_ico_sphere_add()
-            nucleus = bpy.context.active_object
-            nucleus.name = f"Nucleus_Type_{self.attribute.cell_type}_{idx}"
-            set_orientation(nucleus, s.direction)
-            nucleus.location = s.centroid
-            nucleus.scale = s.scale
-            bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
-            deform_mesh(nucleus, self.attribute)
-            bpy.ops.object.modifier_add(type='SUBSURF')
-            bpy.context.object.modifiers["Subdivision"].levels = 3
-            bpy.ops.object.modifier_apply(modifier="Subdivision")
-
+        attribute = CellAttribute.from_type(self.type)
+        for idx, seed in enumerate(self.nuclei_seeds):
+            nucleus = attribute.add_nucleus_object(seed.centroid, seed.direction)
+            nucleus.scale = tuple(s / attribute.size for s in seed.scale) # NOTE: Need to rescale since for EPI the scale depends on the Voronoi placement and cannot be given at construction. - ck
+            nucleus.name = f"Nucleus_Type_{self.type.name}_{idx}"
             self.objects.append(nucleus)
+
+
+        # for idx, s in enumerate(self.nuclei_seeds):
+        #     bpy.ops.mesh.primitive_ico_sphere_add()
+        #     nucleus = bpy.context.active_object
+        #     nucleus.name = f"Nucleus_Type_{self.attribute.cell_type}_{idx}"
+        #     set_orientation(nucleus, s.direction)
+        #     nucleus.location = s.centroid
+        #     nucleus.scale = s.scale
+        #     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+        #     deform_mesh(nucleus, self.attribute)
+        #     bpy.ops.object.modifier_add(type='SUBSURF')
+        #     bpy.context.object.modifiers["Subdivision"].levels = 3
+        #     bpy.ops.object.modifier_apply(modifier="Subdivision")
+
+        #     self.objects.append(nucleus)
