@@ -42,6 +42,7 @@ def parse_dataset_args():
     parser.add_argument("--gpu_devices", type=list, default=[0], help="List of GPU devices to use for rendering")
     parser.add_argument("--gpu", type=bool, default=True, help="Use GPU for rendering")
     parser.add_argument("--output_dir", type=str, default="rendered", help="Set output folder")
+    parser.add_argument("--start_idx", type=int, default=0, help="Dataset size")
     parser.add_argument("--n_samples", type=int, default=500, help="Dataset size")
    
     # DATASET PARAMETERS
@@ -54,7 +55,7 @@ def parse_dataset_args():
     # nuclei
     parser.add_argument("--surf_number", type=int, default=80, help="number of surface cells")
     parser.add_argument("--filler_scale", type=float, default=0.8, help="Scale of the size of smaller filler nuclei w.r.t to the original nuclei size")
-    parser.add_argument("--number", type=int, default=8, help="number of volume cells")
+    parser.add_argument("--number", type=int, default=800, help="number of volume cells")
     parser.add_argument("--ratios", type=list, default=[0.6, 0.2, 0.2], help="ratios of different cell types")
     parser.add_argument("--vol_scale", type=tuple, default=(1, 0.7, 1), help="Volume scale")
     parser.add_argument("--surf_scale", type=tuple, default=(0.8, 0.5, 1), help="Surface scale")
@@ -209,10 +210,9 @@ def main():
     dir = render_path + '/train_combined_masks/semantic'
     if not os.path.exists(dir):
             os.makedirs(dir)
-    max_n_samples = len(glob.glob(f"{dir}/*.png")) 
 
     # render individual samples
-    for i in tqdm(range(max_n_samples, max_n_samples + args.n_samples)):
+    for i in tqdm(range(args.start_idx, args.start_idx + args.n_samples)):
         my_scene = create_scene(
             tissue_thickness = args.tissue_thickness, tissue_size = args.tissue_size, 
             tissue_location = args.tissue_location, tissue_padding = args.tissue_padding,
