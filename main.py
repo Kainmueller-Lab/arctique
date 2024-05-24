@@ -95,12 +95,12 @@ end2 = time.time()
 print(f"Volume adding took {time.time() - end1} s")
 
 # add epi volume filling
-# crypt_fill = arr.VoronoiFill(EPI_VOL, EPI_COUNT, EPI_TYPE)
-# end3 = time.time()
-# print(f"Voronoi filling took {end3 - end2} s")
-# my_scene.add_arrangement(crypt_fill) # NOTE: 200 nuclei take about 40 s
-# end4 = time.time()
-# print(f"Voronoi adding took {end4 - end3} s")
+crypt_fill = arr.VoronoiFill(EPI_VOL, EPI_COUNT, EPI_TYPE)
+end3 = time.time()
+print(f"Voronoi filling took {end3 - end2} s")
+my_scene.add_arrangement(crypt_fill) # NOTE: 200 nuclei take about 40 s
+end4 = time.time()
+print(f"Voronoi adding took {end4 - end3} s")
 
 # 4) cut objects and add staining
 my_scene.cut_cells()
@@ -110,7 +110,7 @@ my_scene.add_staining(material=my_materials.nuclei_mask)
 my_scene.add_staining(material=my_materials.nuclei_staining)
 
 # Hide non cell objects
-#my_scene.hide_non_cell_objects()
+my_scene.hide_non_cell_objects()
 
 # # render scene
 # RENDER_PATH = 'C:/Users/cwinklm/Documents/Alpacathon/rendered_HE/renders2d_test/'

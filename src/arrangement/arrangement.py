@@ -153,7 +153,7 @@ class VoronoiFill(CellArrangement):
             diam = diameter(prism_coords)
             c = centroid(prism_coords)
             if diam*diam - 4*self.radius*self.radius < 0:
-                print(f"Object {obj.name} has neg radius.")
+                continue
             height = np.sqrt(diam*diam - 4*self.radius*self.radius)
             scale = (0.5*self.size_coeff*height, self.size_coeff*self.radius, self.size_coeff*self.radius)
             direction = (c - choice[idx]) / np.linalg.norm((c - choice[idx]))
