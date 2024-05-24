@@ -39,12 +39,12 @@ def parse_dataset_args():
     parser = argparse.ArgumentParser()
     
     # RENDERING PARAMETERS                                                                                                                                                        # add argument with list of all gpu devices
-    parser.add_argument("--gpu_devices", type=list, default=[0], help="List of GPU devices to use for rendering")
+    parser.add_argument("--gpu_devices", type=list, default=[1], help="List of GPU devices to use for rendering")
     parser.add_argument("--gpu", type=bool, default=True, help="Use GPU for rendering")
     parser.add_argument("--output_dir", type=str, default="rendered", help="Set output folder")
     parser.add_argument("--start_idx", type=int, default=0, help="Dataset size")
     parser.add_argument("--n_samples", type=int, default=500, help="Dataset size")
-   
+
     # DATASET PARAMETERS
     # tissue
     parser.add_argument("--tissue_thickness", type=float, default=0.05, help="Tissue thickness")
@@ -55,9 +55,8 @@ def parse_dataset_args():
     # nuclei
     parser.add_argument("--surf_number", type=int, default=80, help="number of surface cells")
     parser.add_argument("--filler_scale", type=float, default=0.8, help="Scale of the size of smaller filler nuclei w.r.t to the original nuclei size")
-    parser.add_argument("--number", type=int, default=800, help="number of volume cells")
-    parser.add_argument("--ratios", type=list, default=[0.6, 0.2, 0.2], help="ratios of different cell types")
-    parser.add_argument("--vol_scale", type=tuple, default=(1, 0.7, 1), help="Volume scale")
+    parser.add_argument("--number", type=int, default=8, help="number of volume cells")
+    parser.add_argument("--ratios", type=list, default=[0.1, 0.3, 0.4, 0.1, 0.1], help="ratios of different cell types")
     parser.add_argument("--surf_scale", type=tuple, default=(0.8, 0.5, 1), help="Surface scale")
 
     #other default value for --output_dir: "/Volumes/ag_kainmueller/vguarin/synthetic_HE" via internal VPN
@@ -71,8 +70,8 @@ def parse_dataset_args():
 
 def create_scene(
         tissue_thickness = 0.05, tissue_size = 2, tissue_location = (0, 0, 0.5),
-        tissue_padding = 0.5, surf_number = 80, filler_scale = 0.8, number = 80, 
-        ratios = [0.6, 0.2, 0.2], vol_scale = (1, 0.7, 1), surf_scale = (0.8, 0.5, 1),
+        tissue_padding = 0.5, surf_number = 80, number = 80, 
+        ratios = [0.1, 0.3, 0.4, 0.1, 0.1],
         seed=0):
     '''
     creates a tissue crop with cells and nuclei
@@ -122,10 +121,17 @@ def create_scene(
     # my_scene.add_arrangement(crypt_fill) # NOTE: 200 nuclei take about 30 s
 
     # Add volume filling
-    ATTRIBUTES = [cells.CellAttributeA(), cells.CellAttributeB(), cells.CellAttributeC()]
-    volume_fill = arr.VolumeFill(mucosa, number, ATTRIBUTES, ratios, strict_boundary=False)
+    MIX_TYPES = [
+        cells.CellType.MIX,
+        cells.CellType.PLA, 
+        cells.CellType.LYM, 
+        cells.CellType.EOS, 
+        cells.CellType.FIB]
+    volume_fill = arr.VolumeFill(
+        mucosa, number, MIX_TYPES, ratios, strict_boundary=True, seed=seed)
     my_scene.add_arrangement(volume_fill)
     my_scene.cut_cells(boolean_object=mucosa)
+    #volume_fill = arr.VolumeFill(MIX_VOL, MIX_COUNT, MIX_TYPES, RATIOS, strict_boundary=True)
 
     # 4) cut objects and add staining
     my_scene.cut_cells()
@@ -216,8 +222,8 @@ def main():
         my_scene = create_scene(
             tissue_thickness = args.tissue_thickness, tissue_size = args.tissue_size, 
             tissue_location = args.tissue_location, tissue_padding = args.tissue_padding,
-            surf_number = args.surf_number, filler_scale = args.filler_scale, number = args.number, 
-            ratios = args.ratios, vol_scale = args.vol_scale, surf_scale = args.surf_scale,
+            surf_number = args.surf_number, number = args.number, 
+            ratios = args.ratios,
             seed=i)
         render_scene(my_scene, render_path, i+1, gpu=args.gpu, devices=args.gpu_devices)
         bpy.ops.wm.read_factory_settings(use_empty=True)
