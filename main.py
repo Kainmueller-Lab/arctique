@@ -84,7 +84,7 @@ MIX_VOL = mucosa
 EPI_VOL = crypt_vol_1
 #MIX_VOL, EPI_VOL = utils.geometry.add_dummy_volumes(my_tissue, TISSUE_PADDING)
 
- # 3) populate scene with nuclei/cells
+# 3) populate scene with nuclei/cells
 # add mix volume filling
 start = time.time()
 volume_fill = arr.VolumeFill(MIX_VOL, MIX_COUNT, MIX_TYPES, RATIOS, strict_boundary=True, seed=SEED)
