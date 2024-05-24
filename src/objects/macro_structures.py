@@ -11,6 +11,7 @@ class build_crypt():
         self.hex_input, self.hex_output = self._add_hexagon_structure(self.input.outputs['Geometry'])
         self.crypt_input, self.crypt_otput = self._add_crypts(self.hex_output, self.output.inputs['Geometry'])
         bpy.ops.object.modifier_apply(modifier=self.name)
+        self._cut_geometry(self.crypt)
 
         # add crypt volumes
         self.crypt_vol_in = self._make_crypt_vol(thickness=0.01, name='crypt_volume_inner')
@@ -31,7 +32,7 @@ class build_crypt():
         bpy.context.view_layer.objects.active = obj
         bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
     
-    def _make_crypt_vol(self, thickness=0.1, name='crypt_vol'):
+    def _make_crypt_vol(self, thickness=0.1, name='crypt_vol', offset_tol=0.001):
         # copy the crypt
         crypt_vol = self.crypt.copy()
         crypt_vol.data = self.crypt.data.copy()
@@ -42,6 +43,7 @@ class build_crypt():
         bpy.context.view_layer.objects.active = crypt_vol        
         bpy.ops.object.modifier_add(type='SOLIDIFY')
         bpy.context.object.modifiers['Solidify'].thickness = thickness
+        bpy.context.object.modifiers['Solidify'].offset = bpy.context.object.modifiers['Solidify'].offset + offset_tol
         bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
         bpy.ops.object.modifier_apply(modifier="Solidify")
 
