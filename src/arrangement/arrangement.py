@@ -22,7 +22,9 @@ class CellArrangement:
     count = 0
 
     def __init__(self):
-        self.objects = [] # Contains the nuclei objects
+        self.objects = [] # Contains all cell objects (i.e. nucleus and cytoplasm)
+        self.nuclei = [] # Contains all nucleus objects
+        self.cytoplasm = [] # Contains all cytoplasm objects
         self.name = None
         self.id = CellArrangement.count
         CellArrangement.count += 1
@@ -80,6 +82,7 @@ class VolumeFill(CellArrangement):
                 nucleus = cell_objects[0]
                 nucleus.name = f"Nucleus_Type_{type.name}_{idx}"
                 self.objects.append(nucleus)
+                self.nuclei.append(nucleus)
 
 
 class VoronoiFill(CellArrangement):
@@ -198,3 +201,4 @@ class VoronoiFill(CellArrangement):
             nucleus.scale = tuple(s / attribute.size for s in seed.scale) # NOTE: Need to rescale since for EPI the scale depends on the Voronoi placement and cannot be given at construction. - ck
             nucleus.name = f"Nucleus_Type_{self.type.name}_{idx}"
             self.objects.append(nucleus)
+            self.nuclei.append(nucleus)
