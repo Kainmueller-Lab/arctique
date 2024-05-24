@@ -70,7 +70,14 @@ class VolumeFill(CellArrangement):
             attribute = CellAttribute.from_type(type)
             for idx, location in enumerate(locations):
                 direction = Vector(random_unit_vector())
-                nucleus = attribute.add_nucleus_object(location, direction)
+                cell_objects = attribute.add_cell_objects(location, direction)
+                cytoplasm = None
+                if len(cell_objects) == 2:
+                    cytoplasm = cell_objects[1]
+                    cytoplasm.name = f"Cytoplasm_Type_{type.name}_{idx}"
+                    self.objects.append(cytoplasm)
+                    self.cytoplasm.append(cytoplasm)
+                nucleus = cell_objects[0]
                 nucleus.name = f"Nucleus_Type_{type.name}_{idx}"
                 self.objects.append(nucleus)
 
@@ -180,7 +187,14 @@ class VoronoiFill(CellArrangement):
     def add(self):
         attribute = CellAttribute.from_type(self.type)
         for idx, seed in enumerate(self.nuclei_seeds):
-            nucleus = attribute.add_nucleus_object(seed.centroid, seed.direction)
+            cell_objects = attribute.add_cell_objects(seed.centroid, seed.direction)
+            cytoplasm = None
+            if len(cell_objects) == 2:
+                cytoplasm = cell_objects[1]
+                cytoplasm.name = f"Cytoplasm_Type_{type.name}_{idx}"
+                self.objects.append(cytoplasm)
+                self.cytoplasm.append(cytoplasm)
+            nucleus = cell_objects[0]
             nucleus.scale = tuple(s / attribute.size for s in seed.scale) # NOTE: Need to rescale since for EPI the scale depends on the Voronoi placement and cannot be given at construction. - ck
             nucleus.name = f"Nucleus_Type_{self.type.name}_{idx}"
             self.objects.append(nucleus)
