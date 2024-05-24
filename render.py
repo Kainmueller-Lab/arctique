@@ -39,7 +39,7 @@ def parse_dataset_args():
     parser = argparse.ArgumentParser()
     
     # RENDERING PARAMETERS                                                                                                                                                        # add argument with list of all gpu devices
-    parser.add_argument("--gpu_devices", type=list, default=[1], help="List of GPU devices to use for rendering")
+    parser.add_argument("--gpu_devices", type=list, default=[0], help="List of GPU devices to use for rendering")
     parser.add_argument("--gpu", type=bool, default=True, help="Use GPU for rendering")
     parser.add_argument("--output_dir", type=str, default="rendered", help="Set output folder")
     parser.add_argument("--start_idx", type=int, default=0, help="Dataset size")
@@ -55,7 +55,7 @@ def parse_dataset_args():
     # nuclei
     parser.add_argument("--surf_number", type=int, default=80, help="number of surface cells")
     parser.add_argument("--filler_scale", type=float, default=0.8, help="Scale of the size of smaller filler nuclei w.r.t to the original nuclei size")
-    parser.add_argument("--number", type=int, default=80, help="number of volume cells")
+    parser.add_argument("--number", type=int, default=800, help="number of volume cells")
     parser.add_argument("--ratios", type=list, default=[0.1, 0.3, 0.4, 0.1, 0.1], help="ratios of different cell types")
     parser.add_argument("--surf_scale", type=tuple, default=(0.8, 0.5, 1), help="Surface scale")
 
@@ -134,6 +134,7 @@ def create_scene(
     volume_fill = arr.VolumeFill(
         mucosa, number, MIX_TYPES, ratios, strict_boundary=False, seed=seed)
     my_scene.add_arrangement(volume_fill)
+    my_scene.cut_cytoplasm_nuclei()
     my_scene.cut_cells(boolean_object=mucosa)
     #volume_fill = arr.VolumeFill(MIX_VOL, MIX_COUNT, MIX_TYPES, RATIOS, strict_boundary=True)
 

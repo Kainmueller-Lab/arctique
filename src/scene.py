@@ -160,6 +160,24 @@ class BioMedicalScene:
             boolean.object = self.tissue
             #bpy.ops.object.modifier_apply(modifier=boolean.name)
 
+    def cut_cytoplasm_nuclei(self, tolerance=0.01):
+        for cyto in self.cell_objects:
+            if cyto.name.startswith('Cytoplasm'):
+                idx_cytoplasm = cyto.name.split('_')[-1]
+                for cell_nucleus in self.cell_objects:
+                    if cell_nucleus.name.startswith('Nucleus') and cell_nucleus.name.endswith(idx_cytoplasm):
+                        # scale nucleus to avoid intersection with cytoplasm cut
+                        cell_nucleus_scale = cell_nucleus.scale
+                        cell_nucleus.scale.x = cell_nucleus.scale.x*(1+tolerance)
+                        cell_nucleus.scale.y = cell_nucleus.scale.y*(1+tolerance)
+                        cell_nucleus.scale.z = cell_nucleus.scale.z*(1+tolerance)
+                        boolean = cyto.modifiers.new(name="nuclei_cut", type='BOOLEAN')
+                        boolean.operation = 'DIFFERENCE'
+                        boolean.object = cell_nucleus
+                        bpy.context.view_layer.objects.active = cyto
+                        bpy.ops.object.modifier_apply(modifier=boolean.name)
+                        cell_nucleus.scale = cell_nucleus_scale
+                
     def cut_cells(self, boolean_object=None):
         for cell in self.cell_objects:
             if cell.name.startswith('Nucleus'):
