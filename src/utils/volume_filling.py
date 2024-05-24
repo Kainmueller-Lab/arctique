@@ -43,10 +43,14 @@ def generate_points(num_points, min_distance, mesh, use_strict_boundary=True):
         bpy.data.objects.remove(bounding_mesh, do_unlink=True)
     return points
 
-def fill_volume(counts, attributes, mesh, use_strict_boundary):
+def fill_volume(counts, attributes, mesh, use_strict_boundary, seed=None):
     radii = [attribute.size for attribute in attributes]
     types = [attribute.cell_type for attribute in attributes]
     assert len(counts) == len(radii), "Counts and radii must have the same length"
+
+    if seed is not None:
+        random.seed(seed)
+        np.random.seed(seed)
 
     points_per_type = []
     # Sort counts and radii by radii, starting with maximal radius

@@ -39,12 +39,12 @@ def parse_dataset_args():
     parser = argparse.ArgumentParser()
     
     # RENDERING PARAMETERS                                                                                                                                                        # add argument with list of all gpu devices
-    parser.add_argument("--gpu_devices", type=list, default=[0], help="List of GPU devices to use for rendering")
+    parser.add_argument("--gpu_devices", type=list, default=[1], help="List of GPU devices to use for rendering")
     parser.add_argument("--gpu", type=bool, default=True, help="Use GPU for rendering")
     parser.add_argument("--output_dir", type=str, default="rendered", help="Set output folder")
     parser.add_argument("--start_idx", type=int, default=0, help="Dataset size")
     parser.add_argument("--n_samples", type=int, default=500, help="Dataset size")
-   
+
     # DATASET PARAMETERS
     # tissue
     parser.add_argument("--tissue_thickness", type=float, default=0.05, help="Tissue thickness")
@@ -55,7 +55,7 @@ def parse_dataset_args():
     # nuclei
     parser.add_argument("--surf_number", type=int, default=80, help="number of surface cells")
     parser.add_argument("--filler_scale", type=float, default=0.8, help="Scale of the size of smaller filler nuclei w.r.t to the original nuclei size")
-    parser.add_argument("--number", type=int, default=800, help="number of volume cells")
+    parser.add_argument("--number", type=int, default=80, help="number of volume cells")
     parser.add_argument("--ratios", type=list, default=[0.6, 0.2, 0.2], help="ratios of different cell types")
     parser.add_argument("--vol_scale", type=tuple, default=(1, 0.7, 1), help="Volume scale")
     parser.add_argument("--surf_scale", type=tuple, default=(0.8, 0.5, 1), help="Surface scale")
@@ -123,7 +123,8 @@ def create_scene(
 
     # Add volume filling
     ATTRIBUTES = [cells.CellAttributeA(), cells.CellAttributeB(), cells.CellAttributeC()]
-    volume_fill = arr.VolumeFill(mucosa, number, ATTRIBUTES, ratios, strict_boundary=False)
+    volume_fill = arr.VolumeFill(
+        mucosa, number, ATTRIBUTES, ratios, strict_boundary=False, seed=seed)
     my_scene.add_arrangement(volume_fill)
     my_scene.cut_cells(boolean_object=mucosa)
 
