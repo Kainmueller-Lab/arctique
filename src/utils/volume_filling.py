@@ -106,6 +106,8 @@ def is_inside(point, obj):
     _point = point - obj.location
     _, closest, nor, _ = obj.closest_point_on_mesh(_point)
     direction = closest - _point
+    # TODO: Test this, maybe remove the 0.03 after. - ck
+    direction /= np.linalg.norm(direction)
     # NOTE: Use this for debugging the dummy volumes - ck
     # if np.linalg.norm(_point) < 0.4:
     #     if direction.dot(nor) > 0.0:
