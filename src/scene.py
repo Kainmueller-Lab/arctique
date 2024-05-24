@@ -86,6 +86,8 @@ class BioMedicalScene:
         self.sample_name = sample_name
         self.arrangements = []
         self.cell_objects = []
+        self.nuclei_objects = []
+        self.cytoplasm_objetcs = []
         self.scene = bpy.context.scene
         self.scene.camera = self.camera.cam_obj
         self._clear_compositor()
@@ -191,6 +193,8 @@ class BioMedicalScene:
         cell_arrangement.add()
         print(f"Added arrangement {cell_arrangement.name} with {len(cell_arrangement.objects)} objects.")
         self.cell_objects = self.cell_objects + cell_arrangement.objects
+        self.nuclei_objects = self.nuclei_objects + cell_arrangement.nuclei
+        self.cytoplasm_objetcs = self.cytoplasm_objetcs + cell_arrangement.cytoplasm
 
     def rename_nuclei(self):
         for idx, cell in enumerate(self.cell_objects):
@@ -235,7 +239,7 @@ class BioMedicalScene:
     def hide_non_cell_objects(self):
         '''hide all objects except cells in the scene'''
         for obj in self.scene.objects:
-            if not obj.name.startswith('Nucleus'):
+            if not obj.name.startswith(('Nucleus', 'Cytoplasm')):
                 obj.hide_viewport = True
                 obj.hide_render = True
 

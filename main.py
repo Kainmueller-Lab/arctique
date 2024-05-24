@@ -70,7 +70,7 @@ MIX_VOL, EPI_VOL = utils.geometry.add_dummy_volumes(my_tissue, TISSUE_PADDING)
 
 MIX_COUNT = 200
 RATIOS = [0.1, 0.3, 0.4, 0.1, 0.1]
-MIX_TYPES = [CellType.MIX, CellType.PLA, CellType.LYM, CellType.EOS, CellType.FIB]
+MIX_TYPES = [CellType.MIX, CellType.PLA, CellType.LYM, CellType.EOS, CellType.FIB] # NOTE: MIX is a PLA nucleus that has a mixed shape interpolated to LYM. - ck
 
 EPI_COUNT = 200
 EPI_TYPE = CellType.EPI
