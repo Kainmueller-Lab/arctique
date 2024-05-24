@@ -31,7 +31,9 @@ class Material():
         self.muscosa = self.add_mucosa_staining()
         self.nuclei_mask = self.add_nuclei_mask()
         self.crypt_staining = self.add_crypt_staining()
-        self.nuclei_staining = self.add_nuclei_staining()
+        self.nuclei_staining = self.add_nuclei_staining(name="Nucleus")
+        self.cytoplasm_staining = self.add_nuclei_staining(name="Cytoplasm", color=(0.605, 0.017, 0.043, 1),
+            staining_intensity=50)
 
     def add_light_source(self, brightness=60, name='light_source'):
         # add new material and node tree
@@ -124,7 +126,7 @@ class Material():
         return material
     
     def add_nuclei_staining(
-            self, name="tissue_staining", color=(0.315, 0.003, 0.631, 1),
+            self, name="Nucleus", color=(0.315, 0.003, 0.631, 1),
             staining_intensity=200, start_pos=(0, 0), sep=200):
         material, nodes, links = shading_utils.initialize_material(name)
 

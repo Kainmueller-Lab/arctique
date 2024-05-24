@@ -141,8 +141,8 @@ def create_scene(
     my_scene.cut_cells()
     my_scene.cut_tissue()
     my_scene.add_tissue_staining(materials=[my_materials.muscosa, my_materials.crypt_staining])
-    my_scene.add_staining(material=my_materials.nuclei_mask)
-    my_scene.add_staining(material=my_materials.nuclei_staining)
+    my_scene.add_nuclei_mask(material=my_materials.nuclei_mask)
+    my_scene.add_staining(materials=[my_materials.nuclei_staining, my_materials.cytoplasm_staining])
 
     # 5) hide non cell objects
     for obj in [crypt, crypt_vol_1]:

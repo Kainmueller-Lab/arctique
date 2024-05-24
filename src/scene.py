@@ -116,6 +116,15 @@ class BioMedicalScene:
         self.tissue_empty.hide_render = True
         self.tissue_empty.scale.z = 0.999
 
+        # add tissue empty for cytoplasm
+        self.tissue_empty_cytoplasm = tissue.copy()
+        self.tissue_empty_cytoplasm.data = tissue.data.copy()
+        bpy.context.collection.objects.link(self.tissue_empty_cytoplasm)
+        self.tissue_empty_cytoplasm.name = 'tissue_empty_Cytoplasm'
+        self.tissue_empty_cytoplasm.hide_viewport = True
+        self.tissue_empty_cytoplasm.hide_render = True
+        self.tissue_empty_cytoplasm.scale.z = 0.999 - 0.0001
+
         # add bounding box for omitting objects outside of tissue
         self.tissue_bound = tissue.copy()
         self.tissue_bound.data = tissue.data.copy()
@@ -153,12 +162,20 @@ class BioMedicalScene:
 
     def cut_cells(self, boolean_object=None):
         for cell in self.cell_objects:
-            boolean = cell.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
-            boolean.operation = 'INTERSECT'
-            if boolean_object is None:
-                boolean.object = self.tissue_empty
-            else:
-                boolean.object = boolean_object
+            if cell.name.startswith('Nucleus'):
+                boolean = cell.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
+                boolean.operation = 'INTERSECT'
+                if boolean_object is None:
+                    boolean.object = self.tissue_empty
+                else:
+                    boolean.object = boolean_object
+            if cell.name.startswith('Cytoplasm'):
+                boolean = cell.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
+                boolean.operation = 'INTERSECT'
+                if boolean_object is None:
+                    boolean.object = self.tissue_empty_cytoplasm
+                else:
+                    boolean.object = boolean_object
 
     def uncut_cells(self): 
         """ reverses the action of cut_cells"""
@@ -183,10 +200,18 @@ class BioMedicalScene:
                     v.data.materials.append(m)
                     v.active_material = m
     
-    def add_staining(self, material):
+    def add_nuclei_mask(self, material):
         for cell in self.cell_objects:
-            cell.data.materials.append(material)
-            cell.active_material = material
+            if cell.name.startswith('Nucleus'):
+                cell.data.materials.append(material)
+                cell.active_material = material
+
+    def add_staining(self, materials):
+        for m in materials:
+            for cell in self.cell_objects:
+                if m.name in cell.name:
+                    cell.data.materials.append(m)
+                    cell.active_material = m
     
     def add_arrangement(self, cell_arrangement: arr.CellArrangement):
         self.arrangements.append(cell_arrangement)
@@ -236,10 +261,10 @@ class BioMedicalScene:
             s.hide_viewport = False
             s.hide_render = False
 
-    def hide_non_cell_objects(self):
+    def hide_non_cell_objects(self, cell_parts = ('Nucleus')):
         '''hide all objects except cells in the scene'''
         for obj in self.scene.objects:
-            if not obj.name.startswith(('Nucleus', 'Cytoplasm')):
+            if not obj.name.startswith(('Nucleus')):
                 obj.hide_viewport = True
                 obj.hide_render = True
 
@@ -558,7 +583,7 @@ class BioMedicalScene:
         
         # switch to non focus camera and switch material of nuclei
         self.camera.switch_to_mask_camera(self.scene)
-        self.add_staining(bpy.data.materials.get("nuclei_mask"))
+        self.add_nuclei_mask(bpy.data.materials.get("nuclei_mask"))
 
         if semantic_mask: 
             self.setup_scene_render_full_masks(output_shape=output_shape, max_samples=1)
