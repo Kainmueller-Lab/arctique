@@ -50,12 +50,12 @@ def parse_dataset_args():
     parser.add_argument("--tissue_thickness", type=float, default=0.05, help="Tissue thickness")
     parser.add_argument("--tissue_size", type=float, default=2, help="Tissue size")
     parser.add_argument("--tissue_location", type=tuple, default=(0, 0, 0.5), help="Tissue location")
-    parser.add_argument("--tissue_padding", type=float, default=0.5, help="Tissue padding")
+    parser.add_argument("--tissue_padding", type=float, default=1, help="Tissue padding")
     
     # nuclei
     parser.add_argument("--surf_number", type=int, default=80, help="number of surface cells")
     parser.add_argument("--filler_scale", type=float, default=0.8, help="Scale of the size of smaller filler nuclei w.r.t to the original nuclei size")
-    parser.add_argument("--number", type=int, default=8, help="number of volume cells")
+    parser.add_argument("--number", type=int, default=800, help="number of volume cells")
     parser.add_argument("--ratios", type=list, default=[0.1, 0.3, 0.4, 0.1, 0.1], help="ratios of different cell types")
     parser.add_argument("--surf_scale", type=tuple, default=(0.8, 0.5, 1), help="Surface scale")
 
@@ -89,6 +89,7 @@ def create_scene(
     Returns:
         my_scene: BioMedicalScene object
     '''
+    print(number)
     scene.BioMedicalScene.clear()
         
     # 1) initialize microscope objects and add to scene
@@ -106,7 +107,9 @@ def create_scene(
     tissue_arch.random_crop(my_tissue.tissue)
     macro_structure = tissue_arch.get_architecture()
     crypt, crypt_vol_1, crypt_vol_2, mucosa = macro_structure
-    my_scene.bound_architecture(volumes=[crypt_vol_1, crypt_vol_2, mucosa], surfaces=[crypt])
+    my_scene.bound_architecture(
+        volumes=[crypt_vol_1, crypt_vol_2, mucosa], surfaces=[crypt],
+        padding=tissue_padding)
 
     # 3) populate scene with nuclei/cells
     # add bounding volumes
@@ -121,6 +124,7 @@ def create_scene(
     # my_scene.add_arrangement(crypt_fill) # NOTE: 200 nuclei take about 30 s
 
     # Add volume filling
+    # add tissue padding befor filling
     MIX_TYPES = [
         cells.CellType.MIX,
         cells.CellType.PLA, 
@@ -128,7 +132,7 @@ def create_scene(
         cells.CellType.EOS, 
         cells.CellType.FIB]
     volume_fill = arr.VolumeFill(
-        mucosa, number, MIX_TYPES, ratios, strict_boundary=True, seed=seed)
+        mucosa, number, MIX_TYPES, ratios, strict_boundary=False, seed=seed)
     my_scene.add_arrangement(volume_fill)
     my_scene.cut_cells(boolean_object=mucosa)
     #volume_fill = arr.VolumeFill(MIX_VOL, MIX_COUNT, MIX_TYPES, RATIOS, strict_boundary=True)

@@ -216,7 +216,7 @@ class build_muscosa():
         self._remove_crypts()
 
     def _add_geometry(self):
-        bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, self.size[2]/2))
+        bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, self.size[2]/2+0.0001))
         geometry = bpy.context.active_object
         geometry.name = self.name
         geometry.scale = (self.size[0]*(1-self.buffer[0]), self.size[1]*(1-self.buffer[1]), self.size[2]*(1+self.buffer[2]))
