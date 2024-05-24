@@ -148,10 +148,16 @@ class VoronoiFill(CellArrangement):
         seeds = []
         for idx, obj in enumerate(region_objects):
             prism_coords = [obj.matrix_world @ v.co for v in obj.data.vertices]
+            if len(prism_coords) == 0:
+                continue
             diam = diameter(prism_coords)
             c = centroid(prism_coords)
+            if diam*diam - 4*self.radius*self.radius < 0:
+                continue
             height = np.sqrt(diam*diam - 4*self.radius*self.radius)
             scale = (0.5*self.size_coeff*height, self.size_coeff*self.radius, self.size_coeff*self.radius)
+            if np.linalg.norm((c - choice[idx])) > 3*self.radius: # NOTE: This avoids artifacts in the voronoi prisms where the prism centroid is far from the surface center point. - ck
+                continue
             direction = (c - choice[idx]) / np.linalg.norm((c - choice[idx]))
             if height < 5 * self.radius: # NOTE: Need this artifact check for now since sometimes a very long icosphere is created. - ck
                 seeds.append(NucleusSeed(centroid=c, scale=scale, direction=direction))
