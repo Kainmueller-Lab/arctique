@@ -18,7 +18,7 @@ class build_crypt():
 
         objects = [self.crypt, self.crypt_vol_in, self.crypt_vol_out]
         for obj in objects:
-            self._cut_geometry(obj)
+            #self._cut_geometry(obj)
             self._scale(obj, (10, 10, 10))
             # bpy.context.view_layer.objects.active = obj
             # obj.select_set(True)

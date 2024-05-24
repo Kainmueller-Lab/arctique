@@ -38,7 +38,7 @@ class VolumeFill(CellArrangement):
     Ratios of corresponding types must be given and determine how many nuclei of each type should be placed.
     If strict_boundary is set to true, nuclei objects will be placed only inside the mesh, otherwise only their locations will be inside the mesh.
     '''
-    def __init__(self, mesh, number, types, ratios, strict_boundary = True):
+    def __init__(self, mesh, number, types, ratios, strict_boundary = True, seed=None):
         """
         Initializes a CellArrangement object with the given parameters.
         Fills a volume with randomly placed nuclei of different types without intersection.
@@ -51,6 +51,7 @@ class VolumeFill(CellArrangement):
             - strict_boundary: if true will place nuclei fully inside the mesh, if false only centroids will be placed fully inside the mesh
         """
         super().__init__()
+        self.seed = seed
         self.name = "VolumeFill"
         self.mesh = mesh
         self.subdivision_levels = 2
@@ -65,7 +66,8 @@ class VolumeFill(CellArrangement):
         self.counts = [int(ratio*number) for ratio in normalized_ratios]
         # Generate points inside mesh with given minimum distance
         # TODO: Generate based on Mahalanobis distance for scaled spheres
-        self.points_per_type = fill_volume(self.counts, self.attributes, self.mesh, self.strict_boundary)
+        self.points_per_type = fill_volume(
+            self.counts, self.attributes, self.mesh, self.strict_boundary, seed=seed)
 
     def add(self):
         for locations, radius, type in self.points_per_type:
