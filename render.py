@@ -4,6 +4,7 @@ import os
 import argparse
 import glob
 from tqdm import tqdm
+import json
 
 # IMPORT SOURCES
 dir = os.path.dirname(bpy.data.filepath)
@@ -42,21 +43,21 @@ def parse_dataset_args():
     parser.add_argument("--gpu_devices", type=list, default=[1], help="List of GPU devices to use for rendering")
     parser.add_argument("--gpu", type=bool, default=True, help="Use GPU for rendering")
     parser.add_argument("--output_dir", type=str, default="rendered", help="Set output folder")
-    parser.add_argument("--start_idx", type=int, default=0, help="Dataset size")
-    parser.add_argument("--n_samples", type=int, default=500, help="Dataset size")
+    parser.add_argument("--start_idx", type=int, default=500, help="Dataset size")
+    parser.add_argument("--n_samples", type=int, default=750, help="Dataset size")
 
     # DATASET PARAMETERS
     # tissue
     parser.add_argument("--tissue_thickness", type=float, default=0.05, help="Tissue thickness")
-    parser.add_argument("--tissue_size", type=float, default=2, help="Tissue size")
+    parser.add_argument("--tissue_size", type=float, default=1.28, help="Tissue size")
     parser.add_argument("--tissue_location", type=tuple, default=(0, 0, 0.5), help="Tissue location")
-    parser.add_argument("--tissue_padding", type=float, default=0.5, help="Tissue padding")
+    parser.add_argument("--tissue_padding", type=float, default=0.1, help="Tissue padding")
     
     # nuclei
-    parser.add_argument("--surf_number", type=int, default=80, help="number of surface cells")
+    parser.add_argument("--epi_number", type=int, default=600, help="number of surface cells")
     parser.add_argument("--filler_scale", type=float, default=0.8, help="Scale of the size of smaller filler nuclei w.r.t to the original nuclei size")
-    parser.add_argument("--number", type=int, default=8, help="number of volume cells")
-    parser.add_argument("--ratios", type=list, default=[0.1, 0.3, 0.4, 0.1, 0.1], help="ratios of different cell types")
+    parser.add_argument("--number", type=int, default=600, help="number of volume cells")
+    parser.add_argument("--ratios", type=list, default=[0, 0.3, 0.4, 0.1, 0.1], help="ratios of different cell types")
     parser.add_argument("--surf_scale", type=tuple, default=(0.8, 0.5, 1), help="Surface scale")
 
     #other default value for --output_dir: "/Volumes/ag_kainmueller/vguarin/synthetic_HE" via internal VPN
@@ -69,10 +70,10 @@ def parse_dataset_args():
 
 
 def create_scene(
-        tissue_thickness = 0.05, tissue_size = 2, tissue_location = (0, 0, 0.5),
-        tissue_padding = 0.5, surf_number = 80, number = 80, 
-        ratios = [0.1, 0.3, 0.4, 0.1, 0.1],
-        seed=0):
+        tissue_thickness = 0.05, tissue_size = 1.28, tissue_location = (0, 0, 0.5),
+        tissue_padding = 0.5, epi_count = 80, number = 80, 
+        ratios = [0, 0.3, 0.4, 0.2, 0.1],
+        seed=0, **kwargs):
     '''
     creates a tissue crop with cells and nuclei
     Args:
@@ -89,16 +90,36 @@ def create_scene(
     Returns:
         my_scene: BioMedicalScene object
     '''
+    print(number)
     scene.BioMedicalScene.clear()
         
     # 1) initialize microscope objects and add to scene
-    my_materials = materials.Material(seed=seed)
+    params_cell_shading = {
+        'PLA': {
+            'Nucleus': {'name': 'Nucleus_PLA', 'color': (0.315, 0.003, 0.631, 1), 'staining_intensity': 140},
+            'Cytoplasm': {'name': 'Cytoplasm_PLA', 'color': (0.456, 0.011, 0.356, 1), 'staining_intensity': 40}},
+        'LYM': {
+            'Nucleus': {'name': 'Nucleus_LYM', 'color': (0.315, 0.003, 0.631, 1), 'staining_intensity': 230}},
+        'EOS': {
+            'Nucleus': {'name': 'Nucleus_EOS', 'color': (0.315, 0.003, 0.631, 1), 'staining_intensity': 170},
+            'Cytoplasm': {'name': 'Cytoplasm_EOS', 'color': (0.605, 0.017, 0.043, 1), 'staining_intensity': 50}},
+        'FIB': {
+            'Nucleus': {'name': 'Nucleus_FIB', 'color': (0.315, 0.003, 0.631, 1), 'staining_intensity': 130}},
+        'EPI': {
+            'Nucleus': {'name': 'Nucleus_EPI', 'color': (0.315, 0.003, 0.631, 1), 'staining_intensity': 150}}}
+        # 'GOB': {
+        #     'Nucleus': {'name': 'Nucleus_GOB', 'color': (1, 1, 1, 1), 'staining_intensity': 0}},
+        # 'MIX': {
+        #     'Nucleus': {'name': 'Nucleus_MIX', 'color': (0.315, 0.003, 0.631, 1), 'staining_intensity': 200},
+        #     'Cytoplasm': {'name': 'Cytoplasm_MIX', 'color': (0.605, 0.017, 0.043, 1), 'staining_intensity': 50}}}  
+    my_materials = materials.Material(seed=seed, cell_type_params=params_cell_shading)
     my_tissue = tissue.Tissue(
         my_materials.muscosa, thickness=tissue_thickness,
         size=tissue_size, location=tissue_location)
     my_light_source = scene.LightSource(material=my_materials.light_source)
     my_camera = scene.Camera()
     my_scene = scene.BioMedicalScene(my_light_source, my_camera)
+    my_scene.add_cell_params(params_cell_shading)
     my_scene.add_tissue(tissue=my_tissue.tissue)
 
     # 2) create macrostructures in tissue block, rotate and scale them and cut them
@@ -106,7 +127,9 @@ def create_scene(
     tissue_arch.random_crop(my_tissue.tissue)
     macro_structure = tissue_arch.get_architecture()
     crypt, crypt_vol_1, crypt_vol_2, mucosa = macro_structure
-    my_scene.bound_architecture(volumes=[crypt_vol_1, crypt_vol_2, mucosa], surfaces=[crypt])
+    my_scene.bound_architecture(
+        volumes=[crypt_vol_1, crypt_vol_2, mucosa], surfaces=[crypt],
+        padding=tissue_padding)
 
     # 3) populate scene with nuclei/cells
     # add bounding volumes
@@ -115,12 +138,11 @@ def create_scene(
     # MIX_VOL, EPI_VOL = utils.geometry.add_dummy_volumes(my_tissue, tissue_padding)
 
     # # add epi volume filling
-    # EPI_COUNT = 200
-    # EPI_ATTRIBUTE = cells.CellAttributeEpi(size=0.1, scale=(1, 0.5, 0.5))
-    # crypt_fill = arr.VoronoiFill(EPI_VOL, EPI_COUNT, EPI_ATTRIBUTE)
-    # my_scene.add_arrangement(crypt_fill) # NOTE: 200 nuclei take about 30 s
+    crypt_fill = arr.VoronoiFill(crypt_vol_1, epi_count, cells.CellType.EPI)
+    my_scene.add_arrangement(crypt_fill) # NOTE: 200 nuclei take about 40 s
 
     # Add volume filling
+    # add tissue padding befor filling
     MIX_TYPES = [
         cells.CellType.MIX,
         cells.CellType.PLA, 
@@ -130,15 +152,16 @@ def create_scene(
     volume_fill = arr.VolumeFill(
         mucosa, number, MIX_TYPES, ratios, strict_boundary=True, seed=seed)
     my_scene.add_arrangement(volume_fill)
-    my_scene.cut_cells(boolean_object=mucosa)
-    #volume_fill = arr.VolumeFill(MIX_VOL, MIX_COUNT, MIX_TYPES, RATIOS, strict_boundary=True)
+    #my_scene.cut_cytoplasm_nuclei()
+    #my_scene.cut_cells(boolean_object=mucosa)
 
     # 4) cut objects and add staining
+    my_scene.add_cell_params(params_cell_shading)
     my_scene.cut_cells()
     my_scene.cut_tissue()
     my_scene.add_tissue_staining(materials=[my_materials.muscosa, my_materials.crypt_staining])
-    my_scene.add_staining(material=my_materials.nuclei_mask)
-    my_scene.add_staining(material=my_materials.nuclei_staining)
+    my_scene.add_nuclei_mask(material=my_materials.nuclei_mask)
+    my_scene.add_staining_to_cell(materials=my_materials.cell_staining)
 
     # 5) hide non cell objects
     for obj in [crypt, crypt_vol_1]:
@@ -148,19 +171,23 @@ def create_scene(
     return my_scene
 
 
-def recreate_scene(parameters):
+def mainpulate_scene(my_scene, **kwargs):
+    pass
+    # TODO 
+    # fix indexing problem
+    # change tissue thickness
+    # 
+
+
+def recreate_scene(**kwargs):
     '''
     recreates a scene from parameters
     Args:
-        parameters: dict, parameters of the scene
+        kwargs: dict, parameters of the scene
     Returns:
         my_scene: BioMedicalScene object
     '''
-    my_scene = create_scene(
-        tissue_thickness = parameters['tissue_thickness'], tissue_size = parameters['tissue_size'], 
-        tissue_location = parameters['tissue_location'], tissue_padding = parameters['tissue_padding'],
-        surf_number = parameters['surf_number'], filler_scale = parameters['filler_scale'], number = parameters['number'], 
-        ratios = parameters['ratios'], vol_scale = parameters['vol_scale'], surf_scale = parameters['surf_scale'])
+    my_scene = create_scene(**kwargs)
     return my_scene
 
 
@@ -212,22 +239,27 @@ def main():
         render_path = os.getcwd() + '/rendered'
     else:
         render_path = args.output_dir
-    print(render_path) 
+    print(render_path)
     dir = render_path + '/train_combined_masks/semantic'
+    dir_parameters = render_path + '/parameters'
     if not os.path.exists(dir):
-            os.makedirs(dir)
+        os.makedirs(dir)
+    if not os.path.exists(dir_parameters):
+        os.makedirs(dir_parameters)
+    
 
     # render individual samples
     for i in tqdm(range(args.start_idx, args.start_idx + args.n_samples)):
-        my_scene = create_scene(
-            tissue_thickness = args.tissue_thickness, tissue_size = args.tissue_size, 
-            tissue_location = args.tissue_location, tissue_padding = args.tissue_padding,
-            surf_number = args.surf_number, number = args.number, 
-            ratios = args.ratios,
-            seed=i)
+        paramters = {
+            'tissue_thickness': args.tissue_thickness, 'tissue_size': args.tissue_size,
+            'tissue_location': args.tissue_location, 'tissue_padding': args.tissue_padding,
+            'epi_count': args.epi_number, 'number': args.number, 'ratios': args.ratios,
+            'seed': i}
+        with open(dir_parameters+f'/parameters_{i}.json', 'w') as outfile:
+            json.dump(paramters, outfile)
+        my_scene = create_scene(**paramters)
         render_scene(my_scene, render_path, i+1, gpu=args.gpu, devices=args.gpu_devices)
         bpy.ops.wm.read_factory_settings(use_empty=True)
-
 
 if __name__ == "__main__":
     main()

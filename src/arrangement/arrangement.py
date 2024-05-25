@@ -108,7 +108,7 @@ class VoronoiFill(CellArrangement):
         self.attribute = CellAttribute.from_type(self.type)
         self.size_coeff = 0.7 # This can be adjusted. It scales the icospheres w.r.t. to the surrounding compartment. If it is set to 1 it maximally fits into the compartment but can lead to overlaps of meshes. - ck
         self.radius = self.attribute.size * self.attribute.scale[1] # We need the secong largest radius as tesselation distance between seed points
-        self.subdivision_level = 4 # Reduce level for computation speed, increase for finer tessellation
+        self.subdivision_level = 3 # Reduce level for computation speed, increase for finer tessellation
 
         # Compute seeds for icospherical nuclei
         self.nuclei_seeds = self.compute_seeds()

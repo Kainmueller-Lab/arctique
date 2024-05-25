@@ -11,9 +11,10 @@ class build_crypt():
         self.hex_input, self.hex_output = self._add_hexagon_structure(self.input.outputs['Geometry'])
         self.crypt_input, self.crypt_otput = self._add_crypts(self.hex_output, self.output.inputs['Geometry'])
         bpy.ops.object.modifier_apply(modifier=self.name)
+        self._cut_geometry(self.crypt)
 
         # add crypt volumes
-        self.crypt_vol_in = self._make_crypt_vol(thickness=0.01, name='crypt_volume_inner')
+        self.crypt_vol_in = self._make_crypt_vol(thickness=0.005, name='crypt_volume_inner')
         self.crypt_vol_out = self._make_crypt_vol(thickness=0.02, name='crypt')
 
         objects = [self.crypt, self.crypt_vol_in, self.crypt_vol_out]
@@ -31,7 +32,7 @@ class build_crypt():
         bpy.context.view_layer.objects.active = obj
         bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
     
-    def _make_crypt_vol(self, thickness=0.1, name='crypt_vol'):
+    def _make_crypt_vol(self, thickness=0.1, name='crypt_vol', offset_tol=0.001):
         # copy the crypt
         crypt_vol = self.crypt.copy()
         crypt_vol.data = self.crypt.data.copy()
@@ -42,6 +43,7 @@ class build_crypt():
         bpy.context.view_layer.objects.active = crypt_vol        
         bpy.ops.object.modifier_add(type='SOLIDIFY')
         bpy.context.object.modifiers['Solidify'].thickness = thickness
+        bpy.context.object.modifiers['Solidify'].offset = bpy.context.object.modifiers['Solidify'].offset + offset_tol
         bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
         bpy.ops.object.modifier_apply(modifier="Solidify")
 
@@ -174,7 +176,7 @@ class build_crypt():
         ### C) Increase details
         subdivide = nodes.new(type='GeometryNodeSubdivisionSurface')
         subdivide.location = (pos.location[0]+sep, pos.location[1])
-        subdivide.inputs['Level'].default_value = 3
+        subdivide.inputs['Level'].default_value = 4
         links.new(pos.outputs['Geometry'], subdivide.inputs['Mesh'])
         
         if out_link is not None:
@@ -216,7 +218,7 @@ class build_muscosa():
         self._remove_crypts()
 
     def _add_geometry(self):
-        bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, self.size[2]/2))
+        bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, self.size[2]/2+0.0001))
         geometry = bpy.context.active_object
         geometry.name = self.name
         geometry.scale = (self.size[0]*(1-self.buffer[0]), self.size[1]*(1-self.buffer[1]), self.size[2]*(1+self.buffer[2]))
