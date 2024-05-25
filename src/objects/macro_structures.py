@@ -14,7 +14,7 @@ class build_crypt():
         self._cut_geometry(self.crypt)
 
         # add crypt volumes
-        self.crypt_vol_in = self._make_crypt_vol(thickness=0.01, name='crypt_volume_inner')
+        self.crypt_vol_in = self._make_crypt_vol(thickness=0.005, name='crypt_volume_inner')
         self.crypt_vol_out = self._make_crypt_vol(thickness=0.02, name='crypt')
 
         objects = [self.crypt, self.crypt_vol_in, self.crypt_vol_out]
@@ -176,7 +176,7 @@ class build_crypt():
         ### C) Increase details
         subdivide = nodes.new(type='GeometryNodeSubdivisionSurface')
         subdivide.location = (pos.location[0]+sep, pos.location[1])
-        subdivide.inputs['Level'].default_value = 3
+        subdivide.inputs['Level'].default_value = 4
         links.new(pos.outputs['Geometry'], subdivide.inputs['Mesh'])
         
         if out_link is not None:

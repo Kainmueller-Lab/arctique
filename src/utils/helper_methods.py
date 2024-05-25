@@ -60,6 +60,7 @@ def subdivide_object(obj, level, type='SIMPLE'):
     bpy.ops.object.modifier_apply(modifier="Subdivision")
 
 def get_info_from_cell_name(name):
-    id = name.split('_')[1]
+    cell_parts = name.split('_')[0]
+    id = name.split('_')[-1]
     type = name.split('_')[2]
-    return id, type
+    return cell_parts, id, type

@@ -26,7 +26,7 @@ def fn_print_time_when_render_done(dummy):
 
 class Camera:
     def __init__(
-            self, name='camera 1', pos=(0, 0, 1.5622), rot=(0, 0, 0), size=2,
+            self, name='camera 1', pos=(0, 0, 1.5622), rot=(0, 0, 0), size=1.28,
             focus_pos=(0, 0, 0.62), fstop=0.8, sensor_width=36):
         self.scene = bpy.context.scene
         
@@ -71,7 +71,7 @@ class Camera:
 class LightSource:
     def __init__(self, material, name='lightsource'):
         # create mesh
-        bpy.ops.mesh.primitive_plane_add(size=2, location=(0, 0, -0.2))
+        bpy.ops.mesh.primitive_plane_add(size=1.28, location=(0, 0, -0.2))
         self.light_source = bpy.context.active_object
 
         # add shading
@@ -80,7 +80,7 @@ class LightSource:
 
 
 class BioMedicalScene:
-    def __init__(self, light_source: LightSource, camera: Camera, sample_name: int = None):
+    def __init__(self, light_source: LightSource, camera: Camera, sample_name: int = None, size=1.28):
         self.light_source = light_source
         self.camera = camera
         self.sample_name = sample_name
@@ -91,6 +91,10 @@ class BioMedicalScene:
         self.scene = bpy.context.scene
         self.scene.camera = self.camera.cam_obj
         self._clear_compositor()
+        self.cell_params = {}
+        self.size = size
+        bpy.context.scene.cycles.volume_bounces = 11
+    
 
     @staticmethod
     def clear():
@@ -114,7 +118,9 @@ class BioMedicalScene:
         self.tissue_empty.name = 'tissue_empty'
         self.tissue_empty.hide_viewport = True
         self.tissue_empty.hide_render = True
-        self.tissue_empty.scale.z = 0.999
+        self.tissue_empty.dimensions.x = self.size
+        self.tissue_empty.dimensions.y = self.size
+        self.tissue_empty.scale.z = 0.997
 
         # add tissue empty for cytoplasm
         self.tissue_empty_cytoplasm = tissue.copy()
@@ -158,7 +164,7 @@ class BioMedicalScene:
             boolean = v.modifiers.new(name="Boolean Modifier 2", type='BOOLEAN')
             boolean.operation = 'INTERSECT'
             boolean.object = self.tissue
-            #bpy.ops.object.modifier_apply(modifier=boolean.name)
+            bpy.ops.object.modifier_apply(modifier=boolean.name)
 
     def cut_cytoplasm_nuclei(self, tolerance=0.01):
         for cyto in self.cell_objects:
@@ -177,16 +183,32 @@ class BioMedicalScene:
                         bpy.context.view_layer.objects.active = cyto
                         bpy.ops.object.modifier_apply(modifier=boolean.name)
                         cell_nucleus.scale = cell_nucleus_scale
+
+    # def cut_tissue_nuclei(self, tolerance=0.02): # TODO
+    #     for v in self.volumes:
+    #         for cell_nucleus in self.cell_objects:
+    #             if cell_nucleus.name.startswith('Nucleus'):
+    #                 boolean = v.modifiers.new(name="nuclei_cut", type='BOOLEAN')
+    #                 boolean.operation = 'DIFFERENCE'
+    #                 boolean.object = cell_nucleus
+    #                 bpy.context.view_layer.objects.active = v
+    #                 bpy.ops.object.modifier_apply(modifier=boolean.name)
                 
     def cut_cells(self, boolean_object=None):
         for cell in self.cell_objects:
             if cell.name.startswith('Nucleus'):
-                boolean = cell.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
-                boolean.operation = 'INTERSECT'
-                if boolean_object is None:
-                    boolean.object = self.tissue_empty
+                cell_type = cell.name.split('_')[-2]
+                if cell_type != 'EPI':
+                    boolean = cell.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
+                    boolean.operation = 'INTERSECT'
+                    if boolean_object is None:
+                        boolean.object = self.tissue_empty
+                    else:
+                        boolean.object = boolean_object
                 else:
-                    boolean.object = boolean_object
+                    boolean = cell.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
+                    boolean.operation = 'INTERSECT'
+                    boolean.object = self.tissue_empty
             if cell.name.startswith('Cytoplasm'):
                 boolean = cell.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
                 boolean.operation = 'INTERSECT'
@@ -201,11 +223,11 @@ class BioMedicalScene:
             mod = cell.modifiers['Boolean Modifier']
             cell.modifiers.remove(mod)
 
-    def cut_cells_in_tissue(self):
-        for cell in self.cell_objects:
-            boolean = self.tissue.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
-            boolean.operation = 'DIFFERENCE'
-            boolean.object = cell
+    # def cut_cells_in_tissue(self):
+    #     for cell in self.cell_objects:
+    #         boolean = self.tissue.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
+    #         boolean.operation = 'DIFFERENCE'
+    #         boolean.object = cell
 
     def add_tissue_staining(self, materials):
         '''
@@ -224,13 +246,29 @@ class BioMedicalScene:
                 cell.data.materials.append(material)
                 cell.active_material = material
 
-    def add_staining(self, materials):
+    def add_staining_to_cell(self, materials):
         for m in materials:
             for cell in self.cell_objects:
-                if m.name in cell.name:
+                cell_type = cell.name.split('_')[-2]
+                cell_part = cell.name.split('_')[0]
+                if cell_type in m.name and cell_part in m.name:
                     cell.data.materials.append(m)
                     cell.active_material = m
+
+    # def add_staining(self, material):
+    #     for cell in self.cell_objects:
+    #         cell.data.materials.append(material)
+    #         cell.active_material = material
     
+    def add_cell_params(self, cell_params):
+        for cell_type, params in cell_params.items():
+            if cell_type not in self.cell_params:
+                self.cell_params[cell_type] = params
+            else:
+                for attr, value in params.items():
+                    self.cell_params[cell_type][attr] = value
+        print(self.cell_params)
+
     def add_arrangement(self, cell_arrangement: arr.CellArrangement):
         self.arrangements.append(cell_arrangement)
         cell_arrangement.add()
@@ -349,25 +387,29 @@ class BioMedicalScene:
         self.cell_info = []
         unique_type_counter = 0
         unique_type_dict = {}
+
+        # TODO: get cell properties from cell object
         
-        masks_path = self.filepath + f"/masks/instance_individual/{self.sample_name}/"
         metadata_path = self.filepath + f'/metadata'
         if not os.path.exists(metadata_path):
             os.makedirs(metadata_path)
             
         for idx, cell in enumerate(self.cell_objects): 
-            cell_id = idx + 1
             cell_name = cell.name
 
-            _, cell_type = hm.get_info_from_cell_name(cell_name)
-            
-            if cell_type not in unique_type_dict.keys(): 
-                unique_type_counter +=1 
+            cell_part, cell_id, cell_type = hm.get_info_from_cell_name(cell_name)
+            # get material properties
+            if cell_type in self.cell_params:
+                if cell_part in self.cell_params[cell_type]:
+                    cell_params = self.cell_params[cell_type][cell_part]
+
+            if cell_type not in unique_type_dict:
+                unique_type_counter += 1
                 unique_type_dict[cell_type] = unique_type_counter
                 
-            mask_name = f"{cell_name}.png"
-            cell_filename = masks_path + '/' + mask_name
-            cell_info_tuple = {"ID": cell_id, "Type": cell_type, "Filename": cell_filename, "Cellname":cell_name, "ID_Type": unique_type_dict[cell_type]}
+            cell_info_tuple = {
+                "ID": int(cell_id), "ID_Type": unique_type_dict[cell_type], "Type": cell_type, "Cellpart": cell_part, "Cellname": cell_name,
+                "staining_color": cell_params["color"], "staining_intensity": cell_params["staining_intensity"]}
             self.cell_info.append(cell_info_tuple)
 
         with open(Path(metadata_path).joinpath(f'metadata_{self.sample_name}.json'), 'w') as f:

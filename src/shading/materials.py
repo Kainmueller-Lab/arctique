@@ -16,7 +16,7 @@ imp.reload(shaders)
 
 
 class Material():
-    def __init__(self, seed=0):
+    def __init__(self, seed=0, cell_type_params=None):
         # delete all materials
         for material in bpy.data.materials:
             bpy.data.materials.remove(material)
@@ -31,9 +31,17 @@ class Material():
         self.muscosa = self.add_mucosa_staining()
         self.nuclei_mask = self.add_nuclei_mask()
         self.crypt_staining = self.add_crypt_staining()
-        self.nuclei_staining = self.add_nuclei_staining(name="Nucleus")
-        self.cytoplasm_staining = self.add_nuclei_staining(name="Cytoplasm", color=(0.605, 0.017, 0.043, 1),
-            staining_intensity=50)
+        self.cell_staining = []
+        if cell_type_params is None:
+            self.nuclei_staining = self.add_nuclei_staining(name="Nucleus")
+            self.cytoplasm_staining = self.add_nuclei_staining(name="Cytoplasm", color=(0.605, 0.017, 0.043, 1),
+                staining_intensity=50)
+        else:
+            for cell_type, parts in cell_type_params.items():
+                for cell_part, params in parts.items():
+                    print(cell_type, cell_part, params)
+                    self.cell_staining.append(self.add_nuclei_staining(**params))
+                    
 
     def add_light_source(self, brightness=60, name='light_source'):
         # add new material and node tree
