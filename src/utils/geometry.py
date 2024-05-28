@@ -168,7 +168,7 @@ def add_box(min_coords, max_coords):
     bpy.context.active_object.location = [(max_coords[i] + min_coords[i]) / 2 for i in range(3)]
     return bpy.context.active_object
 
-def intersect_with_object(target_objects, box_object):
+def intersect_with_object(target_objects, box_object, apply=True):
     # Iterate through each target object
     for target_object in target_objects:
         boolean = target_object.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
@@ -176,7 +176,8 @@ def intersect_with_object(target_objects, box_object):
         boolean.object = box_object
 
         # Apply the boolean modifier and remove the cube object
-        bpy.ops.object.modifier_apply({"object": target_object}, modifier="Boolean Modifier")
+        if apply:
+            bpy.ops.object.modifier_apply({"object": target_object}, modifier="Boolean Modifier")
     return target_objects
 
 def subtract_object(target_objects, subtract_object):
