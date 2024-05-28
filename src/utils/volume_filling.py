@@ -69,12 +69,12 @@ def fill_volume(counts, attributes, mesh, use_strict_boundary, seed=None):
         points = []
         random_points = random_points_in_bbox(bbox, max_iterations)
         for new_point in random_points:
+            if len(points) == count:
+                break
             if is_inside(new_point, bounding_mesh):   
                 if is_far_from_points_per_type(new_point, points_per_type, radius):
                     if is_far_from_points(new_point, points, 2*radius):
                         points.append(new_point)
-            if len(points) == count:
-                break
         points_per_type.append((points, radius, type))
         if use_strict_boundary:
             bpy.data.objects.remove(bounding_mesh, do_unlink=True)
