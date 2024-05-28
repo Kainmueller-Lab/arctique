@@ -120,7 +120,7 @@ class BioMedicalScene:
         self.tissue_empty.hide_render = True
         self.tissue_empty.dimensions.x = self.size
         self.tissue_empty.dimensions.y = self.size
-        self.tissue_empty.scale.z = 0.997
+        self.tissue_empty.scale.z = 0.95
 
         # add tissue empty for cytoplasm
         self.tissue_empty_cytoplasm = tissue.copy()
@@ -129,7 +129,7 @@ class BioMedicalScene:
         self.tissue_empty_cytoplasm.name = 'tissue_empty_Cytoplasm'
         self.tissue_empty_cytoplasm.hide_viewport = True
         self.tissue_empty_cytoplasm.hide_render = True
-        self.tissue_empty_cytoplasm.scale.z = 0.999 - 0.0001
+        self.tissue_empty_cytoplasm.scale.z = 0.97#.5
 
         # add bounding box for omitting objects outside of tissue
         self.tissue_bound = tissue.copy()
@@ -161,9 +161,10 @@ class BioMedicalScene:
 
     def cut_tissue(self):
         for v in self.volumes:
-            boolean = v.modifiers.new(name="Boolean Modifier 2", type='BOOLEAN')
+            boolean = v.modifiers.new(name="tissue cutting", type='BOOLEAN')
             boolean.operation = 'INTERSECT'
             boolean.object = self.tissue
+            bpy.context.view_layer.objects.active = v
             bpy.ops.object.modifier_apply(modifier=boolean.name)
 
     def cut_cytoplasm_nuclei(self, tolerance=0.01):
@@ -197,25 +198,24 @@ class BioMedicalScene:
     def cut_cells(self, boolean_object=None):
         for cell in self.cell_objects:
             if cell.name.startswith('Nucleus'):
-                cell_type = cell.name.split('_')[-2]
-                if cell_type != 'EPI':
-                    boolean = cell.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
-                    boolean.operation = 'INTERSECT'
-                    if boolean_object is None:
-                        boolean.object = self.tissue_empty
-                    else:
-                        boolean.object = boolean_object
-                else:
-                    boolean = cell.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
-                    boolean.operation = 'INTERSECT'
-                    boolean.object = self.tissue_empty
+                boolean = cell.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
+                boolean.operation = 'INTERSECT'
+                boolean.object = self.tissue_empty
+                #boolean.solver = 'FAST'
             if cell.name.startswith('Cytoplasm'):
                 boolean = cell.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
                 boolean.operation = 'INTERSECT'
-                if boolean_object is None:
-                    boolean.object = self.tissue_empty_cytoplasm
-                else:
-                    boolean.object = boolean_object
+                boolean.object = self.tissue_empty_cytoplasm
+            
+            cell_copy = hm.copy_object(cell)
+            hm.convert2mesh(cell_copy)
+            if hm.check_obj_empty(cell_copy):
+                # remove from list
+                print(f"Removed empty object {cell.name}")
+                bpy.data.objects.remove(cell)
+                self.cell_objects.remove(cell)   
+            bpy.data.objects.remove(cell_copy)
+
 
     def uncut_cells(self): 
         """ reverses the action of cut_cells"""
@@ -269,12 +269,22 @@ class BioMedicalScene:
                     self.cell_params[cell_type][attr] = value
         print(self.cell_params)
 
-    def add_arrangement(self, cell_arrangement: arr.CellArrangement):
+    def add_arrangement(self, cell_arrangement: arr.CellArrangement, bounding_mesh=None):
         self.arrangements.append(cell_arrangement)
         cell_arrangement.add()
         print(f"Added arrangement {cell_arrangement.name} with {len(cell_arrangement.objects)} objects.")
-        self.cell_objects = self.cell_objects + cell_arrangement.objects
-        self.nuclei_objects = self.nuclei_objects + cell_arrangement.nuclei
+        if bounding_mesh is not None:
+            cell_parts = hm.delete_cells_outside_tissue(cell_arrangement.objects, bounding_mesh)
+        else:
+            cell_parts = cell_arrangement.objects
+
+        # safety checks
+        for cell in cell_parts:
+            hm.convert2mesh(cell)
+            hm.shade_switch(cell, flat=True)
+
+        self.cell_objects = self.cell_objects + cell_parts
+        self.nuclei_objects = self.nuclei_objects + cell_arrangement.nuclei # TODO change that to just access per name since we will have more and more cell parts
         self.cytoplasm_objetcs = self.cytoplasm_objetcs + cell_arrangement.cytoplasm
 
     def rename_nuclei(self):
@@ -381,35 +391,44 @@ class BioMedicalScene:
         
     def create_cell_info(self):    
         ''''
-        TODO change to metadata
+        TODO add position in pixel
+        TODO check if idx starts add 0 or 1 for color putting -> node setup
         create a list of dictionaries wich contains for each cell its type and ID 
         ''' 
         self.cell_info = []
         unique_type_counter = 0
         unique_type_dict = {}
+        self.lookup_indices = hm.get_universal_cell_ids([c.name for c in self.cell_objects])
 
-        # TODO: get cell properties from cell object
-        
         metadata_path = self.filepath + f'/metadata'
         if not os.path.exists(metadata_path):
             os.makedirs(metadata_path)
-            
+
         for idx, cell in enumerate(self.cell_objects): 
             cell_name = cell.name
 
-            cell_part, cell_id, cell_type = hm.get_info_from_cell_name(cell_name)
+            cell_part, type_idx, cell_type, idx_name = hm.get_info_from_cell_name(cell_name) 
+            
             # get material properties
             if cell_type in self.cell_params:
                 if cell_part in self.cell_params[cell_type]:
                     cell_params = self.cell_params[cell_type][cell_part]
 
+            # get unique id for each cell type
             if cell_type not in unique_type_dict:
                 unique_type_counter += 1
                 unique_type_dict[cell_type] = unique_type_counter
                 
+            # get cell location
+            loc_in_scene, loc_in_pixel = hm.get_cell_location(
+                cell, self.scene.camera, self.scene.render.resolution_x)
+
             cell_info_tuple = {
-                "ID": int(cell_id), "ID_Type": unique_type_dict[cell_type], "Type": cell_type, "Cellpart": cell_part, "Cellname": cell_name,
-                "staining_color": cell_params["color"], "staining_intensity": cell_params["staining_intensity"]}
+                "ID": self.lookup_indices[idx_name] , "ID_Type": unique_type_dict[cell_type],
+                "Type": cell_type, "Cellpart": cell_part, "Cellname": cell_name,
+                "staining_color": cell_params["color"],
+                "staining_intensity": cell_params["staining_intensity"],
+                "location": loc_in_scene, "location_pixel": loc_in_pixel}
             self.cell_info.append(cell_info_tuple)
 
         with open(Path(metadata_path).joinpath(f'metadata_{self.sample_name}.json'), 'w') as f:
@@ -497,34 +516,36 @@ class BioMedicalScene:
         self.set_object_pass_idx(type)
         self.scene.view_layers["ViewLayer"].use_pass_object_index = True
         self.mask_type = type
-
         self.setup_node_tree_full_masks()
         self.scene.render.filepath = str(Path(self.semantic_path).joinpath("empty.png"))
-        print(self.scene.render.filepath)
-
         bpy.ops.render.render('EXEC_DEFAULT', write_still=True) # render single cell mask
-
-        # the exported image is a BW-png with the pixel values corresponding to the cell types/cell instances
-        # typically most pixel values are close to 0 and not well visible in a typical image viewer. Theerfore 
-        # we assign colors to to pixels to ensure visibility
-        print(self.scene.render.filepath)
         palette = self.define_palette(type=type)
         path_temp = self.semantic_path + f"/tmp_{self.sample_name}0001.png"
+
+        # get mask data and unique values 
         with Image.open(path_temp) as im:
-            colored_instance_mask = np.array(im)
+            mask = np.array(im, dtype=np.uint16)
+            values = np.unique(mask)
         if type == "semantic":
-            self.semantic_ids = np.unique(im)
+            self.semantic_ids = values
         if type == "instance":
-            self.instance_ids = np.unique(im)
-        colored_instance_mask = ph.put_palette(colored_instance_mask, palette)
+            self.instance_ids = values
+        
+        # save a colorized version for better visibility 
+        colored_instance_mask = ph.put_palette(mask, palette)
         colored_instance_mask = Image.fromarray(colored_instance_mask.astype(np.uint8))
+        colored_instance_mask.save(str(Path(self.semantic_path).joinpath(f"{self.sample_name}.png")))
+        
+        # convert the mask to correct cell ids
+        ids = hm.map_16bit_to_index(values)
+        mask_indexing = ph.put_palette_1d(mask, ids, values)
         if not os.path.exists(self.semantic_path+'_indexing'):
             os.makedirs(self.semantic_path+'_indexing')
-        new_path = self.semantic_path+'_indexing'+ f"/{self.sample_name}.png"
-        if os.path.exists(new_path):
-            os.remove(new_path)
-        Path(path_temp).rename(new_path)
-        colored_instance_mask.save(str(Path(self.semantic_path).joinpath(f"{self.sample_name}.png")))
+        new_path = self.semantic_path+'_indexing'+ f"/{self.sample_name}.tif"
+        Image.fromarray(mask_indexing).save(new_path)
+        if os.path.exists(path_temp):
+            os.remove(path_temp)
+        
         self._clear_compositor()
     
     def enable_depth_output_render_setup(self):
@@ -632,17 +653,19 @@ class BioMedicalScene:
         output_shape = width and height of output pngs
         max_samples: number of samples for rendering. Fewer samples will render more quickly
         '''
-        self.filepath = filepath
-        self.create_cell_info()
-        
+        self.filepath = filepath        
         bpy.app.handlers.render_complete.append(fn_print_time_when_render_done)
 
         if scene: 
+            print("rendering scene")
             self.setup_scene_render_default(output_shape=output_shape, max_samples=max_samples)
             self.export_scene()
+            print("scene rendered")
+
         
         # switch to non focus camera and switch material of nuclei
         self.camera.switch_to_mask_camera(self.scene)
+        self.create_cell_info()
         self.add_nuclei_mask(bpy.data.materials.get("nuclei_mask"))
 
         if semantic_mask: 
@@ -685,8 +708,6 @@ class BioMedicalScene:
         tissue_thickness = self.tissue_empty.dimensions.z
         tissue_location = self.tissue_empty.location.z
 
-        tissue_thickness = tissue_thickness
-
         # prepare slices
         if slice_thickness is None: 
             slice_thickness = tissue_thickness / n_slices
@@ -694,7 +715,6 @@ class BioMedicalScene:
         end = tissue_location - (tissue_thickness - slice_thickness) / 2
         slices = np.arange(start, end-end/10**4, -slice_thickness)
         self.tissue_empty.dimensions.z = slice_thickness
-        print(slices)
 
         # setup scene for rendering
         self.hide_non_cell_objects()
@@ -709,33 +729,39 @@ class BioMedicalScene:
         self.scene.render.filepath = str(Path(filepath).joinpath("empty.png"))
         instance_mask_3d = []
         instance_mask_3d_indexing = []
-        print(self.scene.render.filepath)
         
         for idx, loc in enumerate(slices): # TODO turn off rendering scene
+            
+            # render single slice
             self.tissue_empty.location.z = loc
             bpy.ops.render.render('EXEC_DEFAULT', write_still=True) # render single cell mask
-            print(self.scene.render.filepath)
+
+            # open rendered result
             name = self.output_node.file_slots[0].path
-            
-            # colorize mask
-            palette = self.define_palette(type=type)
             path_temp = filepath + f"/{name}0001.png"
             with Image.open(path_temp) as im:
-                indexing = np.array(im)
-                colored_instance_mask = np.copy(indexing)
-            colored_instance_mask = ph.put_palette(colored_instance_mask, palette, ids=self.instance_ids)
+                mask = np.array(im, dtype=np.uint16)
+                values = np.unique(mask)
+
+            # colorize mask
+            palette = self.define_palette(type=type)
+            colored_instance_mask = ph.put_palette(mask, palette, ids=self.instance_ids)
+            colored_instance_mask = Image.fromarray(colored_instance_mask.astype(np.uint8))
+            colored_instance_mask.save(str(Path(filepath).joinpath(f"slice_{self.sample_name}_{idx}.png")))
+            instance_mask_3d.append(colored_instance_mask)
+            
+            # save correct index mask
+            ids = hm.map_16bit_to_index(values)
+            indexing = ph.put_palette_1d(mask, ids, values)
             new_filepath = self.filepath + f'/masks/instance_3d_indexing/{self.sample_name}/'
             if not os.path.exists(new_filepath):
                 os.makedirs(new_filepath)
             new_path = new_filepath + f"/slice_{self.sample_name}_{idx}.png"
-            if os.path.exists(new_path):
-                os.remove(new_path)
-            Path(path_temp).rename(new_path)
+            if os.path.exists(path_temp):
+                os.remove(path_temp)
+            Image.fromarray(indexing).save(new_path)
             os.remove(self.scene.render.filepath)
-            instance_mask_3d.append(colored_instance_mask)
             instance_mask_3d_indexing.append(indexing)
-            colored_instance_mask = Image.fromarray(colored_instance_mask.astype(np.uint8))
-            colored_instance_mask.save(str(Path(filepath).joinpath(f"slice_{self.sample_name}_{idx}.png")))
             
         # combine to numpy stack
         instance_mask_3d = np.stack(instance_mask_3d)
