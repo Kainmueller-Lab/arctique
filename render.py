@@ -268,7 +268,7 @@ def main():
         with open(dir_parameters+f'/parameters_{i}.json', 'w') as outfile:
             json.dump(paramters, outfile)
         my_scene = create_scene(**paramters)
-        render_scene(my_scene, render_path, i+1, gpu=args.gpu, devices=args.gpu_device)
+        render_scene(my_scene, render_path, i+1, gpu=args.gpu, device=args.gpu_device)
         bpy.ops.wm.read_factory_settings(use_empty=True)
 
 if __name__ == "__main__":
