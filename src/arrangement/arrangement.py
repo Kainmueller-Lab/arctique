@@ -144,25 +144,23 @@ class VoronoiFill(CellArrangement):
             region_objects.append(region)
         region_objects = intersect_with_object(region_objects, self.mesh_obj)
 
-        # Place icospheres into Voronoi regions
-        seeds = []
         for idx, obj in enumerate(region_objects):
             prism_coords = [obj.matrix_world @ v.co for v in obj.data.vertices]
-            if len(prism_coords) == 0:
+            if len(prism_coords) == 0 or diameter(prism_coords) > 4*self.radius:
+                # If region empty or too large (avoid artifacts)
                 continue
-            diam = diameter(prism_coords)
-            c = centroid(prism_coords)
-            if diam*diam - 4*self.radius*self.radius < 0:
-                continue
-            height = np.sqrt(diam*diam - 4*self.radius*self.radius)
-            scale = (0.5*self.size_coeff*height, self.size_coeff*self.radius, self.size_coeff*self.radius)
-            if np.linalg.norm((c - choice[idx])) > 3*self.radius: # NOTE: This avoids artifacts in the voronoi prisms where the prism centroid is far from the surface center point. - ck
-                continue
-            direction = (c - choice[idx]) / np.linalg.norm((c - choice[idx]))
-            if height < 5 * self.radius: # NOTE: Need this artifact check for now since sometimes a very long icosphere is created. - ck
-                seeds.append(NucleusSeed(centroid=c, scale=scale, direction=direction))
+
+            bpy.ops.mesh.primitive_ico_sphere_add(radius=3, location=centroid(prism_coords))
+            nucleus = bpy.context.active_object
+            bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+            shrinkwrap(obj, nucleus)
+            smoothen_object(nucleus, 0.8, 4)
+
+            nucleus.name = f"Nucleus_Type_{self.type.name}_{idx}"
+            self.objects.append(nucleus)
+            self.nuclei.append(nucleus)
         remove_objects(region_objects + [surface_obj])
-        return seeds
+        return []
 
     def split_vertices(self, mesh):
         inner, outer = [], []
