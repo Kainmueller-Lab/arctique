@@ -54,10 +54,10 @@ class CellAttribute():
 class PLA(CellAttribute):
     def __init__(self, 
                  cell_type = CellType.PLA,
-                 size = 0.9,  # 0.9
+                 size = 0.07,
                  nucleus_size = 0.05,
-                 scale = (1,0.8,0.7), # (1, 0.6, 0.5)
-                 deformation_strength = 0.4,  # 0.7
+                 scale = (1,0.6,0.5),
+                 deformation_strength = 0.7,
                  attribute_name = "Plasma Cell",
                  max_bending_strength = 0.2):
         super().__init__()
@@ -93,9 +93,9 @@ class LYM(CellAttribute):
     def __init__(self, 
                  cell_type = CellType.LYM,
                  size = 0.04,
-                 nucleus_size = 0.025, # 0.04,
-                 scale = (1, 0.9, 0.8),  #(1, 0.9, 0.8),
-                 deformation_strength = 0.2,  #0.7,
+                 nucleus_size = 0.04,
+                 scale = (1, 0.9, 0.8),
+                 deformation_strength = 0.7,
                  attribute_name = "Lymphocyte",
                  max_bending_strength = 0.2):
         super().__init__()
@@ -121,7 +121,7 @@ class EOS(CellAttribute):
     def __init__(self, 
                  cell_type = CellType.EOS,
                  size = 0.06,
-                 nucleus_size = 0.025, # 0.04
+                 nucleus_size = 0.04,
                  scale = (1,1,1),
                  deformation_strength = 0.2,
                  attribute_name = "Eosinophile",
@@ -168,8 +168,8 @@ class FIB(CellAttribute):
     def __init__(self, 
                  cell_type = CellType.FIB,
                  size = 0.1,
-                 nucleus_size = 0.1, # 0.1
-                 scale = (1,0.6,0.5),  #(1,0.4,0.3),
+                 nucleus_size = 0.1,
+                 scale = (1,0.4,0.3),
                  deformation_strength = 0.2,
                  attribute_name = "Fibroblast",
                  max_bending_strength = 0.7):

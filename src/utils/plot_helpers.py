@@ -14,12 +14,16 @@ def make_color_palette(n_colors, bg_col = (0,0,0), seed=42):
             if col not in colors: 
                 colors.append(col)
                 not_unique =False
+    # palette = []
+    # for color in colors:
+    #     palette.extend(color)
+
     return colors
 
 def put_palette(image_arr, palette, ids=None):
     '''
     image_arr: np.array, image array, shape (H, W) with pixel values in [0, 255]
-    palette: list of RGB values
+    palette: list, list of RGB values
     '''
     if ids is None:
         ids = np.unique(image_arr)
@@ -27,20 +31,6 @@ def put_palette(image_arr, palette, ids=None):
     for i, idx in enumerate(ids):
             new_image_arr[image_arr == idx] = palette[i]
     return new_image_arr
-
-
-def put_palette_1d(image_arr, palette, ids=None):
-    '''
-    image_arr: np.array, image array, shape (H, W)
-    palette: list of new values
-    '''
-    if ids is None:
-        ids = np.unique(image_arr)
-    new_image_arr = np.zeros(image_arr.shape, dtype=np.uint8)
-    for i, idx in enumerate(ids):
-        new_image_arr[image_arr == idx] = palette[i]
-    return new_image_arr
-
 
 def reduce_single_masks(source_folder, file_names): 
     """
