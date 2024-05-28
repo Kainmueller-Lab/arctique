@@ -192,7 +192,20 @@ def subtract_object(target_objects, subtract_object):
         bpy.ops.object.modifier_apply({"object": target_object}, modifier="Boolean Modifier")
     return target_objects
 
-def shrinkwrap(cell_objects, nuclei_scale=1):
+def smoothen_object(obj, factor, iterations):
+    smooth_mod = obj.modifiers.new(name="Smooth", type='SMOOTH')
+    smooth_mod.factor = factor
+    smooth_mod.iterations = iterations
+
+def shrinkwrap(target, wrapper):
+    shrinkwrap_mod = wrapper.modifiers.new(name="Shrinkwrap", type='SHRINKWRAP')
+    shrinkwrap_mod.target = target
+    shrinkwrap_mod.wrap_method = 'NEAREST_SURFACEPOINT'  # You can choose other methods like 'PROJECT', 'NEAREST_VERTEX', etc.
+    bpy.context.view_layer.objects.active = wrapper
+    bpy.ops.object.modifier_apply(modifier=shrinkwrap_mod.name)
+
+# NOTE: OLD METHOD
+def shrinkwrap_old(cell_objects, type):
     nucleus_objects = []
     for cell_object in cell_objects:
         bpy.ops.mesh.primitive_cube_add(enter_editmode=False, align='WORLD', location=cell_object.location)
@@ -200,11 +213,6 @@ def shrinkwrap(cell_objects, nuclei_scale=1):
         shrinkwrap = nucleus_object.modifiers.new(name="Shrinkwrap Modifier", type='SHRINKWRAP')
         shrinkwrap.target = cell_object
         bpy.ops.object.modifier_apply(modifier="Shrinkwrap Modifier")
-        subsurf = nucleus_object.modifiers.new("Subsurface Modifier", type='SUBSURF')
-        subsurf.levels = 2
-        bpy.ops.object.modifier_apply(modifier="Subsurface Modifier")
-        nucleus_object.scale = (nuclei_scale, nuclei_scale, nuclei_scale)
-        nucleus_objects.append(nucleus_object)
     return nucleus_objects
 
 def subdivide(obj, levels):
