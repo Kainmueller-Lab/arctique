@@ -44,7 +44,7 @@ def parse_dataset_args():
     parser = argparse.ArgumentParser()
     
     # RENDERING PARAMETERS                                                                                                                                                        # add argument with list of all gpu devices
-    parser.add_argument("--gpu_devices", type=list, default=[0], help="List of GPU devices to use for rendering")
+    parser.add_argument("--gpu_device", type=int, default=0, help="List of GPU devices to use for rendering")
     parser.add_argument("--gpu", type=bool, default=True, help="Use GPU for rendering")
     parser.add_argument("--output_dir", type=str, default="rendered", help="Set output folder")
     parser.add_argument("--start_idx", type=int, default=0, help="Dataset size")
@@ -201,7 +201,7 @@ def recreate_scene(**kwargs):
     return my_scene
 
 
-def render_scene(my_scene, render_path, sample_name, gpu=True, devices=[0], output_shape=(512, 512), max_samples=256):
+def render_scene(my_scene, render_path, sample_name, gpu=True, device=0, output_shape=(512, 512), max_samples=256):
     '''
     renders a scene
     Args:
@@ -222,7 +222,7 @@ def render_scene(my_scene, render_path, sample_name, gpu=True, devices=[0], outp
     bpy.context.preferences.addons["cycles"].preferences.get_devices()
     print(bpy.context.preferences.addons["cycles"].preferences.compute_device_type)
     for j, d in enumerate(bpy.context.preferences.addons["cycles"].preferences.devices):
-        if j in devices:
+        if j == device:
             d["use"] = True
         else:
             d["use"] = False
@@ -268,7 +268,7 @@ def main():
         with open(dir_parameters+f'/parameters_{i}.json', 'w') as outfile:
             json.dump(paramters, outfile)
         my_scene = create_scene(**paramters)
-        render_scene(my_scene, render_path, i+1, gpu=args.gpu, devices=args.gpu_devices)
+        render_scene(my_scene, render_path, i+1, gpu=args.gpu, devices=args.gpu_device)
         bpy.ops.wm.read_factory_settings(use_empty=True)
 
 if __name__ == "__main__":
