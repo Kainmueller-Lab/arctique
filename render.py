@@ -20,6 +20,8 @@ import src.utils as utils
 import src.utils.geometry as geom
 import src.utils.surface_filling as sf
 import src.objects.tissue_architecture as arch
+import src.utils.helper_methods as hm
+import src.utils.geometry as geo
 
 # this next part forces a reload in case you edit the source after you first start the blender session
 #import imp
@@ -33,6 +35,8 @@ imp.reload(utils)
 imp.reload(geom)
 imp.reload(sf)
 imp.reload(arch)
+imp.reload(hm)
+imp.reload(geo)
 
 
 
@@ -43,21 +47,21 @@ def parse_dataset_args():
     parser.add_argument("--gpu_devices", type=list, default=[0], help="List of GPU devices to use for rendering")
     parser.add_argument("--gpu", type=bool, default=True, help="Use GPU for rendering")
     parser.add_argument("--output_dir", type=str, default="rendered", help="Set output folder")
-    parser.add_argument("--start_idx", type=int, default=500, help="Dataset size")
-    parser.add_argument("--n_samples", type=int, default=750, help="Dataset size")
+    parser.add_argument("--start_idx", type=int, default=0, help="Dataset size")
+    parser.add_argument("--n_samples", type=int, default=100, help="Dataset size")
 
     # DATASET PARAMETERS
     # tissue
     parser.add_argument("--tissue_thickness", type=float, default=0.05, help="Tissue thickness")
     parser.add_argument("--tissue_size", type=float, default=1.28, help="Tissue size")
     parser.add_argument("--tissue_location", type=tuple, default=(0, 0, 0.5), help="Tissue location")
-    parser.add_argument("--tissue_padding", type=float, default=0.1, help="Tissue padding")
+    parser.add_argument("--tissue_padding", type=float, default=0.2, help="Tissue padding")
     
     # nuclei
-    parser.add_argument("--epi_number", type=int, default=600, help="number of surface cells")
+    parser.add_argument("--epi_number", type=int, default=150, help="number of surface cells")
     parser.add_argument("--filler_scale", type=float, default=0.8, help="Scale of the size of smaller filler nuclei w.r.t to the original nuclei size")
-    parser.add_argument("--number", type=int, default=600, help="number of volume cells")
-    parser.add_argument("--ratios", type=list, default=[0, 0.3, 0.4, 0.1, 0.1], help="ratios of different cell types")
+    parser.add_argument("--number", type=int, default=1200, help="number of volume cells")
+    parser.add_argument("--ratios", type=list, default=[0, 0.3, 0.3, 0.2, 0.2], help="ratios of different cell types")
     parser.add_argument("--surf_scale", type=tuple, default=(0.8, 0.5, 1), help="Surface scale")
 
     #other default value for --output_dir: "/Volumes/ag_kainmueller/vguarin/synthetic_HE" via internal VPN
@@ -107,11 +111,6 @@ def create_scene(
             'Nucleus': {'name': 'Nucleus_FIB', 'color': (0.315, 0.003, 0.631, 1), 'staining_intensity': 130}},
         'EPI': {
             'Nucleus': {'name': 'Nucleus_EPI', 'color': (0.315, 0.003, 0.631, 1), 'staining_intensity': 150}}}
-        # 'GOB': {
-        #     'Nucleus': {'name': 'Nucleus_GOB', 'color': (1, 1, 1, 1), 'staining_intensity': 0}},
-        # 'MIX': {
-        #     'Nucleus': {'name': 'Nucleus_MIX', 'color': (0.315, 0.003, 0.631, 1), 'staining_intensity': 200},
-        #     'Cytoplasm': {'name': 'Cytoplasm_MIX', 'color': (0.605, 0.017, 0.043, 1), 'staining_intensity': 50}}}  
     my_materials = materials.Material(seed=seed, cell_type_params=params_cell_shading)
     my_tissue = tissue.Tissue(
         my_materials.muscosa, thickness=tissue_thickness,
@@ -132,12 +131,7 @@ def create_scene(
         padding=tissue_padding)
 
     # 3) populate scene with nuclei/cells
-    # add bounding volumes
-    # NOTE: MIX_VOL bounds the volume for the mixed cell types
-    # NOTE: EPI_VOL bounds the volume for the epithelial cell types.
-    # MIX_VOL, EPI_VOL = utils.geometry.add_dummy_volumes(my_tissue, tissue_padding)
-
-    # # add epi volume filling
+    # add epi volume filling
     crypt_fill = arr.VoronoiFill(crypt_vol_1, epi_count, cells.CellType.EPI)
     my_scene.add_arrangement(crypt_fill) # NOTE: 200 nuclei take about 40 s
 
@@ -149,11 +143,12 @@ def create_scene(
         cells.CellType.LYM, 
         cells.CellType.EOS, 
         cells.CellType.FIB]
+    stroma_fill = hm.copy_object(mucosa, name='stroma_fill')
+    hm.convert2mesh(stroma_fill)
     volume_fill = arr.VolumeFill(
         mucosa, number, MIX_TYPES, ratios, strict_boundary=True, seed=seed)
-    my_scene.add_arrangement(volume_fill)
+    my_scene.add_arrangement(volume_fill, bounding_mesh=stroma_fill) # NOTE: 240 nuclei take about 20 s
     #my_scene.cut_cytoplasm_nuclei()
-    #my_scene.cut_cells(boolean_object=mucosa)
 
     # 4) cut objects and add staining
     my_scene.add_cell_params(params_cell_shading)
@@ -164,19 +159,34 @@ def create_scene(
     my_scene.add_staining_to_cell(materials=my_materials.cell_staining)
 
     # 5) hide non cell objects
-    for obj in [crypt, crypt_vol_1]:
+    for obj in [crypt, crypt_vol_1, stroma_fill]:
         obj.hide_viewport = True
         obj.hide_render = True
 
     return my_scene
 
 
-def mainpulate_scene(my_scene, **kwargs):
-    pass
+class mainpulate_scene(object):
+    def __init__(self, my_scene):
+        self.my_scene = my_scene
+    
+    def change_tissue_thickness(self, thickness):
+        pass
+
+    def delete_objects(self, objects):
+        pass
+
+    def change_staining(self, cell_object, staining_intensity, staining_color):
+        pass
+
+    def change_tissue_staining(self, materials):
+        pass
+
+    def inflate_cells(self):
+        pass
     # TODO 
     # fix indexing problem
-    # change tissue thickness
-    # 
+
 
 
 def recreate_scene(**kwargs):
@@ -191,7 +201,7 @@ def recreate_scene(**kwargs):
     return my_scene
 
 
-def render_scene(my_scene, render_path, sample_name, gpu=True, devices=[0], output_shape=(512, 512), max_samples=1024):
+def render_scene(my_scene, render_path, sample_name, gpu=True, devices=[0], output_shape=(512, 512), max_samples=256):
     '''
     renders a scene
     Args:
