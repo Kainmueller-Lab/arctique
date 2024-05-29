@@ -43,7 +43,7 @@ def generate_points(num_points, min_distance, mesh, use_strict_boundary=True):
         bpy.data.objects.remove(bounding_mesh, do_unlink=True)
     return points
 
-def fill_volume(counts, attributes, mesh, use_strict_boundary, seed=None):
+def fill_volume(counts, attributes, volume, use_strict_boundary, seed=None):
     radii = [attribute.size for attribute in attributes]
     types = [attribute.cell_type for attribute in attributes]
     assert len(counts) == len(radii), "Counts and radii must have the same length"
@@ -57,27 +57,22 @@ def fill_volume(counts, attributes, mesh, use_strict_boundary, seed=None):
     zipped_data = list(zip(radii, counts, types))
     sorted_data = sorted(zipped_data, key=lambda x: x[0], reverse=True)
     for radius, count, type in sorted_data:
-        # Create shrinked copy of mesh
-        shrink_value = radius
-        bounding_mesh = get_shrinked_copy(mesh, shrink_value)  if use_strict_boundary else mesh
         # Compute max number of iterations
-        bbox = compute_bbox(bounding_mesh)
+        bbox = compute_bbox(volume)
         box_volume = compute_bbox_volume(bbox)
         max_iterations = upper_limit_points(box_volume, radius)
 
-        # TODO: test this
+        shrink_value = 1.5 * radius if use_strict_boundary else 0 # NOTE: Reduce 1.5 in case nuclei distance to mesh boundary is too large.
         points = []
         random_points = random_points_in_bbox(bbox, max_iterations)
         for new_point in random_points:
             if len(points) == count:
                 break
-            if is_inside(new_point, bounding_mesh):   
+            if is_inside(new_point, volume, shrink_value):   
                 if is_far_from_points_per_type(new_point, points_per_type, radius):
                     if is_far_from_points(new_point, points, 2*radius):
                         points.append(new_point)
         points_per_type.append((points, radius, type))
-        if use_strict_boundary:
-            bpy.data.objects.remove(bounding_mesh, do_unlink=True)
     assert len(counts) == len(points_per_type), "List points_per_type is not the same length as list counts"
     return points_per_type
 
@@ -102,17 +97,24 @@ def upper_limit_points(volume, radius):
     # See: https://en.wikipedia.org/wiki/Sphere_packing
     return np.floor((3*0.64*volume)/(4*np.pi*radius*radius*radius))
 
-def is_inside(point, obj):
-    _point = point - obj.location
-    _, closest, nor, _ = obj.closest_point_on_mesh(_point)
-    direction = closest - _point
-    # TODO: Test this, maybe remove the 0.03 after. - ck
-    direction /= np.linalg.norm(direction)
-    # NOTE: Use this for debugging the dummy volumes - ck
-    # if np.linalg.norm(_point) < 0.4:
-    #     if direction.dot(nor) > 0.0:
-    #         print(f"Outside pt: {point}, scp value: {direction.dot(nor)}, normal: {nor}")
-    return direction.dot(nor) > 0.03 # NOTE: Increase this threshold slightly if inner nuclei artifacts do appear.It should be closest possible to 0 though. - ck
+def nearest_vertex(obj, q):
+    vertices = [v for v in obj.data.vertices]
+    v_coords = [obj.matrix_world @ v.co for v in obj.data.vertices]
+    distances = [np.linalg.norm(p-q) for p in v_coords]
+    min_index = np.argmin(distances)
+    nearest_vertex = vertices[min_index]
+    min_distance = distances[min_index]
+    return nearest_vertex, min_distance
+
+def is_inside(point, obj, shrink=0):
+    '''
+    Checks whether a given point lies inside a shrinked version of the given mesh.
+    '''
+    nearest_vert, _ = nearest_vertex(obj, point)
+    normal = nearest_vert.normal
+    closest = nearest_vert.co - shrink*normal
+    direction = closest - point
+    return direction.dot(normal) > 0.01
 
 def random_points_in_bbox(bbox, count):
     xs, ys, zs = bbox

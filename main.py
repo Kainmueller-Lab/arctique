@@ -47,16 +47,14 @@ TISSUE_LOCATION = (0, 0, 0.5)
 TISSUE_PADDING = 0.04
 SEED = 100
 
-MIX_COUNT = 200
+MIX_COUNT = 300
 RATIOS = [0.1, 0.3, 0.4, 0.1, 0.1]
 MIX_TYPES = [CellType.MIX, CellType.PLA, CellType.LYM, CellType.EOS, CellType.FIB] # NOTE: MIX is a PLA nucleus that has a mixed shape interpolated to LYM. - ck
-
-EPI_COUNT = 200
-EPI_TYPE = CellType.EPI
-# NOTE: This is an unused dummy variable. You have to set it in the cells.py file.
+# NOTE: TYPE_MIXING is an unused dummy variable. You have to set it in the cells.py file.
 # Once we use config files this should easily be solvable. - ck
 TYPE_MIXING = 0.3 # Mixing strength of PLA nuclei (between 0 and 1, 0 is a pure PLA shape, 1 is a pure LYM shape)
 
+EPI_TYPE = CellType.EPI
 
 ###################  MAIN  METHOD  #####################
 # create the necessary objects
@@ -76,18 +74,13 @@ my_scene.add_tissue(tissue=my_tissue.tissue)
 tissue_arch = arch.TissueArch(seed=SEED)
 tissue_arch.random_crop(my_tissue.tissue)
 macro_structure = tissue_arch.get_architecture()
-crypt, crypt_vol_1, crypt_vol_2, mucosa = macro_structure
-my_scene.bound_architecture(volumes=[crypt_vol_1, crypt_vol_2, mucosa], surfaces=[crypt])
-# NOTE: MIX_VOL bounds the volume for the mixed cell types
-# NOTE: EPI_VOL bounds the volume for the epithelial cell types.
-MIX_VOL = mucosa
-EPI_VOL = crypt_vol_1
-#MIX_VOL, EPI_VOL = utils.geometry.add_dummy_volumes(my_tissue, TISSUE_PADDING)
+crypt, epithelium, crypt_vol_2, mucosa = macro_structure
+my_scene.bound_architecture(volumes=[epithelium, crypt_vol_2, mucosa], surfaces=[crypt])
 
 # 3) populate scene with nuclei/cells
 # add mix volume filling
 start = time.time()
-volume_fill = arr.VolumeFill(MIX_VOL, MIX_COUNT, MIX_TYPES, RATIOS, strict_boundary=True, seed=SEED)
+volume_fill = arr.VolumeFill(mucosa, MIX_COUNT, MIX_TYPES, RATIOS, strict_boundary=True, seed=SEED)
 end1 = time.time()
 print(f"Volume filling took {end1 - start} s")
 my_scene.add_arrangement(volume_fill) # NOTE: 240 nuclei take about 20 s
@@ -95,7 +88,7 @@ end2 = time.time()
 print(f"Volume adding took {time.time() - end1} s")
 
 # add epi volume filling
-crypt_fill = arr.VoronoiFill(EPI_VOL, EPI_COUNT, EPI_TYPE)
+crypt_fill = arr.VoronoiFill(epithelium, EPI_TYPE)
 end3 = time.time()
 print(f"Voronoi filling took {end3 - end2} s")
 my_scene.add_arrangement(crypt_fill) # NOTE: 200 nuclei take about 40 s
@@ -103,11 +96,11 @@ end4 = time.time()
 print(f"Voronoi adding took {end4 - end3} s")
 
 # 4) cut objects and add staining
-my_scene.cut_cells()
-my_scene.cut_tissue()
-my_scene.add_tissue_staining(materials=[my_materials.muscosa, my_materials.crypt_staining])
-my_scene.add_staining(material=my_materials.nuclei_mask)
-my_scene.add_staining(material=my_materials.nuclei_staining)
+#my_scene.cut_cells()
+#my_scene.cut_tissue()
+# my_scene.add_tissue_staining(materials=[my_materials.muscosa, my_materials.crypt_staining])
+# my_scene.add_staining(material=my_materials.nuclei_mask)
+# my_scene.add_staining(material=my_materials.nuclei_staining)
 
 # Hide non cell objects
 my_scene.hide_non_cell_objects()

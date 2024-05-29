@@ -88,7 +88,7 @@ class VolumeFill(CellArrangement):
 
 
 class VoronoiFill(CellArrangement):
-    def __init__(self, mesh_obj, count, type):
+    def __init__(self, mesh_obj, type):
         """
         Initializes a CellArrangement object with the given parameters.
         Takes as input a mesh_obj which needs to consist of an outer and an inner wall mesh, e.g. an annulus.
@@ -97,17 +97,16 @@ class VoronoiFill(CellArrangement):
 
         Parameters:
             - mesh_obj: object of volume to populate with nuclei
-            - count: number of total nuclei to populate
             - attribute: nuclei type attribute that should populate the mesh
         """
         super().__init__()
         self.name = "VoronoiFill"
         self.mesh_obj = mesh_obj
-        self.count = count
         self.type = type
         self.attribute = CellAttribute.from_type(self.type)
         self.size_coeff = 0.7 # This can be adjusted. It scales the icospheres w.r.t. to the surrounding compartment. If it is set to 1 it maximally fits into the compartment but can lead to overlaps of meshes. - ck
-        self.radius = self.attribute.size * self.attribute.scale[1] # We need the secong largest radius as tesselation distance between seed points
+        self.radius = self.attribute.size
+        self.max_count = 500 # NOTE: The volume will be filled up with maximally this number of nuclei
         self.subdivision_level = 3 # Reduce level for computation speed, increase for finer tessellation
 
         # Compute seeds for icospherical nuclei
@@ -124,8 +123,7 @@ class VoronoiFill(CellArrangement):
         root = outer_data[0][0]
         sorted_data = self.sort_data_by_root_dist(outer_data, root)
         sorted_vs = [v for v, _ in sorted_data]
-        choice, _ = self.sample_centers(sorted_vs, 2*self.radius, self.count)
-        #choice_normals = [sorted_data[idx][1] for idx in choice_ids]
+        choice, _ = self.sample_centers(sorted_vs, 2*self.radius, self.max_count)
         
         # Create Voronoi regions
         min_coords = [min([v[0] for v in choice]), min([v[1] for v in choice]), min([v[2] for v in choice])]
@@ -145,16 +143,16 @@ class VoronoiFill(CellArrangement):
         region_objects = intersect_with_object(region_objects, self.mesh_obj)
 
         for idx, obj in enumerate(region_objects):
+            remove_loose_vertices(obj) # NOTE: For some strange reason the intersection with "FAST" solver leads to ca 1000 loose vertices per region. - ck
             prism_coords = [obj.matrix_world @ v.co for v in obj.data.vertices]
-            if len(prism_coords) == 0 or diameter(prism_coords) > 4*self.radius:
-                # If region empty or too large (avoid artifacts)
+            if len(prism_coords) < 4 or diameter(prism_coords) > 10*self.radius or diameter(prism_coords) < self.radius:
+                # Don't create nuclei objetcs if Voronoi region too small or too large (avoid artifacts)
                 continue
 
             bpy.ops.mesh.primitive_ico_sphere_add(radius=3, location=centroid(prism_coords))
             nucleus = bpy.context.active_object
-            bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
             shrinkwrap(obj, nucleus)
-            smoothen_object(nucleus, 0.8, 4)
+            smoothen_object(nucleus, 1.5, 5) # TODO: Make these params in EPI cell type 
 
             nucleus.name = f"Nucleus_Type_{self.type.name}_{idx}"
             self.objects.append(nucleus)
@@ -194,17 +192,5 @@ class VoronoiFill(CellArrangement):
         return sampled_verts, sampled_ids
 
     def add(self):
-        attribute = CellAttribute.from_type(self.type)
-        for idx, seed in enumerate(self.nuclei_seeds):
-            cell_objects = attribute.add_cell_objects(seed.centroid, seed.direction)
-            cytoplasm = None
-            if len(cell_objects) == 2:
-                cytoplasm = cell_objects[1]
-                cytoplasm.name = f"Cytoplasm_Type_{type.name}_{idx}"
-                self.objects.append(cytoplasm)
-                self.cytoplasm.append(cytoplasm)
-            nucleus = cell_objects[0]
-            nucleus.scale = tuple(s / attribute.size for s in seed.scale) # NOTE: Need to rescale since for EPI the scale depends on the Voronoi placement and cannot be given at construction. - ck
-            nucleus.name = f"Nucleus_Type_{self.type.name}_{idx}"
-            self.objects.append(nucleus)
-            self.nuclei.append(nucleus)
+        # NOTE: Remove and refactor later
+        pass

@@ -11,12 +11,12 @@ from src.shading.materials import Material
 from src.utils.geometry import *
 
 class CellType(Enum):
-    PLA = 1,
-    LYM = 2,
-    EOS = 3,
-    FIB = 4,
-    EPI = 5,
-    GOB = 6,
+    PLA = 1
+    LYM = 2
+    EOS = 3
+    FIB = 4
+    EPI = 5
+    GOB = 6
     MIX = 7
 
 TYPE_MIXING = 0.3
@@ -54,7 +54,7 @@ class CellAttribute():
 class PLA(CellAttribute):
     def __init__(self, 
                  cell_type = CellType.PLA,
-                 size = 0.9,  # 0.9
+                 size = 0.09,  # 0.9
                  nucleus_size = 0.05,
                  scale = (1,0.8,0.7), # (1, 0.6, 0.5)
                  deformation_strength = 0.4,  # 0.7
@@ -147,7 +147,7 @@ class EOS(CellAttribute):
         cytoplasm.scale = self.scale
 
         # Add nucleus
-        coeff = 0.36 # Controls the displacement between to metaballs, 0: no distance
+        coeff = 0.55 # Controls the displacement between to metaballs, 0: no distance
         delta = 2.0*coeff*self.nucleus_size
         rad1 = self.size*(1-coeff) + self.deformation_strength*self.size*random.uniform(-1,1)
         rad2 = 2.0*self.size*(1-coeff) - rad1
@@ -204,9 +204,9 @@ class FIB(CellAttribute):
 class EPI(CellAttribute):
     def __init__(self, 
                  cell_type = CellType.EPI,
-                 size = 0.1,
-                 nucleus_size = 0.1,
-                 scale = (1, 0.6, 0.6),
+                 size = 0.05,
+                 nucleus_size = 0.05,
+                 scale = (1, 1, 1),
                  deformation_strength = 0.2,
                  attribute_name = "Epithelial Cell",
                  max_bending_strength = 0.3):
