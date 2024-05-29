@@ -191,9 +191,10 @@ def subtract_object(target_objects, subtract_object):
     return target_objects
 
 def smoothen_object(obj, factor, iterations):
-    smooth_mod = obj.modifiers.new(name="Smooth", type='SMOOTH')
+    smooth_mod = obj.modifiers.new(name="Smooth Modifier", type='SMOOTH')
     smooth_mod.factor = factor
     smooth_mod.iterations = iterations
+    bpy.ops.object.modifier_apply(modifier="Smooth Modifier")
 
 def shrinkwrap(target, wrapper):
     shrinkwrap_mod = wrapper.modifiers.new(name="Shrinkwrap", type='SHRINKWRAP')

@@ -104,17 +104,15 @@ class VoronoiFill(CellArrangement):
         self.mesh_obj = mesh_obj
         self.type = type
         self.attribute = CellAttribute.from_type(self.type)
-        self.size_coeff = 0.7 # This can be adjusted. It scales the icospheres w.r.t. to the surrounding compartment. If it is set to 1 it maximally fits into the compartment but can lead to overlaps of meshes. - ck
         self.radius = self.attribute.size
         self.max_count = 500 # NOTE: The volume will be filled up with maximally this number of nuclei
-        self.subdivision_level = 3 # Reduce level for computation speed, increase for finer tessellation
+        self.surface_subdivision_levels = 5 # NOTE: Increase this for finer subdvision and more quasi-random placement, but will be slower
+        self.add_nuclei() 
 
-        # Compute seeds for icospherical nuclei
-        self.nuclei_seeds = self.compute_seeds()
 
-    def compute_seeds(self):
+    def add_nuclei(self):
         surface_obj = remove_top_and_bottom_faces(self.mesh_obj)
-        subdivide_object(surface_obj, self.subdivision_level)
+        subdivide_object(surface_obj, self.surface_subdivision_levels)
         mesh = surface_obj.data
         _, outer_vs = self.split_vertices(mesh)
 
@@ -145,15 +143,15 @@ class VoronoiFill(CellArrangement):
         for idx, obj in enumerate(region_objects):
             remove_loose_vertices(obj) # NOTE: For some strange reason the intersection with "FAST" solver leads to ca 1000 loose vertices per region. - ck
             prism_coords = [obj.matrix_world @ v.co for v in obj.data.vertices]
+            # Don't create nuclei objetcs if Voronoi region too small or too large (avoid artifacts)
             if len(prism_coords) < 4 or diameter(prism_coords) > 10*self.radius or diameter(prism_coords) < self.radius:
-                # Don't create nuclei objetcs if Voronoi region too small or too large (avoid artifacts)
                 continue
 
             bpy.ops.mesh.primitive_ico_sphere_add(radius=3, location=centroid(prism_coords))
             nucleus = bpy.context.active_object
             shrinkwrap(obj, nucleus)
-            smoothen_object(nucleus, 1.5, 5) # TODO: Make these params in EPI cell type 
-
+            smoothen_object(nucleus, self.attribute.smooth_factor, self.attribute.smooth_roundness)
+            subdivide(nucleus, self.attribute.subdivision_levels)
             nucleus.name = f"Nucleus_Type_{self.type.name}_{idx}"
             self.objects.append(nucleus)
             self.nuclei.append(nucleus)

@@ -54,7 +54,6 @@ MIX_TYPES = [CellType.MIX, CellType.PLA, CellType.LYM, CellType.EOS, CellType.FI
 # Once we use config files this should easily be solvable. - ck
 TYPE_MIXING = 0.3 # Mixing strength of PLA nuclei (between 0 and 1, 0 is a pure PLA shape, 1 is a pure LYM shape)
 
-EPI_TYPE = CellType.EPI
 
 ###################  MAIN  METHOD  #####################
 # create the necessary objects
@@ -74,8 +73,8 @@ my_scene.add_tissue(tissue=my_tissue.tissue)
 tissue_arch = arch.TissueArch(seed=SEED)
 tissue_arch.random_crop(my_tissue.tissue)
 macro_structure = tissue_arch.get_architecture()
-crypt, epithelium, crypt_vol_2, mucosa = macro_structure
-my_scene.bound_architecture(volumes=[epithelium, crypt_vol_2, mucosa], surfaces=[crypt])
+crypt, epithelium, goblet_vol, mucosa = macro_structure
+my_scene.bound_architecture(volumes=[epithelium, goblet_vol, mucosa], surfaces=[crypt])
 
 # 3) populate scene with nuclei/cells
 # add mix volume filling
@@ -88,7 +87,10 @@ end2 = time.time()
 print(f"Volume adding took {time.time() - end1} s")
 
 # add epi volume filling
-crypt_fill = arr.VoronoiFill(epithelium, EPI_TYPE)
+TEST_GOBLET_CELLS = True
+volume = goblet_vol if TEST_GOBLET_CELLS else epithelium # TODO: Add EPI and GOB cells on two disjoint volumes.
+cell_type = CellType.GOB if TEST_GOBLET_CELLS else CellType.EPI
+crypt_fill = arr.VoronoiFill(volume, cell_type)
 end3 = time.time()
 print(f"Voronoi filling took {end3 - end2} s")
 my_scene.add_arrangement(crypt_fill) # NOTE: 200 nuclei take about 40 s

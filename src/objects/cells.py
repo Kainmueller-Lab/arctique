@@ -25,12 +25,8 @@ TYPE_MIXING = 0.3
 class CellAttribute():
     def __init__(self):
         self.cell_type = None
-        self.size = None # Cell size
-        self.nucleus_size = None
-        self.scale = None
-        self.deformation_strength = None
+        self.size = None
         self.attribute_name = None
-        self.max_bending_strength = None
         self.subdivision_levels = 1
 
     def add_cell_objects(self, location, direction):
@@ -52,22 +48,15 @@ class CellAttribute():
 # The scale of an attribute should always be normalized such the maximal scale value is 1. 
 # This ensures that the maximal diameter of a cell nucleus is twice its size.
 class PLA(CellAttribute):
-    def __init__(self, 
-                 cell_type = CellType.PLA,
-                 size = 0.09,  # 0.9
-                 nucleus_size = 0.05,
-                 scale = (1,0.8,0.7), # (1, 0.6, 0.5)
-                 deformation_strength = 0.4,  # 0.7
-                 attribute_name = "Plasma Cell",
-                 max_bending_strength = 0.2):
+    def __init__(self):
         super().__init__()
-        self.cell_type = cell_type
-        self.size = size
-        self.nucleus_size = nucleus_size
-        self.scale = scale
-        self.deformation_strength = deformation_strength
-        self.attribute_name = attribute_name
-        self.max_bending_strength = max_bending_strength
+        self.cell_type = CellType.PLA
+        self.size = 0.09 # 0.9
+        self.nucleus_size = 0.05
+        self.scale = (1,0.8,0.7) # (1, 0.6, 0.5)
+        self.deformation_strength = 0.4 # 0.7
+        self.attribute_name = "Plasma Cell"
+        self.max_bending_strength = 0.2
     
     def add_cell_objects(self, location, direction):
         # Add cytoplasm
@@ -90,22 +79,15 @@ class PLA(CellAttribute):
         return [nucleus, cytoplasm] # NOTE: Important: Nucleus needs to be first in list. - ck
 
 class LYM(CellAttribute):
-    def __init__(self, 
-                 cell_type = CellType.LYM,
-                 size = 0.04,
-                 nucleus_size = 0.025, # 0.04,
-                 scale = (1, 0.9, 0.8),  #(1, 0.9, 0.8),
-                 deformation_strength = 0.2,  #0.7,
-                 attribute_name = "Lymphocyte",
-                 max_bending_strength = 0.2):
+    def __init__(self):
         super().__init__()
-        self.cell_type = cell_type
-        self.size = size
-        self.nucleus_size = nucleus_size
-        self.scale = scale
-        self.deformation_strength = deformation_strength
-        self.attribute_name = attribute_name
-        self.max_bending_strength = max_bending_strength
+        self.cell_type = CellType.LYM
+        self.size = 0.04 # 0.04,
+        self.nucleus_size = 0.025
+        self.scale = (1, 0.9, 0.8) #(1, 0.9, 0.8)
+        self.deformation_strength = 0.2 #0.7
+        self.attribute_name = "Lymphocyte"
+        self.max_bending_strength = 0.2
     
     def add_cell_objects(self, location, direction):
         bpy.ops.mesh.primitive_ico_sphere_add(radius=self.size)
@@ -118,23 +100,15 @@ class LYM(CellAttribute):
         return [nucleus]
 
 class EOS(CellAttribute):
-    def __init__(self, 
-                 cell_type = CellType.EOS,
-                 size = 0.06,
-                 nucleus_size = 0.025, # 0.04
-                 scale = (1,1,1),
-                 deformation_strength = 0.2,
-                 attribute_name = "Eosinophile",
-                 max_bending_strength = 0.2):
+    def __init__(self):
         super().__init__()
-        self.cell_type = cell_type
-        self.size = size
-        self.nucleus_size = nucleus_size
-        self.scale = scale
-        self.deformation_strength = deformation_strength
-        self.attribute_name = attribute_name
-        self.max_bending_strength = max_bending_strength
-
+        self.cell_type = CellType.EOS
+        self.size = 0.06
+        self.nucleus_size = 0.025
+        self.scale = (1,1,1)
+        self.deformation_strength = 0.2
+        self.attribute_name = "Eosinophil"
+        self.max_bending_strength = 0.2
 
     def add_cell_objects(self, location, direction):
         # Add cytoplasm
@@ -165,22 +139,15 @@ class EOS(CellAttribute):
         return [nucleus, cytoplasm]
 
 class FIB(CellAttribute):
-    def __init__(self, 
-                 cell_type = CellType.FIB,
-                 size = 0.1,
-                 nucleus_size = 0.1, # 0.1
-                 scale = (1,0.6,0.5),  #(1,0.4,0.3),
-                 deformation_strength = 0.2,
-                 attribute_name = "Fibroblast",
-                 max_bending_strength = 0.7):
+    def __init__(self):
         super().__init__()
-        self.cell_type = cell_type
-        self.size = size
-        self.nucleus_size = nucleus_size
-        self.scale = scale
-        self.deformation_strength = deformation_strength
-        self.attribute_name = attribute_name
-        self.max_bending_strength = max_bending_strength
+        self.cell_type = CellType.FIB
+        self.size = 0.1
+        self.nucleus_size = 0.1
+        self.scale = (1,0.6,0.5)
+        self.deformation_strength = 0.2
+        self.attribute_name = "Fibroblast"
+        self.max_bending_strength = 0.7
 
     def add_cell_objects(self, location, direction):
         coeff = 0.3 # Controls the displacement between to metaballs, 0: no distance
@@ -202,60 +169,29 @@ class FIB(CellAttribute):
         return [nucleus]
 
 class EPI(CellAttribute):
-    def __init__(self, 
-                 cell_type = CellType.EPI,
-                 size = 0.05,
-                 nucleus_size = 0.05,
-                 scale = (1, 1, 1),
-                 deformation_strength = 0.2,
-                 attribute_name = "Epithelial Cell",
-                 max_bending_strength = 0.3):
+    def __init__(self):
         super().__init__()
-        self.cell_type = cell_type
-        self.size = size
-        self.nucleus_size = nucleus_size
-        self.scale = scale
-        self.deformation_strength = deformation_strength
-        self.attribute_name = attribute_name
-        self.max_bending_strength = max_bending_strength
+        self.cell_type = CellType.EPI
+        self.size = 0.05
+        self.attribute_name = "Epithelial Cell"
+        self.smooth_factor = 1
+        self.smooth_roundness = 4
 
     def add_cell_objects(self, location, direction):
-            bpy.ops.mesh.primitive_ico_sphere_add(radius=self.size)
-            nucleus = bpy.context.active_object
-            deform_mesh(nucleus, self)
-            subdivide(nucleus, self.subdivision_levels)
-            set_orientation(nucleus, direction)
-            nucleus.location = location
-            nucleus.scale = self.scale
-            return [nucleus]
+        pass
 
 class GOB(CellAttribute):
-    def __init__(self,
-                 cell_type = CellType.GOB,
-                 size = 0.15,
-                 nucleus_size = 0.15,
-                 scale = (1,0.8,0.7),
-                 deformation_strength = 0.4,
-                 attribute_name = "Goblet Cell",
-                 max_bending_strength = 0.2):
+    def __init__(self):
         super().__init__()
-        self.cell_type = cell_type
-        self.size = size
-        self.nucleus_size = nucleus_size
-        self.scale = scale
-        self.deformation_strength = deformation_strength
-        self.attribute_name = attribute_name
-        self.max_bending_strength = max_bending_strength
+        self.cell_type = CellType.GOB
+        self.size = 0.1
+        self.attribute_name = "Goblet Cell"
+        self.smooth_factor = 0.7
+        self.smooth_roundness = 5
+        self.subdivision_levels = 2
 
     def add_cell_objects(self, location, direction):
-            bpy.ops.mesh.primitive_ico_sphere_add(radius=self.size)
-            nucleus = bpy.context.active_object
-            deform_mesh(nucleus, self)
-            subdivide(nucleus, self.subdivision_levels)
-            set_orientation(nucleus, direction)
-            nucleus.location = location
-            nucleus.scale = self.scale
-            return [nucleus]
+        pass
 
 
 
