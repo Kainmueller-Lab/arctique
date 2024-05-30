@@ -14,7 +14,9 @@ class TissueArch():
         self.tissue = macro.build_muscosa(self.crypt.crypt)
 
     def get_architecture(self):
-        return [self.crypt.crypt, self.crypt.crypt_vol_in, self.crypt.crypt_vol_out, self.tissue.muscosa]
+        return [
+            self.crypt.crypt, self.crypt.crypt_vol_in, 
+            self.crypt.crypt_vol_out, self.tissue.muscosa]
     
     def random_crop(self, crop):
         objects = self.get_architecture()

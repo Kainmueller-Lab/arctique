@@ -1,5 +1,13 @@
 import bpy
+
 from src.shading.materials import Material
+import src.utils.helper_methods as hm
+
+# this next part forces a reload in case you edit the source after you first start the blender session
+# #import imp
+# import importlib as imp # imp module is deprecated since python 3.12
+# imp.reload(hm)
+# imp.reload(Material)
 
 
 
@@ -14,8 +22,10 @@ class build_crypt():
         self._cut_geometry(self.crypt)
 
         # add crypt volumes
-        self.crypt_vol_in = self._make_crypt_vol(thickness=0.01, name='crypt_volume_inner')
+        self.crypt_vol_in = self._make_crypt_vol(thickness=0.005, name='crypt_volume_inner')
         self.crypt_vol_out = self._make_crypt_vol(thickness=0.02, name='crypt')
+
+        # TODO inner, outer middle
 
         objects = [self.crypt, self.crypt_vol_in, self.crypt_vol_out]
         for obj in objects:

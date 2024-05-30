@@ -129,11 +129,17 @@ def create_scene(
     my_scene.bound_architecture(
         volumes=[crypt_vol_1, crypt_vol_2, mucosa], surfaces=[crypt],
         padding=tissue_padding)
+    vol_goblet = hm.copy_object(crypt_vol_2, 'vol_goblet')
+    extended_stroma = hm.copy_object(mucosa, 'extended_stroma')
+    hm.add_boolean_modifier(extended_stroma, crypt_vol_1, operation='UNION', name='add epi to stroma', apply=True)
+    hm.add_boolean_modifier(vol_goblet, extended_stroma, name='Remove inner volume', apply=True)
 
     # 3) populate scene with nuclei/cells
     # add epi volume filling
-    crypt_fill = arr.VoronoiFill(crypt_vol_1, epi_count, cells.CellType.EPI)
+    crypt_goblet = arr.VoronoiFill(vol_goblet, cells.CellType.GOB)
+    crypt_fill = arr.VoronoiFill(crypt_vol_1, cells.CellType.EPI)
     my_scene.add_arrangement(crypt_fill) # NOTE: 200 nuclei take about 40 s
+    my_scene.add_arrangement(crypt_goblet)
 
     # Add volume filling
     # add tissue padding befor filling
@@ -150,6 +156,11 @@ def create_scene(
     my_scene.add_arrangement(volume_fill, bounding_mesh=stroma_fill) # NOTE: 240 nuclei take about 20 s
     #my_scene.cut_cytoplasm_nuclei()
 
+    # remove goblet cell volum from tissue
+    my_scene.remove_goblet_volume(crypt_vol_2)
+
+    
+    
     # 4) cut objects and add staining
     my_scene.add_cell_params(params_cell_shading)
     my_scene.cut_cells()
@@ -159,7 +170,12 @@ def create_scene(
     my_scene.add_staining_to_cell(materials=my_materials.cell_staining)
 
     # 5) hide non cell objects
-    for obj in [crypt, crypt_vol_1, stroma_fill]:
+    goblet_cells = []
+    for cell in my_scene.cell_objects:
+        cell_type = cell.name.split('_')[-2]
+        if cell_type == 'GOB':
+            goblet_cells.append(cell)
+    for obj in [crypt, crypt_vol_1, stroma_fill, vol_goblet, extended_stroma]+goblet_cells:
         obj.hide_viewport = True
         obj.hide_render = True
 
