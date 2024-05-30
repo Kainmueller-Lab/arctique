@@ -27,6 +27,7 @@ class build_crypt():
 
         # TODO inner, outer middle
 
+
         objects = [self.crypt, self.crypt_vol_in, self.crypt_vol_out]
         for obj in objects:
             #self._cut_geometry(obj)
@@ -42,7 +43,7 @@ class build_crypt():
         bpy.context.view_layer.objects.active = obj
         bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
     
-    def _make_crypt_vol(self, thickness=0.1, name='crypt_vol', offset_tol=0.001):
+    def _make_crypt_vol(self, thickness=0.1, name='crypt_vol', offset_tol=0.1):
         # copy the crypt
         crypt_vol = self.crypt.copy()
         crypt_vol.data = self.crypt.data.copy()
