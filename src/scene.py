@@ -255,6 +255,12 @@ class BioMedicalScene:
                     cell.data.materials.append(m)
                     cell.active_material = m
 
+    def remove_goblet_volume(self, volume):
+        for cell in self.cell_objects:
+            cell_type = cell.name.split('_')[-2]
+            if cell_type == 'GOB':
+                hm.add_boolean_modifier(volume, cell, name='remove goblet', operation='DIFFERENCE', apply=True)
+
     # def add_staining(self, material):
     #     for cell in self.cell_objects:
     #         cell.data.materials.append(material)
