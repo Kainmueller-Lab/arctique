@@ -306,6 +306,33 @@ def remove_top_and_bottom_faces(obj):
     bpy.context.collection.objects.link(new_obj)
     return new_obj
 
+def remove_vertical_and_horizontal_faces(obj):
+    mesh = bpy.data.meshes.new(name="ModifiedMesh")
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+
+    epsilon = 1e-3
+    # Deselect all faces
+    for face in bm.faces:
+        face.select_set(False)
+    # Select faces with vertical normals
+    for face in bm.faces:
+        normal = face.normal
+        # Check if the z-component of the normal is close to -1 or 1
+        if abs(normal.z) > 1-epsilon or abs(normal.x) > 1-epsilon or abs(normal.y) > 1-epsilon:
+            face.select_set(True)
+    # Delete selected faces
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.select], context='FACES')
+    # Update the mesh data
+    bm.to_mesh(mesh)
+    bm.free()
+    # Create a new object and link it to the scene
+    new_obj = bpy.data.objects.new("ModifiedObject", mesh)
+    new_obj.location = obj.location
+    new_obj.scale = obj.scale
+    bpy.context.collection.objects.link(new_obj)
+    return new_obj
+
 # NOTE: Can be deleted in the future. - ck
 def add_dummy_objects(tissue, padding, vol_scale, surf_scale):
     # Create temporarily padded tissue
