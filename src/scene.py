@@ -165,7 +165,7 @@ class BioMedicalScene:
             boolean = v.modifiers.new(name="tissue cutting", type='BOOLEAN')
             boolean.operation = 'INTERSECT'
             boolean.object = self.tissue
-            boolean.solver = 'FAST'
+            #boolean.solver = 'FAST'
             bpy.context.view_layer.objects.active = v
             bpy.ops.object.modifier_apply(modifier=boolean.name)
 
@@ -198,7 +198,8 @@ class BioMedicalScene:
     #                 bpy.ops.object.modifier_apply(modifier=boolean.name)
                 
     def cut_cells(self, boolean_object=None):
-        for cell in self.cell_objects:
+        deleted_names = []
+        for i, cell in enumerate(self.cell_objects):
             boolean = cell.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
             boolean.operation = 'INTERSECT'
             boolean.object = self.tissue_empty if cell.name.startswith('Nucleus') else self.tissue_empty_cytoplasm
@@ -206,7 +207,10 @@ class BioMedicalScene:
             bpy.ops.object.modifier_apply({"object": cell}, modifier="Boolean Modifier")
 
             if len(cell.data.polygons) == 0:
+                deleted_names.append(cell)
                 bpy.data.objects.remove(cell)
+        for cell in deleted_names:
+            self.cell_objects.remove(cell)
 
 
     def uncut_cells(self): 

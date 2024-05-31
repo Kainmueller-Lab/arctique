@@ -47,7 +47,7 @@ def parse_dataset_args():
     parser.add_argument("--gpu_device", type=int, default=0, help="List of GPU devices to use for rendering")
     parser.add_argument("--gpu", type=bool, default=True, help="Use GPU for rendering")
     parser.add_argument("--output-dir", type=str, default="rendered", help="Set output folder")
-    parser.add_argument("--start-idx", type=int, default=0, help="Dataset size")
+    parser.add_argument("--start-idx", type=int, default=400, help="Dataset size")
     parser.add_argument("--n-samples", type=int, default=500, help="Dataset size")
 
     # DATASET PARAMETERS
@@ -63,6 +63,8 @@ def parse_dataset_args():
     parser.add_argument("--number", type=int, default=1200, help="number of volume cells")
     parser.add_argument("--ratios", type=list, default=[0, 0.3, 0.3, 0.2, 0.2], help="ratios of different cell types")
     parser.add_argument("--surf_scale", type=tuple, default=(0.8, 0.5, 1), help="Surface scale")
+
+    # TODO add manipulation paramter of same scene
 
     #other default value for --output_dir: "/Volumes/ag_kainmueller/vguarin/synthetic_HE" via internal VPN
     
@@ -136,8 +138,8 @@ def create_scene(
 
     # 3) populate scene with nuclei/cells
     # add epi volume filling
-    crypt_goblet = arr.VoronoiFill(vol_goblet, cells.CellType.GOB)
-    crypt_fill = arr.VoronoiFill(crypt_vol_1, cells.CellType.EPI)
+    crypt_goblet = arr.VoronoiFill(vol_goblet, extended_stroma, cells.CellType.GOB)
+    crypt_fill = arr.VoronoiFill(crypt_vol_1, mucosa, cells.CellType.EPI)
     my_scene.add_arrangement(crypt_fill) # NOTE: 200 nuclei take about 40 s
     my_scene.add_arrangement(crypt_goblet)
 
