@@ -54,17 +54,16 @@ TISSUE_PADDING = 0.2
 SEED = 350
 
 DENSITY = 0.2 # 1 is max density based on the maximal ocurring cell diamter, 0 is quite sparse but never empty
+TYPE_MIXING = 0.0 # Mixing strength of PLA nuclei (between 0 and 1, 0 is a true PLA shape, 1 is a faulty LYM shape)
+
 RATIOS = [0.1, 0.3, 0.4, 0.15, 0.05]
-MIX_TYPES = [CellType.MIX, CellType.PLA, CellType.LYM, CellType.EOS, CellType.FIB] # NOTE: MIX is a PLA nucleus that has a mixed shape interpolated to LYM. - ck
-# NOTE: TYPE_MIXING is an unused dummy variable. You have to set it in the cells.py file.
-# Once we use config files this should easily be solvable. - ck
-TYPE_MIXING = 0.3 # Mixing strength of PLA nuclei (between 0 and 1, 0 is a pure PLA shape, 1 is a pure LYM shape)
+CELL_TYPES = [CellType.MIX, CellType.PLA, CellType.LYM, CellType.EOS, CellType.FIB] # NOTE: MIX is a PLA nucleus that has a mixed shape interpolated to LYM. - ck
 
 
 ###################  MAIN  METHOD  #####################
 # create the necessary objects
 scene.BioMedicalScene.clear()
-    
+
  # 1) initialize microscope objects and add to scene
 my_materials = materials.Material(seed=SEED)
 my_tissue = tissue.Tissue(
@@ -92,7 +91,8 @@ hm.add_boolean_modifier(vol_goblet, extended_stroma, name='Remove inner volume',
 # add mix volume filling
 start = time.time()
 print("Starting volume filling...")
-volume_fill = arr.VolumeFill(mucosa, DENSITY, MIX_TYPES, RATIOS, strict_boundary=True, seed=SEED)
+cells.initialize_mixing_attribute(TYPE_MIXING)
+volume_fill = arr.VolumeFill(mucosa, DENSITY, CELL_TYPES, RATIOS, strict_boundary=True, seed=SEED)
 end1 = time.time()
 print(f"Volume filling took {end1 - start} s")
 my_scene.add_arrangement(volume_fill) # NOTE: 240 nuclei take about 20 s
