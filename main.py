@@ -48,7 +48,7 @@ TISSUE_THICKNESS = 0.05
 TISSUE_SIZE = 1.28
 TISSUE_LOCATION = (0, 0, 0.5)
 TISSUE_PADDING = 0.5
-SEED = random.randint(0, 10000)
+SEED = 300
 
 MIX_COUNT = 100
 RATIOS = [0.1, 0.3, 0.4, 0.1, 0.1]
@@ -88,10 +88,10 @@ hm.add_boolean_modifier(vol_goblet, extended_stroma, name='Remove inner volume',
 # 3) populate scene with nuclei/cells
 # add mix volume filling
 start = time.time()
-#volume_fill = arr.VolumeFill(mucosa, MIX_COUNT, MIX_TYPES, RATIOS, strict_boundary=True, seed=SEED)
+volume_fill = arr.VolumeFill(mucosa, MIX_COUNT, MIX_TYPES, RATIOS, strict_boundary=True, seed=SEED)
 end1 = time.time()
 print(f"Volume filling took {end1 - start} s")
-#my_scene.add_arrangement(volume_fill) # NOTE: 240 nuclei take about 20 s
+my_scene.add_arrangement(volume_fill) # NOTE: 240 nuclei take about 20 s
 end2 = time.time()
 print(f"Volume adding took {time.time() - end1} s")
 
@@ -106,14 +106,15 @@ end4 = time.time()
 print(f"Voronoi adding took {end4 - end3} s")
 
 # 4) cut objects and add staining
-#my_scene.cut_cells()
-#my_scene.cut_tissue()
+# my_scene.cut_cells()
+# my_scene.cut_tissue()
 # my_scene.add_tissue_staining(materials=[my_materials.muscosa, my_materials.crypt_staining])
 # my_scene.add_staining(material=my_materials.nuclei_mask)
 # my_scene.add_staining(material=my_materials.nuclei_staining)
 
 # Hide non cell objects
 my_scene.hide_non_cell_objects()
+print(f"Scene completed.")
 
 # # render scene
 # RENDER_PATH = 'C:/Users/cwinklm/Documents/Alpacathon/rendered_HE/renders2d_test/'
