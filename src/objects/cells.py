@@ -220,7 +220,7 @@ class MixAttribute(CellAttribute):
         return a*(1-t) + b*t
     
     def add_cell_objects(self, location, direction):
-            bpy.ops.mesh.primitive_ico_sphere_add(radius=self.size)
+            bpy.ops.mesh.primitive_ico_sphere_add(radius=self.nucleus_size)
             nucleus = bpy.context.active_object
             deform_mesh(nucleus, self)
             subdivide(nucleus, self.subdivision_levels)
