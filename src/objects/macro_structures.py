@@ -24,7 +24,7 @@ class build_crypt():
         # add crypt volumes
         self.crypt_vol_in = self._make_crypt_vol(thickness=0.005, name='crypt_volume_inner')
         self.crypt_vol_out = self._make_crypt_vol(thickness=0.02, name='crypt')
-
+        
         # TODO inner, outer middle
 
 

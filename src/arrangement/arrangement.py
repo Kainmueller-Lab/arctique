@@ -151,7 +151,11 @@ class VoronoiFill(CellArrangement):
             shrinkwrap(obj, nucleus)
             smoothen_object(nucleus, self.attribute.smooth_factor, self.attribute.smooth_roundness)
             subdivide(nucleus, self.attribute.subdivision_levels)
-            nucleus.name = f"Nucleus_Type_{self.type.name}_{idx}"
+            
+            if self.type.name == "GOB":
+                nucleus.name = f"Goblet_Type_{self.type.name}_{idx}"
+            else:
+                nucleus.name = f"Nucleus_Type_{self.type.name}_{idx}"
             self.objects.append(nucleus)
             self.nuclei.append(nucleus)
         remove_objects(region_objects + [surface_obj])

@@ -56,11 +56,12 @@ def parse_dataset_args():
     parser.add_argument("--tissue-size", type=float, default=1.28, help="Tissue size")
     parser.add_argument("--tissue-location", type=tuple, default=(0, 0, 0.5), help="Tissue location")
     parser.add_argument("--tissue-padding", type=float, default=0.2, help="Tissue padding")
+    parser.add_argument("--tissue-rips", type=float, default=-0.5, help="Degree of rip like structures in tissue")
     
     # nuclei
-    parser.add_argument("--epi-number", type=int, default=150, help="number of surface cells")
+    parser.add_argument("--epi-number", type=int, default=150, help="number of surface cells") # 150
     parser.add_argument("--filler-scale", type=float, default=0.8, help="Scale of the size of smaller filler nuclei w.r.t to the original nuclei size")
-    parser.add_argument("--number", type=int, default=1200, help="number of volume cells")
+    parser.add_argument("--number", type=int, default=1200, help="number of volume cells") # 1200
     parser.add_argument("--ratios", type=list, default=[0, 0.3, 0.3, 0.2, 0.2], help="ratios of different cell types")
     parser.add_argument("--surf_scale", type=tuple, default=(0.8, 0.5, 1), help="Surface scale")
 
@@ -77,6 +78,7 @@ def parse_dataset_args():
 
 def create_scene(
         tissue_thickness = 0.05, tissue_size = 1.28, tissue_location = (0, 0, 0.5),
+        tissue_rips = -0.5,
         tissue_padding = 0.5, epi_count = 80, number = 80, 
         ratios = [0, 0.3, 0.4, 0.2, 0.1],
         seed=0, **kwargs):
@@ -113,7 +115,8 @@ def create_scene(
             'Nucleus': {'name': 'Nucleus_FIB', 'color': (0.315, 0.003, 0.631, 1), 'staining_intensity': 130}},
         'EPI': {
             'Nucleus': {'name': 'Nucleus_EPI', 'color': (0.315, 0.003, 0.631, 1), 'staining_intensity': 150}}}
-    my_materials = materials.Material(seed=seed, cell_type_params=params_cell_shading)
+    my_materials = materials.Material(
+        seed=seed, cell_type_params=params_cell_shading, tissue_rips=tissue_rips)
     my_tissue = tissue.Tissue(
         my_materials.muscosa, thickness=tissue_thickness,
         size=tissue_size, location=tissue_location)
@@ -161,8 +164,6 @@ def create_scene(
     # remove goblet cell volum from tissue
     my_scene.remove_goblet_volume(crypt_vol_2)
 
-    
-    
     # 4) cut objects and add staining
     my_scene.add_cell_params(params_cell_shading)
     my_scene.cut_cells()
@@ -281,6 +282,7 @@ def main():
         paramters = {
             'tissue_thickness': args.tissue_thickness, 'tissue_size': args.tissue_size,
             'tissue_location': args.tissue_location, 'tissue_padding': args.tissue_padding,
+            'tissue_rips': args.tissue_rips,
             'epi_count': args.epi_number, 'number': args.number, 'ratios': args.ratios,
             'seed': i}
         with open(dir_parameters+f'/parameters_{i}.json', 'w') as outfile:

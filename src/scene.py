@@ -160,14 +160,14 @@ class BioMedicalScene:
             boolean.solver = 'FAST'
             bpy.ops.object.modifier_apply(modifier=boolean.name)
 
-    def cut_tissue(self):
-        for v in self.volumes:
+    def cut_tissue(self, tolerance=0.01):
+        for i, v in enumerate(self.volumes):
             boolean = v.modifiers.new(name="tissue cutting", type='BOOLEAN')
             boolean.operation = 'INTERSECT'
             boolean.object = self.tissue
-            #boolean.solver = 'FAST'
             bpy.context.view_layer.objects.active = v
             bpy.ops.object.modifier_apply(modifier=boolean.name)
+            v.scale.z = v.scale.z*(1+i*tolerance)
 
     def cut_cytoplasm_nuclei(self, tolerance=0.01):
         for cyto in self.cell_objects:
@@ -199,6 +199,10 @@ class BioMedicalScene:
                 
     def cut_cells(self, boolean_object=None):
         deleted_names = []
+        # TODO change to 
+        
+        
+        
         for i, cell in enumerate(self.cell_objects):
             boolean = cell.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
             boolean.operation = 'INTERSECT'
