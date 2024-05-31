@@ -420,3 +420,39 @@ def remove_loose_vertices(obj):
         bm.verts.remove(v)
     bm.to_mesh(mesh)
     bm.clear()
+
+def bounding_boxes_intersect(obj1, obj2):
+    """
+    Determines if the bounding boxes of two Blender objects intersect.
+
+    Parameters:
+    obj1 (bpy.types.Object): The first Blender object.
+    obj2 (bpy.types.Object): The second Blender object.
+
+    Returns:
+    bool: True if the bounding boxes intersect, False otherwise.
+    """
+    # Get the bounding box coordinates of obj1
+    bbox1 = [obj1.matrix_world @ Vector(corner) for corner in obj1.bound_box]
+    min_x1 = min(v.x for v in bbox1)
+    max_x1 = max(v.x for v in bbox1)
+    min_y1 = min(v.y for v in bbox1)
+    max_y1 = max(v.y for v in bbox1)
+    min_z1 = min(v.z for v in bbox1)
+    max_z1 = max(v.z for v in bbox1)
+
+    # Get the bounding box coordinates of obj2
+    bbox2 = [obj2.matrix_world @ Vector(corner) for corner in obj2.bound_box]
+    min_x2 = min(v.x for v in bbox2)
+    max_x2 = max(v.x for v in bbox2)
+    min_y2 = min(v.y for v in bbox2)
+    max_y2 = max(v.y for v in bbox2)
+    min_z2 = min(v.z for v in bbox2)
+    max_z2 = max(v.z for v in bbox2)
+
+    # Check for overlap in each dimension
+    intersect_x = (min_x1 <= max_x2 and max_x1 >= min_x2)
+    intersect_y = (min_y1 <= max_y2 and max_y1 >= min_y2)
+    intersect_z = (min_z1 <= max_z2 and max_z1 >= min_z2)
+
+    return intersect_x and intersect_y and intersect_z

@@ -239,3 +239,10 @@ cell_type_to_attribute = {
     CellType.GOB.name : GOB(),
     CellType.MIX.name : MixAttribute(PLA(), LYM(), TYPE_MIXING),
 }
+
+def initialize_mixing_attribute(mixing_coefficient):
+    '''
+    Initializes the mixing attribute with the given mixing coefficient.
+    '''
+    cell_type_to_attribute[CellType.MIX.name] = MixAttribute(PLA(), LYM(), mixing_coefficient)
+    

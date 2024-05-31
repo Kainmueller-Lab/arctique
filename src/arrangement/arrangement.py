@@ -38,14 +38,14 @@ class VolumeFill(CellArrangement):
     Ratios of corresponding types must be given and determine how many nuclei of each type should be placed.
     If strict_boundary is set to true, nuclei objects will be placed only inside the mesh, otherwise only their locations will be inside the mesh.
     '''
-    def __init__(self, mesh, number, types, ratios, strict_boundary = True, seed=None):
+    def __init__(self, mesh, density, types, ratios, strict_boundary = True, seed=None):
         """
         Initializes a CellArrangement object with the given parameters.
         Fills a volume with randomly placed nuclei of different types without intersection.
 
         Parameters:
             - mesh: mesh of volume to populate with nuclei
-            - number: number of total nuclei to populate
+            - density: density of nuclei to place
             - types: list of nuclei type types that should appear
             - ratios: list of ratios of nuclei types to populate
             - strict_boundary: if true will place nuclei fully inside the mesh, if false only centroids will be placed fully inside the mesh
@@ -54,8 +54,9 @@ class VolumeFill(CellArrangement):
         self.seed = seed
         self.name = "VolumeFill"
         self.mesh = mesh
+        self.density = density
         self.subdivision_levels = 2
-        self.number = number
+        self.max_count = 1000 # Max number of nuclei to be placed
         self.types = types
         self.attributes = [CellAttribute.from_type(type) for type in self.types]
         self.ratios = ratios
@@ -63,11 +64,11 @@ class VolumeFill(CellArrangement):
         # Get count
         sum = np.sum(ratios)
         normalized_ratios = [ratio/sum for ratio in ratios]
-        self.counts = [int(ratio*number) for ratio in normalized_ratios]
+        self.counts = [int(ratio*self.max_count) for ratio in normalized_ratios]
         # Generate points inside mesh with given minimum distance
         # TODO: Generate based on Mahalanobis distance for scaled spheres
         self.points_per_type = fill_volume(
-            self.counts, self.attributes, self.mesh, self.strict_boundary, seed=seed)
+            self.counts, self.density, self.attributes, self.mesh, self.strict_boundary, seed=seed)
 
     def add(self):
         for locations, radius, type in self.points_per_type:
