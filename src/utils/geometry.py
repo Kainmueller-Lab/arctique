@@ -267,16 +267,16 @@ def bend_mesh(obj, bend):
         Bend mesh along Z axis.
         """
         modifier = obj.modifiers.new("Simple Deform Modifier", "SIMPLE_DEFORM")
-        modifier_index = len(obj.modifiers) - 1  # Index of the last added modifier
-        modifier = obj.modifiers[modifier_index]
         modifier.deform_method = 'BEND'
         bpy.ops.object.empty_add(type='ARROWS', align='WORLD', location=obj.location, scale=(1, 1, 1))
         empty = bpy.context.active_object
         # Set the origin and deform axis
         modifier.origin = empty
         modifier.deform_axis = 'Z'
-        bending_strength = random.uniform(-1,1)*bend
-        modifier.angle = 2*np.pi*bending_strength
+        modifier.angle = 2*np.pi*bend*random.uniform(-1,1)
+        bpy.context.view_layer.objects.active = obj
+        obj.select_set(True)
+        bpy.ops.object.modifier_apply(modifier="Simple Deform Modifier")
         bpy.data.objects.remove(empty, do_unlink=True)
 
 def remove_top_and_bottom_faces(obj):

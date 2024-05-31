@@ -157,6 +157,7 @@ class BioMedicalScene:
             boolean.operation = 'INTERSECT'
             boolean.object = self.tissue_bound
             bpy.context.view_layer.objects.active = s
+            boolean.solver = 'FAST'
             bpy.ops.object.modifier_apply(modifier=boolean.name)
 
     def cut_tissue(self):
@@ -164,6 +165,7 @@ class BioMedicalScene:
             boolean = v.modifiers.new(name="tissue cutting", type='BOOLEAN')
             boolean.operation = 'INTERSECT'
             boolean.object = self.tissue
+            boolean.solver = 'FAST'
             bpy.context.view_layer.objects.active = v
             bpy.ops.object.modifier_apply(modifier=boolean.name)
 
@@ -197,24 +199,14 @@ class BioMedicalScene:
                 
     def cut_cells(self, boolean_object=None):
         for cell in self.cell_objects:
-            if cell.name.startswith('Nucleus'):
-                boolean = cell.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
-                boolean.operation = 'INTERSECT'
-                boolean.object = self.tissue_empty
-                #boolean.solver = 'FAST'
-            if cell.name.startswith('Cytoplasm'):
-                boolean = cell.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
-                boolean.operation = 'INTERSECT'
-                boolean.object = self.tissue_empty_cytoplasm
-            
-            cell_copy = hm.copy_object(cell)
-            hm.convert2mesh(cell_copy)
-            if hm.check_obj_empty(cell_copy):
-                # remove from list
-                print(f"Removed empty object {cell.name}")
+            boolean = cell.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
+            boolean.operation = 'INTERSECT'
+            boolean.object = self.tissue_empty if cell.name.startswith('Nucleus') else self.tissue_empty_cytoplasm
+            #boolean.solver = 'FAST' # NOTE: FAST leads to artifacts here. - ck
+            bpy.ops.object.modifier_apply({"object": cell}, modifier="Boolean Modifier")
+
+            if len(cell.data.polygons) == 0:
                 bpy.data.objects.remove(cell)
-                self.cell_objects.remove(cell)   
-            bpy.data.objects.remove(cell_copy)
 
 
     def uncut_cells(self): 
@@ -279,19 +271,10 @@ class BioMedicalScene:
         self.arrangements.append(cell_arrangement)
         cell_arrangement.add()
         print(f"Added arrangement {cell_arrangement.name} with {len(cell_arrangement.objects)} objects.")
-        if bounding_mesh is not None:
-            cell_parts = hm.delete_cells_outside_tissue(cell_arrangement.objects, bounding_mesh)
-        else:
-            cell_parts = cell_arrangement.objects
 
-        # safety checks
-        for cell in cell_parts:
-            hm.convert2mesh(cell)
-            hm.shade_switch(cell, flat=True)
-
-        self.cell_objects = self.cell_objects + cell_parts
         self.nuclei_objects = self.nuclei_objects + cell_arrangement.nuclei # TODO change that to just access per name since we will have more and more cell parts
         self.cytoplasm_objetcs = self.cytoplasm_objetcs + cell_arrangement.cytoplasm
+        self.cell_objects = self.nuclei_objects + self.cytoplasm_objetcs
 
     def rename_nuclei(self):
         for idx, cell in enumerate(self.cell_objects):
