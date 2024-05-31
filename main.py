@@ -22,6 +22,7 @@ import src.utils.surface_filling as sf
 import src.utils.volume_filling as vf
 import src.objects.tissue_architecture as arch
 import src.utils.helper_methods as hm
+import src.objects.macro_structures as macro
 
 from src.objects.cells import CellType
 
@@ -38,6 +39,8 @@ imp.reload(geom)
 imp.reload(sf)
 imp.reload(vf)
 imp.reload(hm)
+imp.reload(macro)
+imp.reload(arch)
 
 ###################  PARAMETER  #####################
 # args_camera = {'pos'} # no change just test
@@ -47,11 +50,11 @@ imp.reload(hm)
 TISSUE_THICKNESS = 0.05
 TISSUE_SIZE = 1.28
 TISSUE_LOCATION = (0, 0, 0.5)
-TISSUE_PADDING = 0.5
-SEED = 300
+TISSUE_PADDING = 0.2
+SEED = 350
 
-MIX_COUNT = 100
-RATIOS = [0.1, 0.3, 0.4, 0.1, 0.1]
+DENSITY = 0.2 # 1 is max density based on the maximal ocurring cell diamter, 0 is quite sparse but never empty
+RATIOS = [0.1, 0.3, 0.4, 0.15, 0.05]
 MIX_TYPES = [CellType.MIX, CellType.PLA, CellType.LYM, CellType.EOS, CellType.FIB] # NOTE: MIX is a PLA nucleus that has a mixed shape interpolated to LYM. - ck
 # NOTE: TYPE_MIXING is an unused dummy variable. You have to set it in the cells.py file.
 # Once we use config files this should easily be solvable. - ck
@@ -88,31 +91,32 @@ hm.add_boolean_modifier(vol_goblet, extended_stroma, name='Remove inner volume',
 # 3) populate scene with nuclei/cells
 # add mix volume filling
 start = time.time()
-volume_fill = arr.VolumeFill(mucosa, MIX_COUNT, MIX_TYPES, RATIOS, strict_boundary=True, seed=SEED)
+print("Starting volume filling...")
+volume_fill = arr.VolumeFill(mucosa, DENSITY, MIX_TYPES, RATIOS, strict_boundary=True, seed=SEED)
 end1 = time.time()
 print(f"Volume filling took {end1 - start} s")
 my_scene.add_arrangement(volume_fill) # NOTE: 240 nuclei take about 20 s
 end2 = time.time()
 print(f"Volume adding took {time.time() - end1} s")
 
-# add epi volume filling
-epi_fill = arr.VoronoiFill(epi_volume, mucosa, CellType.EPI)
-goblet_fill = arr.VoronoiFill(vol_goblet, extended_stroma, CellType.GOB)
-end3 = time.time()
-print(f"Voronoi filling took {end3 - end2} s")
-my_scene.add_arrangement(epi_fill) # NOTE: 200 nuclei take about 40 s
-my_scene.add_arrangement(goblet_fill)
-end4 = time.time()
-print(f"Voronoi adding took {end4 - end3} s")
+# # add epi volume filling
+# epi_fill = arr.VoronoiFill(epi_volume, mucosa, CellType.EPI)
+# goblet_fill = arr.VoronoiFill(vol_goblet, extended_stroma, CellType.GOB)
+# end3 = time.time()
+# print(f"Voronoi filling took {end3 - end2} s")
+# my_scene.add_arrangement(epi_fill) # NOTE: 200 nuclei take about 40 s
+# my_scene.add_arrangement(goblet_fill)
+# end4 = time.time()
+# print(f"Voronoi adding took {end4 - end3} s")
 
-# 4) cut objects and add staining
-# my_scene.cut_cells()
-# my_scene.cut_tissue()
-# my_scene.add_tissue_staining(materials=[my_materials.muscosa, my_materials.crypt_staining])
-# my_scene.add_staining(material=my_materials.nuclei_mask)
-# my_scene.add_staining(material=my_materials.nuclei_staining)
+# # 4) cut objects and add staining
+# # my_scene.cut_cells()
+# # my_scene.cut_tissue()
+# # my_scene.add_tissue_staining(materials=[my_materials.muscosa, my_materials.crypt_staining])
+# # my_scene.add_staining(material=my_materials.nuclei_mask)
+# # my_scene.add_staining(material=my_materials.nuclei_staining)
 
-# Hide non cell objects
+# # Hide non cell objects
 my_scene.hide_non_cell_objects()
 print(f"Scene completed.")
 

@@ -5,6 +5,8 @@ import random
 from itertools import combinations
 from mathutils import Vector
 
+from src.utils.geometry import random_unit_vector
+
 def get_shrinked_copy(obj, shrink_value):
     copied_obj = obj.copy()
     copied_obj.data = obj.data.copy()
@@ -43,7 +45,32 @@ def generate_points(num_points, min_distance, mesh, use_strict_boundary=True):
         bpy.data.objects.remove(bounding_mesh, do_unlink=True)
     return points
 
-def fill_volume(counts, attributes, volume, use_strict_boundary, seed=None):
+def generate_grid_points(bbox, delta):
+    """
+    Generate a list of all grid points inside a bounding box with a given grid distance.
+    
+    Parameters:
+    bbox (tuple): Bounding box defined as ((min_x, max_x), (min_y, max_y), (min_z, max_z))
+    delta (float): Grid distance
+
+    Returns:
+    list: List of tuples representing the grid points
+    """
+    (min_x, max_x), (min_y, max_y), (min_z, max_z) = bbox
+
+    x_points = [x for x in np.arange(min_x, max_x + delta, delta)]
+    y_points = [y for y in np.arange(min_y, max_y + delta, delta)]
+    z_points = [z for z in np.arange(min_z, max_z + delta, delta)]
+
+    grid_points = [Vector((x, y, z)) for x in x_points for y in y_points for z in z_points]
+    
+    return grid_points
+
+def bbox_center(bbox):
+    (min_x, max_x), (min_y, max_y), (min_z, max_z) = bbox
+    return (min_x + max_x) / 2, (min_y + max_y) / 2, (min_z + max_z) / 2
+
+def fill_volume(counts, density, attributes, volume, use_strict_boundary, seed=None):
     radii = [attribute.size for attribute in attributes]
     types = [attribute.cell_type for attribute in attributes]
     assert len(counts) == len(radii), "Counts and radii must have the same length"
@@ -52,29 +79,61 @@ def fill_volume(counts, attributes, volume, use_strict_boundary, seed=None):
         random.seed(seed)
         np.random.seed(seed)
 
-    points_per_type = []
-    # Sort counts and radii by radii, starting with maximal radius
-    zipped_data = list(zip(radii, counts, types))
-    sorted_data = sorted(zipped_data, key=lambda x: x[0], reverse=True)
-    for radius, count, type in sorted_data:
-        # Compute max number of iterations
-        bbox = compute_bbox(volume)
-        box_volume = compute_bbox_volume(bbox)
-        max_iterations = upper_limit_points(box_volume, radius)
+    max_count = np.sum(counts)
+    types_to_place = [type_ for type_, count in zip(types, counts) for _ in range(count)]
+    assert len(types_to_place) == max_count, "Cat error ^.^"
+    random.shuffle(types_to_place)
+    points_per_type = {type_: [] for type_ in types}
 
-        shrink_value = 1.5 * radius if use_strict_boundary else 0 # NOTE: Reduce 1.5 in case nuclei distance to mesh boundary is too large.
-        points = []
-        random_points = random_points_in_bbox(bbox, max_iterations)
-        for new_point in random_points:
-            if len(points) == count:
-                break
-            if is_inside(new_point, volume, shrink_value):   
-                if is_far_from_points_per_type(new_point, points_per_type, radius):
-                    if is_far_from_points(new_point, points, 2*radius):
-                        points.append(new_point)
-        points_per_type.append((points, radius, type))
-    assert len(counts) == len(points_per_type), "List points_per_type is not the same length as list counts"
-    return points_per_type
+    bbox = compute_bbox(volume)
+    max_radius = max(radii) * (2-density) * 0.5
+    grid_delta = 0.07 # Allows for more points to be placed near boundary but smaller value take longer
+
+    volume_grid = generate_grid_points(bbox, grid_delta)
+    volume_grid = [pt + Vector(random_unit_vector()) * 0.5 * grid_delta for pt in volume_grid]
+    root = bbox_center(bbox)
+    sorted_volume_grid = sorted(volume_grid, key=lambda point: np.linalg.norm(np.array(point) - np.array(root)))
+
+    shrink_value = 1.2 * max_radius if use_strict_boundary else 0 # NOTE: Reduce coeff in case nuclei distance to mesh boundary is too large.
+
+    placed = []
+    for new_point in sorted_volume_grid:
+        if len(placed) == max_count:
+            break
+        # If sampled point is within 2*max_rad of any placed point, skip, otherwise keep point
+        current_type = types_to_place[len(placed)] 
+        if is_inside(new_point, volume, shrink_value):   
+                if is_far_from_points(new_point, placed, 2*max_radius):
+                    placed.append(new_point)
+                    #print(f"Placing {current_type}, {len(placed)} / {max_count}")
+                    points_per_type[current_type].append(new_point)
+
+    result = [(points_per_type[type_], radii[types.index(type_)], type_) for type_ in types]
+    return result
+
+    # NOTE: This is the old placing algorithm based on precomuted counts instead of density
+    # # Sort counts and radii by radii, starting with maximal radius
+    # zipped_data = list(zip(radii, counts, types))
+    # sorted_data = sorted(zipped_data, key=lambda x: x[0], reverse=True)
+    # bbox = compute_bbox(volume)
+    # box_volume = compute_bbox_volume(bbox)
+    # for radius, count, type in sorted_data:
+    #     # Compute max number of iterations
+    #     max_iterations = upper_limit_points(box_volume, radius)
+
+    #     shrink_value = 1.5 * radius if use_strict_boundary else 0 # NOTE: Reduce 1.5 in case nuclei distance to mesh boundary is too large.
+    #     points = []
+    #     random_points = random_points_in_bbox(bbox, max_iterations)
+    #     for new_point in random_points:
+    #         if len(points) == count:
+    #             break
+    #         if is_inside(new_point, volume, shrink_value):   
+    #             if is_far_from_points_per_type(new_point, points_per_type, radius):
+    #                 if is_far_from_points(new_point, points, 2*radius):
+    #                     points.append(new_point)
+    #     points_per_type.append((points, radius, type))
+    # assert len(counts) == len(points_per_type), "List points_per_type is not the same length as list counts"
+    # return points_per_type
 
 def is_far_from_points(pt, points, min_distance):
     for point in points:
