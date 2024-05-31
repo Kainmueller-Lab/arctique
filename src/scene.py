@@ -20,6 +20,8 @@ imp.reload(geo)
 imp.reload(hm)
 imp.reload(ph)
 
+from src.utils.geometry import bounding_boxes_intersect
+
 def fn_print_time_when_render_done(dummy):
     
     print("----- the time is: ", time.time())
@@ -198,6 +200,18 @@ class BioMedicalScene:
     #                 bpy.ops.object.modifier_apply(modifier=boolean.name)
                 
     def cut_cells(self, boolean_object=None):
+        # Remove all cell objects that do not intersect with the tissue 
+        # NOTE: Use bounding box comparison first, so there will be less objects to intersect -> faster. - ck
+        # TODO: handle object and list entry removal better. - ck
+        deleted_names = [] 
+        for cell in self.cell_objects:
+            if not bounding_boxes_intersect(cell, self.tissue_empty):
+                deleted_names.append(cell)
+                bpy.data.objects.remove(cell)   
+        for cell in deleted_names:
+            self.cell_objects.remove(cell)
+
+        deleted_names = []        
         for cell in self.cell_objects:
             boolean = cell.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
             boolean.operation = 'INTERSECT'
@@ -206,7 +220,10 @@ class BioMedicalScene:
             bpy.ops.object.modifier_apply({"object": cell}, modifier="Boolean Modifier")
 
             if len(cell.data.polygons) == 0:
+                deleted_names.append(cell)
                 bpy.data.objects.remove(cell)
+        for cell in deleted_names:
+            self.cell_objects.remove(cell)
 
 
     def uncut_cells(self): 

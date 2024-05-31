@@ -51,9 +51,9 @@ TISSUE_THICKNESS = 0.05
 TISSUE_SIZE = 1.28
 TISSUE_LOCATION = (0, 0, 0.5)
 TISSUE_PADDING = 0.2
-SEED = 350
+SEED = 666
 
-DENSITY = 0.2 # 1 is max density based on the maximal ocurring cell diamter, 0 is quite sparse but never empty
+DENSITY = 0.6 # 1 is max density based on the maximal ocurring cell diamter, 0 is quite sparse but never empty
 TYPE_MIXING = 0.0 # Mixing strength of PLA nuclei (between 0 and 1, 0 is a true PLA shape, 1 is a faulty LYM shape)
 
 RATIOS = [0.1, 0.3, 0.4, 0.15, 0.05]
@@ -99,19 +99,19 @@ my_scene.add_arrangement(volume_fill) # NOTE: 240 nuclei take about 20 s
 end2 = time.time()
 print(f"Volume adding took {time.time() - end1} s")
 
-# # add epi volume filling
-# epi_fill = arr.VoronoiFill(epi_volume, mucosa, CellType.EPI)
-# goblet_fill = arr.VoronoiFill(vol_goblet, extended_stroma, CellType.GOB)
-# end3 = time.time()
-# print(f"Voronoi filling took {end3 - end2} s")
-# my_scene.add_arrangement(epi_fill) # NOTE: 200 nuclei take about 40 s
-# my_scene.add_arrangement(goblet_fill)
-# end4 = time.time()
-# print(f"Voronoi adding took {end4 - end3} s")
+# add epi volume filling
+epi_fill = arr.VoronoiFill(epi_volume, mucosa, CellType.EPI)
+goblet_fill = arr.VoronoiFill(vol_goblet, extended_stroma, CellType.GOB)
+end3 = time.time()
+print(f"Voronoi filling took {end3 - end2} s")
+my_scene.add_arrangement(epi_fill) # NOTE: 200 nuclei take about 40 s
+my_scene.add_arrangement(goblet_fill)
+end4 = time.time()
+print(f"Voronoi adding took {end4 - end3} s")
 
-# # 4) cut objects and add staining
-# # my_scene.cut_cells()
-# # my_scene.cut_tissue()
+# 4) cut objects and add staining
+my_scene.cut_cells()
+my_scene.cut_tissue()
 # # my_scene.add_tissue_staining(materials=[my_materials.muscosa, my_materials.crypt_staining])
 # # my_scene.add_staining(material=my_materials.nuclei_mask)
 # # my_scene.add_staining(material=my_materials.nuclei_staining)
