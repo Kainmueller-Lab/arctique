@@ -190,3 +190,10 @@ class CustomShaderNodes():
         links.new(mix_shader.outputs[0], outputs.inputs[0])
         
         return node_group
+
+
+    def add_principle_noise(self):
+        pass
+    
+    def add_stacked_noise(self):
+        pass
