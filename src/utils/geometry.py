@@ -267,16 +267,16 @@ def bend_mesh(obj, bend):
         Bend mesh along Z axis.
         """
         modifier = obj.modifiers.new("Simple Deform Modifier", "SIMPLE_DEFORM")
-        modifier_index = len(obj.modifiers) - 1  # Index of the last added modifier
-        modifier = obj.modifiers[modifier_index]
         modifier.deform_method = 'BEND'
         bpy.ops.object.empty_add(type='ARROWS', align='WORLD', location=obj.location, scale=(1, 1, 1))
         empty = bpy.context.active_object
         # Set the origin and deform axis
         modifier.origin = empty
         modifier.deform_axis = 'Z'
-        bending_strength = random.uniform(-1,1)*bend
-        modifier.angle = 2*np.pi*bending_strength
+        modifier.angle = 2*np.pi*bend*random.uniform(-1,1)
+        bpy.context.view_layer.objects.active = obj
+        obj.select_set(True)
+        bpy.ops.object.modifier_apply(modifier="Simple Deform Modifier")
         bpy.data.objects.remove(empty, do_unlink=True)
 
 def remove_top_and_bottom_faces(obj):
@@ -293,6 +293,33 @@ def remove_top_and_bottom_faces(obj):
         normal = face.normal
         # Check if the z-component of the normal is close to -1 or 1
         if abs(normal.z) > 1-epsilon:
+            face.select_set(True)
+    # Delete selected faces
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.select], context='FACES')
+    # Update the mesh data
+    bm.to_mesh(mesh)
+    bm.free()
+    # Create a new object and link it to the scene
+    new_obj = bpy.data.objects.new("ModifiedObject", mesh)
+    new_obj.location = obj.location
+    new_obj.scale = obj.scale
+    bpy.context.collection.objects.link(new_obj)
+    return new_obj
+
+def remove_vertical_and_horizontal_faces(obj):
+    mesh = bpy.data.meshes.new(name="ModifiedMesh")
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
+
+    epsilon = 1e-3
+    # Deselect all faces
+    for face in bm.faces:
+        face.select_set(False)
+    # Select faces with vertical normals
+    for face in bm.faces:
+        normal = face.normal
+        # Check if the z-component of the normal is close to -1 or 1
+        if abs(normal.z) > 1-epsilon or abs(normal.x) > 1-epsilon or abs(normal.y) > 1-epsilon:
             face.select_set(True)
     # Delete selected faces
     bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.select], context='FACES')

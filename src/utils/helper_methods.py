@@ -164,6 +164,7 @@ def add_boolean_modifier(obj, target, name='Boolean Modifier', operation='DIFFER
     boolean = obj.modifiers.new(name=name, type='BOOLEAN')
     boolean.operation = operation
     boolean.object = target
+    boolean.use_self = True # NOTE: This line seems to fix artifacts when using 'DIFFERENCE' operator to create goblet volume. - ck
     bpy.context.view_layer.objects.active = obj
     if apply:
         bpy.ops.object.modifier_apply(modifier=boolean.name)

@@ -174,8 +174,8 @@ class EPI(CellAttribute):
         self.cell_type = CellType.EPI
         self.size = 0.05
         self.attribute_name = "Epithelial Cell"
-        self.smooth_factor = 1
-        self.smooth_roundness = 4
+        self.smooth_factor = 2 # (float 1) Controls the roundness of the object. 0 = identical to surrounding mesh, the higher this number, the rounder the mesh.
+        self.smooth_roundness = 2 # (int, 2) Controls the size of objects, the higher this number, the smaller the mesh. Should be at least 2.
 
     def add_cell_objects(self, location, direction):
         pass
@@ -186,9 +186,9 @@ class GOB(CellAttribute):
         self.cell_type = CellType.GOB
         self.size = 0.1
         self.attribute_name = "Goblet Cell"
-        self.smooth_factor = 0.7
-        self.smooth_roundness = 5
-        self.subdivision_levels = 2
+        self.smooth_factor = 1.5 # (float, 1) Controls the roundness of the object. 0 = identical to surrounding mesh, the higher this number, the rounder the mesh.
+        self.smooth_roundness = 2 # (int, 2) Controls the size of objects, the higher this number, the smaller the mesh. Should be at least 2.
+        self.subdivision_levels = 2 
 
     def add_cell_objects(self, location, direction):
         pass
@@ -220,7 +220,7 @@ class MixAttribute(CellAttribute):
         return a*(1-t) + b*t
     
     def add_cell_objects(self, location, direction):
-            bpy.ops.mesh.primitive_ico_sphere_add(radius=self.size)
+            bpy.ops.mesh.primitive_ico_sphere_add(radius=self.nucleus_size)
             nucleus = bpy.context.active_object
             deform_mesh(nucleus, self)
             subdivide(nucleus, self.subdivision_levels)

@@ -88,7 +88,7 @@ class VolumeFill(CellArrangement):
 
 
 class VoronoiFill(CellArrangement):
-    def __init__(self, mesh_obj, type):
+    def __init__(self, mesh_obj, surface_obj, type):
         """
         Initializes a CellArrangement object with the given parameters.
         Takes as input a mesh_obj which needs to consist of an outer and an inner wall mesh, e.g. an annulus.
@@ -102,22 +102,21 @@ class VoronoiFill(CellArrangement):
         super().__init__()
         self.name = "VoronoiFill"
         self.mesh_obj = mesh_obj
+        self.surface_obj = surface_obj
         self.type = type
         self.attribute = CellAttribute.from_type(self.type)
         self.radius = self.attribute.size
         self.max_count = 500 # NOTE: The volume will be filled up with maximally this number of nuclei
-        self.surface_subdivision_levels = 5 # NOTE: Increase this for finer subdvision and more quasi-random placement, but will be slower
+        self.surface_subdivision_levels = 3 # NOTE: Increase this for finer subdvision and more quasi-random placement, but will be slower
         self.add_nuclei() 
 
 
     def add_nuclei(self):
-        surface_obj = remove_top_and_bottom_faces(self.mesh_obj)
+        surface_obj = remove_vertical_and_horizontal_faces(self.surface_obj)
         subdivide_object(surface_obj, self.surface_subdivision_levels)
-        mesh = surface_obj.data
-        _, outer_vs = self.split_vertices(mesh)
 
         # Sort for sampling
-        outer_data = [(surface_obj.matrix_world @ v.co, v.normal) for v in outer_vs]
+        outer_data = [(surface_obj.matrix_world @ v.co, v.normal) for v in surface_obj.data.vertices]
         root = outer_data[0][0]
         sorted_data = self.sort_data_by_root_dist(outer_data, root)
         sorted_vs = [v for v, _ in sorted_data]
