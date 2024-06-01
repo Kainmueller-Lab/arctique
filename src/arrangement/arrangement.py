@@ -9,6 +9,7 @@ from src.utils.helper_methods import *
 from src.utils.surface_filling import fill_surface
 from src.utils.volume_filling import fill_volume
 from src.utils.voronoi import *
+import src.utils.helper_methods as hm
 
 
 NucleusSeed = namedtuple('NucleusSeed', 'centroid scale direction')
@@ -83,6 +84,7 @@ class VolumeFill(CellArrangement):
                     self.objects.append(cytoplasm)
                     self.cytoplasm.append(cytoplasm)
                 nucleus = cell_objects[0]
+                hm.shade_switch(nucleus, flat=True)
                 nucleus.name = f"Nucleus_Type_{type.name}_{idx}"
                 self.objects.append(nucleus)
                 self.nuclei.append(nucleus)
@@ -152,7 +154,11 @@ class VoronoiFill(CellArrangement):
             shrinkwrap(obj, nucleus)
             smoothen_object(nucleus, self.attribute.smooth_factor, self.attribute.smooth_roundness)
             subdivide(nucleus, self.attribute.subdivision_levels)
-            nucleus.name = f"Nucleus_Type_{self.type.name}_{idx}"
+            
+            if self.type.name == "GOB":
+                nucleus.name = f"Goblet_Type_{self.type.name}_{idx}"
+            else:
+                nucleus.name = f"Nucleus_Type_{self.type.name}_{idx}"
             self.objects.append(nucleus)
             self.nuclei.append(nucleus)
         remove_objects(region_objects + [surface_obj])

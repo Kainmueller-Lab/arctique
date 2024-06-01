@@ -22,6 +22,8 @@ class CustomShaderNodes():
         self.object_coord = self.add_object_coord(shift=self.shift)
         self.volume = self.add_volume()
         self.mixing_red = self.add_mixing_red_points()
+        self.principle_noise = self.add_principle_noise()
+        self.stacked_noise = self.add_stacked_noise()
         
         # tissue
         self.lamina_propria_tissue_base = self.add_lamina_propria_tissue_base()
@@ -115,6 +117,7 @@ class CustomShaderNodes():
         loc = node.location = (loc[0]+1.5*self.sep, loc[1])
         node.color_ramp.elements[0].color = (0.409, 0.215, 0.430, 1)
         node.color_ramp.elements[1].color = (0.456, 0.011, 0.356, 1)
+        node.color_ramp.elements[1].position = 0.1
         links.new(musgrave_noise.outputs[0], color_ramp_1.inputs[0])
         links.new(color_ramp_1.outputs[0], color_ramp_2.inputs[0])
         
@@ -123,10 +126,12 @@ class CustomShaderNodes():
         loc = node.location = (loc_tex[0]+self.sep, loc_tex[1]-2*self.sep)
         node.color_ramp.elements[0].color = (1, 1, 1, 1)
         node.color_ramp.elements[1].color = (0, 0, 0, 1)
+        node.color_ramp.elements[0].position = 0.4
+        node.color_ramp.elements[1].position = 0.48
         node = density_strength = nodes.new('ShaderNodeMath')
         loc = node.location = (loc[0]+1.5*self.sep, loc[1])
         node.operation = 'MULTIPLY'
-        node.inputs[1].default_value = 91.2
+        node.inputs[1].default_value = 130
         links.new(musgrave_noise.outputs[0], density_ramp.inputs[0])
         links.new(density_ramp.outputs[0], density_strength.inputs[0])
         
@@ -190,3 +195,156 @@ class CustomShaderNodes():
         links.new(mix_shader.outputs[0], outputs.inputs[0])
         
         return node_group
+
+
+    def add_principle_noise(self, node_name='PrincipleNoise'):
+        node_group, inputs, outputs = shading_utils.create_node_group(node_name, start=self.start)
+        nodes = node_group.nodes
+        links = node_group.links
+        node_group.inputs.new('NodeSocketShader', 'Shader')
+        node_group.inputs.new('NodeSocketFloat', 'Size')
+        node_group.inputs['Size'].default_value = 40
+        node_group.inputs.new('NodeSocketFloat', 'Threshold')
+        node_group.inputs['Threshold'].default_value = 0.36
+        node_group.inputs.new('NodeSocketFloat', 'Softness')
+        node_group.inputs['Softness'].default_value = 0.24
+        node_group.inputs.new('NodeSocketFloat', 'Dimension')
+        node_group.inputs['Dimension'].default_value = 0
+        node_group.inputs.new('NodeSocketFloat', 'Lacunarity')
+        node_group.inputs['Lacunarity'].default_value = 1.7
+        node_group.inputs.new('NodeSocketFloat', 'Strength')
+        node_group.inputs['Strength'].default_value = 0.6
+        node_group.inputs.new('NodeSocketFloat', 'CorrStrength')
+        node_group.inputs['CorrStrength'].default_value = 1
+        node_group.outputs.new('NodeSocketShader', 'Shader')
+        
+        
+        # object centric coordinate system
+        node = coord = shading_utils.add_node_group(nodes, self.object_coord, pos=self.start)
+        loc = node.location
+
+        # statining intensity
+        node = staining_noise = nodes.new('ShaderNodeTexMusgrave')
+        node.inputs['Scale'].default_value = 5 # TODO
+        node.inputs['Detail'].default_value = 15
+        node.inputs['Dimension'].default_value = 0
+        node.inputs['Lacunarity'].default_value = 1.7
+        links.new(inputs.outputs['Size'], staining_noise.inputs['Scale'])
+        links.new(inputs.outputs['Dimension'], staining_noise.inputs['Dimension'])
+        links.new(inputs.outputs['Lacunarity'], staining_noise.inputs['Lacunarity'])
+
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        links.new(coord.outputs[0], staining_noise.inputs['Vector'])
+        
+        node = threshold = nodes.new('ShaderNodeMath')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        node.operation = 'SUBTRACT'
+        links.new(staining_noise.outputs[0], threshold.inputs[0])
+        links.new(inputs.outputs['Threshold'], threshold.inputs[1])
+        node = softness = nodes.new('ShaderNodeMath')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        node.operation = 'DIVIDE'
+        node.inputs[0].default_value = 1
+        links.new(threshold.outputs[0], softness.inputs[0])
+        links.new(inputs.outputs['Softness'], softness.inputs[1])
+        
+        node = staining_intensity = nodes.new('ShaderNodeValToRGB')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        links.new(softness.outputs[0], staining_intensity.inputs[0])
+
+        # Strength
+        node = strength = nodes.new('ShaderNodeMath')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        node.operation = 'MULTIPLY'
+        links.new(inputs.outputs['Strength'], strength.inputs[1])
+        links.new(staining_intensity.outputs[0], strength.inputs[0])
+
+        # Mix Shader
+        node = mix_shader = nodes.new('ShaderNodeMixShader')
+        loc = node.location = (loc[0]+1.5*self.sep, loc[1])
+        links.new(strength.outputs[0], mix_shader.inputs['Fac'])
+
+        # # Mix Shader correction
+        # node = mix_shader_correction = nodes.new('ShaderNodeMixShader')
+        # loc = node.location = (loc[0]+1.5*self.sep, loc[1])
+        # links.new(inputs.outputs['Threshold'], mix_shader_correction.inputs['Fac'])
+        # links.new(staining_intensity.outputs[0], mix_shader_correction.inputs[1])
+
+        # # Add correction
+        # node = add_correction = nodes.new('ShaderNodeAddShader')
+        # loc = node.location = (loc[0]+1.5*self.sep, loc[1])
+        # links.new(mix_shader.outputs[0], add_correction.inputs[0])
+        # links.new(mix_shader_correction.outputs[0], add_correction.inputs[1])
+        # node = strength_correction = nodes.new('ShaderNodeMixShader')
+        # loc = node.location = (loc[0]+1.5*self.sep, loc[1])
+        # links.new(inputs.outputs['CorrStrength'], strength_correction.inputs['Fac'])
+        # links.new(add_correction.outputs[0], strength_correction.inputs[1])
+
+        # connect to inputs and outputs
+        links.new(inputs.outputs[0], mix_shader.inputs[1])
+        outputs.location = (loc[0]+self.sep, loc[1])
+        links.new(mix_shader.outputs[0], outputs.inputs[0])
+
+        return node_group
+
+
+    
+    def add_stacked_noise(self, node_name='PrincipleTissue'):
+        node_group, inputs, outputs = shading_utils.create_node_group(node_name, start=self.start)
+        nodes = node_group.nodes
+        links = node_group.links
+        node_group.inputs.new('NodeSocketShader', 'Shader')
+        node_group.inputs.new('NodeSocketFloat', 'Strength')
+        node_group.inputs['Strength'].default_value = 0.6
+        node_group.inputs.new('NodeSocketFloat', 'ThresholdRips')
+        node_group.inputs['ThresholdRips'].default_value = 0.3
+        node_group.inputs.new('NodeSocketFloat', 'ThresholdGrain1')
+        node_group.inputs['ThresholdGrain1'].default_value = 0.3
+        node_group.inputs.new('NodeSocketFloat', 'ThresholdGrain2')
+        node_group.inputs['ThresholdGrain2'].default_value = 0.3
+        node_group.inputs.new('NodeSocketFloat', 'StrengthRips')
+        node_group.inputs['StrengthRips'].default_value = 1
+        node_group.inputs.new('NodeSocketFloat', 'StrengthGrain1')
+        node_group.inputs['StrengthGrain1'].default_value = 0.5
+        node_group.inputs.new('NodeSocketFloat', 'StrengthGrain2')
+        node_group.inputs['StrengthGrain2'].default_value = 0.1
+        node_group.outputs.new('NodeSocketShader', 'Shader')
+        
+        # add rips
+        node = rips = shading_utils.add_node_group(nodes, self.principle_noise, pos=self.start)
+        loc = node.location
+        node.inputs['Size'].default_value = 4
+        rips.inputs['Softness'].default_value = 0.2
+        rips.inputs['Dimension'].default_value = 1.5
+        rips.inputs['Lacunarity'].default_value = 2
+        links.new(inputs.outputs['ThresholdRips'], rips.inputs['Threshold'])
+        links.new(inputs.outputs['StrengthRips'], rips.inputs['Strength'])
+        links.new(inputs.outputs['Shader'], rips.inputs['Shader'])
+
+        # add grain 1
+        node = grain1 = shading_utils.add_node_group(nodes, self.principle_noise, pos=(loc[0]+self.sep, loc[1]))
+        loc = node.location
+        grain1.inputs['Size'].default_value = 40
+        grain1.inputs['Softness'].default_value = 0.1
+        grain1.inputs['Dimension'].default_value = 0
+        grain1.inputs['Lacunarity'].default_value = 1.7
+        links.new(inputs.outputs['ThresholdGrain1'], grain1.inputs['Threshold'])
+        links.new(inputs.outputs['StrengthGrain1'], grain1.inputs['Strength'])
+        links.new(rips.outputs['Shader'], grain1.inputs['Shader'])
+
+        # add grain 2
+        node = grain2 = shading_utils.add_node_group(nodes, self.principle_noise, pos=(loc[0]+self.sep, loc[1]))
+        loc = node.location
+        grain2.inputs['Size'].default_value = 100
+        grain2.inputs['Softness'].default_value = 0.1
+        grain2.inputs['Dimension'].default_value = 0
+        grain2.inputs['Lacunarity'].default_value = 1.7
+        links.new(inputs.outputs['ThresholdGrain2'], grain2.inputs['Threshold'])
+        links.new(inputs.outputs['StrengthGrain2'], grain2.inputs['Strength'])
+        links.new(grain1.outputs['Shader'], grain2.inputs['Shader'])
+        links.new(grain2.outputs['Shader'], outputs.inputs['Shader'])
+
+        return node_group
+
+
+

@@ -16,19 +16,20 @@ imp.reload(shaders)
 
 
 class Material():
-    def __init__(self, seed=0, cell_type_params=None):
+    def __init__(self, seed=0, cell_type_params=None, tissue_rips=-0.5, tissue_rips_std=0.1):
         # delete all materials
         for material in bpy.data.materials:
             bpy.data.materials.remove(material)
         
         # add custom nodes
         np.random.seed(seed)
-        self.shift = tuple(np.random.randint([10**5]*3))
+        self.shift = tuple(np.random.randint([10**3]*3))
         self.custom_nodes = shaders.CustomShaderNodes(shift=self.shift)
 
         # add materials
         self.light_source = self.add_light_source()
-        self.muscosa = self.add_mucosa_staining()
+        rips = np.random.normal(tissue_rips, tissue_rips_std)
+        self.muscosa = self.add_mucosa_staining(threshold_rips=-rips)
         self.nuclei_mask = self.add_nuclei_mask()
         self.crypt_staining = self.add_crypt_staining()
         self.cell_staining = []
@@ -119,16 +120,24 @@ class Material():
         loc = node.location
         links.new(density.outputs[0], volume.inputs['AbsorptionDensity'])
         volume.inputs['AbsorptionColor'].default_value = color
+        volume.inputs['AbsorptionDensity'].default_value = 300
         volume.inputs['ScatterDensity'].default_value = 0
 
-        ###### SURFACE
-        node = surface = nodes.new('ShaderNodeBsdfGlass')
-        loc = node.location = (loc[0], loc[1]+sep)
+        # ADD TISSUE NOISE
+        node = tissue_noise = shading_utils.add_node_group(
+            nodes, self.custom_nodes.stacked_noise, pos=(loc[0]+sep, loc[1]))
+        loc = node.location
+        tissue_noise.inputs['StrengthRips'].default_value = 0
+        links.new(volume.outputs[0], tissue_noise.inputs['Shader'])
+
+        ###### SURFACE -> TODO add later again
+        # node = surface = nodes.new('ShaderNodeBsdfGlass')
+        # loc = node.location = (loc[0], loc[1]+sep)
 
         # link nodes
         node = material_output = nodes.new('ShaderNodeOutputMaterial')
-        links.new(volume.outputs[0], material_output.inputs['Volume'])
-        links.new(surface.outputs[0], material_output.inputs['Surface'])
+        links.new(tissue_noise.outputs[0], material_output.inputs['Volume'])
+        #links.new(surface.outputs[0], material_output.inputs['Surface'])
         loc = node.location = (loc[0]+sep, loc[1])
 
         return material
@@ -184,7 +193,7 @@ class Material():
 
     def add_mucosa_staining(
             self, name="muscosa", base_color=(0.62, 0.25, 0.65, 1.0),
-            start_pos=(0, 0), sep=200):
+            start_pos=(0, 0), sep=200, threshold_rips=0.5, tissue_intensity=1):
         
         material, nodes, links = shading_utils.initialize_material(name)
         
@@ -219,21 +228,28 @@ class Material():
         loc = node.location = (loc[0]+1.5*sep, loc[1]+1.5*sep)
         links.new(lamina_propria_tissue_base.outputs[0], staining_base.inputs[2])
         links.new(staining_intensity.outputs[0], staining_base.inputs['Fac'])
+
+        # ADD TISSUE NOISE
+        node = tissue_noise = shading_utils.add_node_group(
+            nodes, self.custom_nodes.stacked_noise, pos=(loc[0]+sep, loc[1]))
+        loc = node.location
+        tissue_noise.inputs['ThresholdRips'].default_value = threshold_rips
+        links.new(staining_base.outputs[0], tissue_noise.inputs['Shader'])
         
         # RED POINTS
         node = red_points = shading_utils.add_node_group(
             nodes, self.custom_nodes.mixing_red, pos=(loc[0]+sep, loc[1]))
         loc = node.location
-        links.new(staining_base.outputs[0], red_points.inputs['Shader'])
+        links.new(tissue_noise.outputs[0], red_points.inputs['Shader'])
         
-        ###### SURFACE
-        node = surface = nodes.new('ShaderNodeBsdfGlass')
-        loc = node.location = (loc[0], loc[1]+sep)
+        ###### SURFACE -> TODO add later again
+        # node = surface = nodes.new('ShaderNodeBsdfGlass')
+        # loc = node.location = (loc[0], loc[1]+sep)
         
         ###### OUTPUT
         node = material_output = nodes.new('ShaderNodeOutputMaterial')
         loc = node.location = (loc[0]+sep, loc[1])
         links.new(red_points.outputs[0], material_output.inputs['Volume'])
-        links.new(surface.outputs[0], material_output.inputs['Surface'])
+        # links.new(surface.outputs[0], material_output.inputs['Surface'])
         
         return material

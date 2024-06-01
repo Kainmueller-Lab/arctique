@@ -51,7 +51,7 @@ class PLA(CellAttribute):
     def __init__(self):
         super().__init__()
         self.cell_type = CellType.PLA
-        self.size = 0.09 # 0.9
+        self.size = 0.075 # 0.9
         self.nucleus_size = 0.05
         self.scale = (1,0.8,0.7) # (1, 0.6, 0.5)
         self.deformation_strength = 0.4 # 0.7
@@ -103,7 +103,7 @@ class EOS(CellAttribute):
     def __init__(self):
         super().__init__()
         self.cell_type = CellType.EOS
-        self.size = 0.06
+        self.size = 0.056
         self.nucleus_size = 0.025
         self.scale = (1,1,1)
         self.deformation_strength = 0.2
@@ -172,7 +172,7 @@ class EPI(CellAttribute):
     def __init__(self):
         super().__init__()
         self.cell_type = CellType.EPI
-        self.size = 0.05
+        self.size = 0.04
         self.attribute_name = "Epithelial Cell"
         self.smooth_factor = 2 # (float 1) Controls the roundness of the object. 0 = identical to surrounding mesh, the higher this number, the rounder the mesh.
         self.smooth_roundness = 2 # (int, 2) Controls the size of objects, the higher this number, the smaller the mesh. Should be at least 2.
