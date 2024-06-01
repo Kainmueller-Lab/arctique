@@ -44,11 +44,11 @@ def parse_dataset_args():
     parser = argparse.ArgumentParser()
     
     # RENDERING PARAMETERS                                                                                                                                                        # add argument with list of all gpu devices
-    parser.add_argument("--gpu_device", type=int, default=0, help="List of GPU devices to use for rendering")
+    parser.add_argument("--gpu-device", type=int, default=0, help="List of GPU devices to use for rendering")
     parser.add_argument("--gpu", type=bool, default=True, help="Use GPU for rendering")
     parser.add_argument("--output-dir", type=str, default="rendered", help="Set output folder")
     parser.add_argument("--start-idx", type=int, default=400, help="Dataset size")
-    parser.add_argument("--n-samples", type=int, default=500, help="Dataset size")
+    parser.add_argument("--n-samples", type=int, default=200, help="Dataset size")
 
     # DATASET PARAMETERS
     # tissue
