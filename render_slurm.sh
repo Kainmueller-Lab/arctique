@@ -2,8 +2,8 @@
 #SBATCH --gres=gpu:full:1
 #SBATCH -n 8
 #SBATCH --cpus-per-task=4
-#SBATCH -e /home/hgf_mdc/hgf_ysb1444/logging/log_%j.err
-#SBATCH --output /home/hgf_mdc/hgf_ysb1444/logging/log_%j.out
+#SBATCH -e /home/hgf_mdc/hgf_lrx5378/logging/log_%j.err
+#SBATCH --output /home/hgf_mdc/hgf_lrx5378/logging/log_%j.out
 #SBATCH --time 0-08:00:00
 #SBATCH --partition=advanced
 
