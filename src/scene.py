@@ -2,6 +2,7 @@ import bpy
 import json
 import os
 from PIL import Image
+from tqdm import tqdm
 
 import src.arrangement.arrangement as arr
 import src.utils.geometry as geo
@@ -162,7 +163,7 @@ class BioMedicalScene:
             boolean.solver = 'FAST'
             bpy.ops.object.modifier_apply(modifier=boolean.name)
 
-    def cut_tissue(self, tolerance=0.01):
+    def cut_tissue(self, tolerance=0.02):
         for i, v in enumerate(self.volumes):
             boolean = v.modifiers.new(name="tissue cutting", type='BOOLEAN')
             boolean.operation = 'INTERSECT'
@@ -199,31 +200,31 @@ class BioMedicalScene:
     #                 bpy.context.view_layer.objects.active = v
     #                 bpy.ops.object.modifier_apply(modifier=boolean.name)
                 
-    def cut_cells(self, boolean_object=None):
+    def delete_cells(self):
         # Remove all cell objects that do not intersect with the tissue 
         # NOTE: Use bounding box comparison first, so there will be less objects to intersect -> faster. - ck
         # TODO: handle object and list entry removal better. - ck
         deleted_names = [] 
-        for cell in self.cell_objects:
+        n = len(self.cell_objects)
+        for cell in (par := tqdm(self.cell_objects)):
             if not bounding_boxes_intersect(cell, self.tissue_empty):
                 deleted_names.append(cell)
                 bpy.data.objects.remove(cell)   
+                frac_deleted = len(deleted_names) / n
+                # add value to tqdm bar
+                par.set_postfix({"deleted": frac_deleted})
         for cell in deleted_names:
             self.cell_objects.remove(cell)
-
-        deleted_names = []        
+    
+    def cut_cells(self):
         for cell in self.cell_objects:
-            boolean = cell.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
-            boolean.operation = 'INTERSECT'
-            boolean.object = self.tissue_empty if cell.name.startswith('Nucleus') else self.tissue_empty_cytoplasm
-            #boolean.solver = 'FAST' # NOTE: FAST leads to artifacts here. - ck
-            bpy.ops.object.modifier_apply({"object": cell}, modifier="Boolean Modifier")
-
-            if len(cell.data.polygons) == 0:
-                deleted_names.append(cell)
-                bpy.data.objects.remove(cell)
-        for cell in deleted_names:
-            self.cell_objects.remove(cell)
+            if cell.name.startswith('Nucleus') or cell.name.startswith('Cytoplasm'):
+                hm.shade_switch(cell, flat=True)  # NOTE!!! always before boolean shade flat
+                boolean = cell.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
+                boolean.operation = 'INTERSECT'
+                boolean.object = self.tissue_empty if cell.name.startswith('Nucleus') else self.tissue_empty_cytoplasm
+                #boolean.solver = 'FAST' # NOTE: FAST leads to artifacts here. - ck
+                #bpy.ops.object.modifier_apply({"object": cell}, modifier="Boolean Modifier")
 
 
     def uncut_cells(self): 
@@ -270,10 +271,29 @@ class BioMedicalScene:
             if cell_type == 'GOB':
                 hm.add_boolean_modifier(volume, cell, name='remove goblet', operation='DIFFERENCE', apply=True)
 
-    # def add_staining(self, material):
-    #     for cell in self.cell_objects:
-    #         cell.data.materials.append(material)
-    #         cell.active_material = material
+    def remove_cells_volume(self, volume, tolerance=-0.07):
+        cell_copies = [hm.copy_object(cell, cell.name + '_copy') for cell in self.cell_objects]
+        scales = [cell.scale for cell in cell_copies]
+        bpy.ops.object.select_all(action='DESELECT')
+        for scale, cell in zip(scales, cell_copies):
+            cell.scale = scale*(1+tolerance) 
+            cell.select_set(True)
+            # apply scale
+            bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+        if cell_copies:
+            bpy.context.view_layer.objects.active = cell_copies[0]
+        #ctx = bpy.context.copy()
+        #ctx['active_object'] = cell_copies[0]
+        #ctx['selected_objects'] = cell_copies
+        bpy.ops.object.join()
+        # #bpy.ops.object.select_all(action='DESELECT')
+        joined_cells = bpy.context.active_object
+        hm.convert2mesh(volume)
+        hm.add_boolean_modifier(volume, joined_cells, name='remove cell', operation='DIFFERENCE', apply=True)
+        bpy.data.objects.remove(joined_cells)
+        for cell in self.cell_objects:
+            cell.scale = cell.scale*(1-tolerance)
+
     
     def add_cell_params(self, cell_params):
         for cell_type, params in cell_params.items():
@@ -288,10 +308,12 @@ class BioMedicalScene:
         self.arrangements.append(cell_arrangement)
         cell_arrangement.add()
         print(f"Added arrangement {cell_arrangement.name} with {len(cell_arrangement.objects)} objects.")
-
         self.nuclei_objects = self.nuclei_objects + cell_arrangement.nuclei # TODO change that to just access per name since we will have more and more cell parts
         self.cytoplasm_objetcs = self.cytoplasm_objetcs + cell_arrangement.cytoplasm
         self.cell_objects = self.nuclei_objects + self.cytoplasm_objetcs
+        # NOTE!!! cells need to be flat shaded before boolean operation
+        for cell in self.cell_objects:
+            hm.shade_switch(cell, flat=True)
 
     def rename_nuclei(self):
         for idx, cell in enumerate(self.cell_objects):

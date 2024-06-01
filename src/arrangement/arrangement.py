@@ -9,6 +9,7 @@ from src.utils.helper_methods import *
 from src.utils.surface_filling import fill_surface
 from src.utils.volume_filling import fill_volume
 from src.utils.voronoi import *
+import src.utils.helper_methods as hm
 
 
 NucleusSeed = namedtuple('NucleusSeed', 'centroid scale direction')
@@ -83,6 +84,7 @@ class VolumeFill(CellArrangement):
                     self.objects.append(cytoplasm)
                     self.cytoplasm.append(cytoplasm)
                 nucleus = cell_objects[0]
+                hm.shade_switch(nucleus, flat=True)
                 nucleus.name = f"Nucleus_Type_{type.name}_{idx}"
                 self.objects.append(nucleus)
                 self.nuclei.append(nucleus)

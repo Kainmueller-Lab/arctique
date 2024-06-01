@@ -57,13 +57,19 @@ def parse_dataset_args():
     parser.add_argument("--tissue-location", type=tuple, default=(0, 0, 0.5), help="Tissue location")
     parser.add_argument("--tissue-padding", type=float, default=0.2, help="Tissue padding")
     parser.add_argument("--tissue-rips", type=float, default=-0.5, help="Degree of rip like structures in tissue")
+    parser.add_argument("--tissue-rips-std", type=float, default=0.2, help="Degree of rip like structures in tissue")
+    parser.add_argument("--stroma-intensity", type=float, default=1, help="Degree of rip like structures in tissue")
+    parser.add_argument("--noise-seed-shift", type=float, default=0, help="Degree of rip like structures in tissue")
     
     # nuclei
     parser.add_argument("--epi-number", type=int, default=150, help="number of surface cells") # 150
     parser.add_argument("--filler-scale", type=float, default=0.8, help="Scale of the size of smaller filler nuclei w.r.t to the original nuclei size")
-    parser.add_argument("--number", type=int, default=1200, help="number of volume cells") # 1200
-    parser.add_argument("--ratios", type=list, default=[0, 0.3, 0.3, 0.2, 0.2], help="ratios of different cell types")
+    parser.add_argument("--stroma-density", type=int, default=0.7, help="density in stroma") # 1200
+    parser.add_argument("--ratios", type=list, default=[0, 0.2, 0.4, 0.2, 0.2], help="ratios of different cell types")
     parser.add_argument("--surf_scale", type=tuple, default=(0.8, 0.5, 1), help="Surface scale")
+    parser.add_argument("--delete-fraction", type=list, default=[0, 0, 0, 0, 0], help="ratios of different cell types")
+    parser.add_argument("--nuclei-intensity", type=float, default=1, help="overall intensity of nuclei")
+    parser.add_argument("--mix-factor", type=float, default=0, help="overall intensity of nuclei")
 
     # TODO add manipulation paramter of same scene
 
@@ -78,8 +84,8 @@ def parse_dataset_args():
 
 def create_scene(
         tissue_thickness = 0.05, tissue_size = 1.28, tissue_location = (0, 0, 0.5),
-        tissue_rips = -0.5,
-        tissue_padding = 0.5, epi_count = 80, number = 80, 
+        tissue_rips = -0.5, tissue_rips_std = 0.1,
+        tissue_padding = 0.5, epi_count = 80, stroma_density = 0.5, 
         ratios = [0, 0.3, 0.4, 0.2, 0.1],
         seed=0, **kwargs):
     '''
@@ -98,25 +104,24 @@ def create_scene(
     Returns:
         my_scene: BioMedicalScene object
     '''
-    print(number)
     scene.BioMedicalScene.clear()
         
     # 1) initialize microscope objects and add to scene
     params_cell_shading = {
         'PLA': {
-            'Nucleus': {'name': 'Nucleus_PLA', 'color': (0.315, 0.003, 0.631, 1), 'staining_intensity': 140},
-            'Cytoplasm': {'name': 'Cytoplasm_PLA', 'color': (0.456, 0.011, 0.356, 1), 'staining_intensity': 40}},
+            'Nucleus': {'name': 'Nucleus_PLA', 'color': (0.315, 0.003, 0.631, 1), 'staining_intensity': 170},
+            'Cytoplasm': {'name': 'Cytoplasm_PLA', 'color': (0.456, 0.011, 0.356, 1), 'staining_intensity': 140}},
         'LYM': {
-            'Nucleus': {'name': 'Nucleus_LYM', 'color': (0.315, 0.003, 0.631, 1), 'staining_intensity': 230}},
+            'Nucleus': {'name': 'Nucleus_LYM', 'color': (0.315, 0.003, 0.631, 1), 'staining_intensity': 400}},
         'EOS': {
             'Nucleus': {'name': 'Nucleus_EOS', 'color': (0.315, 0.003, 0.631, 1), 'staining_intensity': 170},
-            'Cytoplasm': {'name': 'Cytoplasm_EOS', 'color': (0.605, 0.017, 0.043, 1), 'staining_intensity': 50}},
+            'Cytoplasm': {'name': 'Cytoplasm_EOS', 'color': (0.605, 0.017, 0.043, 1), 'staining_intensity': 140}},
         'FIB': {
-            'Nucleus': {'name': 'Nucleus_FIB', 'color': (0.315, 0.003, 0.631, 1), 'staining_intensity': 130}},
+            'Nucleus': {'name': 'Nucleus_FIB', 'color': (0.315, 0.003, 0.631, 1), 'staining_intensity': 200}},
         'EPI': {
-            'Nucleus': {'name': 'Nucleus_EPI', 'color': (0.315, 0.003, 0.631, 1), 'staining_intensity': 150}}}
+            'Nucleus': {'name': 'Nucleus_EPI', 'color': (0.315, 0.003, 0.631, 1), 'staining_intensity': 100}}}
     my_materials = materials.Material(
-        seed=seed, cell_type_params=params_cell_shading, tissue_rips=tissue_rips)
+        seed=seed, cell_type_params=params_cell_shading, tissue_rips=tissue_rips, tissue_rips_std=tissue_rips_std)
     my_tissue = tissue.Tissue(
         my_materials.muscosa, thickness=tissue_thickness,
         size=tissue_size, location=tissue_location)
@@ -157,15 +162,15 @@ def create_scene(
     stroma_fill = hm.copy_object(mucosa, name='stroma_fill')
     hm.convert2mesh(stroma_fill)
     volume_fill = arr.VolumeFill(
-        mucosa, number, MIX_TYPES, ratios, strict_boundary=True, seed=seed)
+        mucosa, stroma_density, MIX_TYPES, ratios, strict_boundary=True, seed=seed)
     my_scene.add_arrangement(volume_fill, bounding_mesh=stroma_fill) # NOTE: 240 nuclei take about 20 s
     #my_scene.cut_cytoplasm_nuclei()
 
-    # remove goblet cell volum from tissue
-    my_scene.remove_goblet_volume(crypt_vol_2)
-
     # 4) cut objects and add staining
     my_scene.add_cell_params(params_cell_shading)
+    my_scene.delete_cells()
+    my_scene.remove_goblet_volume(crypt_vol_2)
+    my_scene.remove_cells_volume(mucosa)
     my_scene.cut_cells()
     my_scene.cut_tissue()
     my_scene.add_tissue_staining(materials=[my_materials.muscosa, my_materials.crypt_staining])
@@ -279,12 +284,16 @@ def main():
 
     # render individual samples
     for i in tqdm(range(args.start_idx, args.start_idx + args.n_samples)):
-        paramters = {
-            'tissue_thickness': args.tissue_thickness, 'tissue_size': args.tissue_size,
-            'tissue_location': args.tissue_location, 'tissue_padding': args.tissue_padding,
-            'tissue_rips': args.tissue_rips,
-            'epi_count': args.epi_number, 'number': args.number, 'ratios': args.ratios,
-            'seed': i}
+        # paramters = {
+        #     'tissue_thickness': args.tissue_thickness, 'tissue_size': args.tissue_size,
+        #     'tissue_location': args.tissue_location, 'tissue_padding': args.tissue_padding,
+        #     'tissue_rips': args.tissue_rips,
+        #     'epi_count': args.epi_number, 'stroma_density': args.stroma_density, 'ratios': args.ratios,
+        #     'seed': i}
+        paramters = {'seed': i}
+        for key, value in args.__dict__.items():
+            if key not in paramters.keys():
+                paramters[key] = value
         with open(dir_parameters+f'/parameters_{i}.json', 'w') as outfile:
             json.dump(paramters, outfile)
         my_scene = create_scene(**paramters)

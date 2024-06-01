@@ -16,7 +16,7 @@ imp.reload(shaders)
 
 
 class Material():
-    def __init__(self, seed=0, cell_type_params=None, tissue_rips=-0.5):
+    def __init__(self, seed=0, cell_type_params=None, tissue_rips=-0.5, tissue_rips_std=0.1):
         # delete all materials
         for material in bpy.data.materials:
             bpy.data.materials.remove(material)
@@ -28,7 +28,8 @@ class Material():
 
         # add materials
         self.light_source = self.add_light_source()
-        self.muscosa = self.add_mucosa_staining(threshold_rips=-tissue_rips)
+        rips = np.random.normal(tissue_rips, tissue_rips_std)
+        self.muscosa = self.add_mucosa_staining(threshold_rips=-rips)
         self.nuclei_mask = self.add_nuclei_mask()
         self.crypt_staining = self.add_crypt_staining()
         self.cell_staining = []
@@ -192,7 +193,7 @@ class Material():
 
     def add_mucosa_staining(
             self, name="muscosa", base_color=(0.62, 0.25, 0.65, 1.0),
-            start_pos=(0, 0), sep=200, noise_threshold=0.5, tissue_intensity=1):
+            start_pos=(0, 0), sep=200, threshold_rips=0.5, tissue_intensity=1):
         
         material, nodes, links = shading_utils.initialize_material(name)
         
@@ -232,7 +233,7 @@ class Material():
         node = tissue_noise = shading_utils.add_node_group(
             nodes, self.custom_nodes.stacked_noise, pos=(loc[0]+sep, loc[1]))
         loc = node.location
-        tissue_noise.inputs['ThresholdRips'].default_value = noise_threshold
+        tissue_noise.inputs['ThresholdRips'].default_value = threshold_rips
         links.new(staining_base.outputs[0], tissue_noise.inputs['Shader'])
         
         # RED POINTS
