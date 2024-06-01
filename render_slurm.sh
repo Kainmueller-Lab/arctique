@@ -5,7 +5,7 @@
 #SBATCH -e /home/hgf_mdc/hgf_lrx5378/logging/log_%j.err
 #SBATCH --output /home/hgf_mdc/hgf_lrx5378/logging/log_%j.out
 #SBATCH --time 0-08:00:00
-
+#SBATCH --partition=advanced
 
 N_GPUS=1
 echo $SLURM_JOB_ID
