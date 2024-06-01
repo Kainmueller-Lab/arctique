@@ -120,6 +120,11 @@ class VoronoiFill(CellArrangement):
 
         # Sort for sampling
         outer_data = [(surface_obj.matrix_world @ v.co, v.normal) for v in surface_obj.data.vertices]
+        if len(outer_data) == 0:
+            return []
+        else:
+            if len(outer_data[0]) == 0:
+                return []
         root = outer_data[0][0]
         sorted_data = self.sort_data_by_root_dist(outer_data, root)
         sorted_vs = [v for v, _ in sorted_data]

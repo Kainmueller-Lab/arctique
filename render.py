@@ -62,9 +62,9 @@ def parse_dataset_args():
     parser.add_argument("--noise-seed-shift", type=float, default=0, help="Degree of rip like structures in tissue")
     
     # nuclei
-    parser.add_argument("--epi-number", type=int, default=150, help="number of surface cells") # 150
-    parser.add_argument("--filler-scale", type=float, default=0.8, help="Scale of the size of smaller filler nuclei w.r.t to the original nuclei size")
-    parser.add_argument("--stroma-density", type=int, default=0.7, help="density in stroma") # 1200
+    parser.add_argument("--epi-number", type=int, default= 150, help="number of surface cells") # 150
+    parser.add_argument("--filler-scale", type=float, default= 0.8, help="Scale of the size of smaller filler nuclei w.r.t to the original nuclei size")
+    parser.add_argument("--stroma-density", type=int, default= 0.7, help="density in stroma") # 1200
     parser.add_argument("--ratios", type=list, default=[0, 0.2, 0.4, 0.2, 0.2], help="ratios of different cell types")
     parser.add_argument("--surf_scale", type=tuple, default=(0.8, 0.5, 1), help="Surface scale")
     parser.add_argument("--delete-fraction", type=list, default=[0, 0, 0, 0, 0], help="ratios of different cell types")
