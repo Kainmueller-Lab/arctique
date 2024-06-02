@@ -64,8 +64,8 @@ def parse_dataset_args():
     # nuclei
     parser.add_argument("--epi-number", type=int, default=150, help="number of surface cells") # 150
     parser.add_argument("--filler-scale", type=float, default=0.8, help="Scale of the size of smaller filler nuclei w.r.t to the original nuclei size")
-    parser.add_argument("--stroma-density", type=int, default=0.7, help="density in stroma") # 1200
-    parser.add_argument("--ratios", type=list, default=[0, 0.2, 0.4, 0.2, 0.2], help="ratios of different cell types")
+    parser.add_argument("--stroma-density", type=int, default=0.5, help="density in stroma") # 1200
+    parser.add_argument("--ratios", type=list, default=[0.05, 0.25, 0.45, 0.15, 0.1], help="ratios of different cell types")
     parser.add_argument("--surf_scale", type=tuple, default=(0.8, 0.5, 1), help="Surface scale")
     parser.add_argument("--delete-fraction", type=list, default=[0, 0, 0, 0, 0], help="ratios of different cell types")
     parser.add_argument("--nuclei-intensity", type=float, default=1, help="overall intensity of nuclei")
@@ -86,7 +86,7 @@ def create_scene(
         tissue_thickness = 0.05, tissue_size = 1.28, tissue_location = (0, 0, 0.5),
         tissue_rips = -0.5, tissue_rips_std = 0.1,
         tissue_padding = 0.5, epi_count = 80, stroma_density = 0.5, 
-        ratios = [0, 0.3, 0.4, 0.2, 0.1],
+        ratios = [0.05, 0.25, 0.45, 0.15, 0.1],
         seed=0, **kwargs):
     '''
     creates a tissue crop with cells and nuclei

@@ -142,8 +142,8 @@ class FIB(CellAttribute):
     def __init__(self):
         super().__init__()
         self.cell_type = CellType.FIB
-        self.size = 0.79
-        self.nucleus_size = 0.179
+        self.size = 0.079
+        self.nucleus_size = 0.079
         self.scale = (1,0.6,0.5)
         self.deformation_strength = 0.2
         self.attribute_name = "Fibroblast"
@@ -172,7 +172,7 @@ class EPI(CellAttribute):
     def __init__(self):
         super().__init__()
         self.cell_type = CellType.EPI
-        self.size = 0.031
+        self.size = 0.033
         self.attribute_name = "Epithelial Cell"
         self.smooth_factor = 2 # (float 1) Controls the roundness of the object. 0 = identical to surrounding mesh, the higher this number, the rounder the mesh.
         self.smooth_roundness = 2 # (int, 2) Controls the size of objects, the higher this number, the smaller the mesh. Should be at least 2.
@@ -184,7 +184,7 @@ class GOB(CellAttribute):
     def __init__(self):
         super().__init__()
         self.cell_type = CellType.GOB
-        self.size = 0.031
+        self.size = 0.1
         self.attribute_name = "Goblet Cell"
         self.smooth_factor = 1.5 # (float, 1) Controls the roundness of the object. 0 = identical to surrounding mesh, the higher this number, the rounder the mesh.
         self.smooth_roundness = 2 # (int, 2) Controls the size of objects, the higher this number, the smaller the mesh. Should be at least 2.

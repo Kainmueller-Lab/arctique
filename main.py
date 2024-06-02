@@ -53,7 +53,7 @@ TISSUE_LOCATION = (0, 0, 0.5)
 TISSUE_PADDING = 0.2
 SEED = 666
 
-DENSITY = 0.85 # 1 is max density based on the maximal ocurring cell diamter, 0 is quite sparse but never empty
+DENSITY = 0.5 # 1 is max density based on the maximal ocurring cell diamter, 0 is quite sparse but never empty
 TYPE_MIXING = 0.0 # Mixing strength of PLA nuclei (between 0 and 1, 0 is a true PLA shape, 1 is a faulty LYM shape)
 
 RATIOS = [0.05, 0.25, 0.45, 0.15, 0.1]
@@ -117,7 +117,11 @@ my_scene.cut_tissue()
 # # my_scene.add_staining(material=my_materials.nuclei_staining)
 
 # # Hide non cell objects
-my_scene.hide_non_cell_objects()
+#my_scene.hide_non_cell_objects()
+for obj in my_scene.objects:
+            if not obj.name.startswith(('Nucleus')):
+                obj.hide_viewport = True
+                obj.hide_render = True
 print(f"Scene completed.")
 
 # # render scene
