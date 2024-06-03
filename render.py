@@ -22,6 +22,7 @@ import src.utils.surface_filling as sf
 import src.objects.tissue_architecture as arch
 import src.utils.helper_methods as hm
 import src.utils.geometry as geo
+import src.objects.cells as cells
 
 # this next part forces a reload in case you edit the source after you first start the blender session
 #import imp
@@ -47,7 +48,7 @@ def parse_dataset_args():
     parser.add_argument("--gpu-device", type=int, default=0, help="List of GPU devices to use for rendering")
     parser.add_argument("--gpu", type=bool, default=True, help="Use GPU for rendering")
     parser.add_argument("--output-dir", type=str, default="rendered", help="Set output folder")
-    parser.add_argument("--start-idx", type=int, default=400, help="Dataset size")
+    parser.add_argument("--start-idx", type=int, default=0, help="Dataset size")
     parser.add_argument("--n-samples", type=int, default=200, help="Dataset size")
 
     # DATASET PARAMETERS
@@ -56,7 +57,7 @@ def parse_dataset_args():
     parser.add_argument("--tissue-size", type=float, default=1.28, help="Tissue size")
     parser.add_argument("--tissue-location", type=tuple, default=(0, 0, 0.5), help="Tissue location")
     parser.add_argument("--tissue-padding", type=float, default=0.2, help="Tissue padding")
-    parser.add_argument("--tissue-rips", type=float, default=-0.5, help="Degree of rip like structures in tissue")
+    parser.add_argument("--tissue-rips", type=float, default=0, help="Degree of rip like structures in tissue")
     parser.add_argument("--tissue-rips-std", type=float, default=0.2, help="Degree of rip like structures in tissue")
     parser.add_argument("--stroma-intensity", type=float, default=1, help="Degree of rip like structures in tissue")
     parser.add_argument("--noise-seed-shift", type=float, default=0, help="Degree of rip like structures in tissue")
@@ -68,8 +69,10 @@ def parse_dataset_args():
     parser.add_argument("--ratios", type=list, default=[0, 0.2, 0.4, 0.2, 0.2], help="ratios of different cell types")
     parser.add_argument("--surf_scale", type=tuple, default=(0.8, 0.5, 1), help="Surface scale")
     parser.add_argument("--delete-fraction", type=list, default=[0, 0, 0, 0, 0], help="ratios of different cell types")
-    parser.add_argument("--nuclei-intensity", type=float, default=1, help="overall intensity of nuclei")
-    parser.add_argument("--mix-factor", type=float, default=0, help="overall intensity of nuclei")
+    parser.add_argument("--nuclei-intensity", type=float, default=1, help="overall intensity of nuclei") # TODO
+    parser.add_argument("--mix-factor", type=float, default=0, help="overall intensity of nuclei") # TODO
+    parser.add_argument("--epi-rescaling", type=int, default=0, help="overall intensity of nuclei") # TODO
+    parser.add_argument("--mix-cyto", type=float, default=0, help="overall intensity of nuclei") # TODO
 
     # TODO add manipulation paramter of same scene
 
@@ -82,10 +85,14 @@ def parse_dataset_args():
     return args
 
 
+def interpolate(alpha, t1, t2 =(0.409, 0.215, 0.430, 1)):
+    return tuple([t1[i]*alpha + t2[i]*(1-alpha) for i in range(len(t1))])
+
+
 def create_scene(
         tissue_thickness = 0.05, tissue_size = 1.28, tissue_location = (0, 0, 0.5),
-        tissue_rips = -0.5, tissue_rips_std = 0.1,
-        tissue_padding = 0.5, epi_count = 80, stroma_density = 0.5, 
+        tissue_rips = -0.5, tissue_rips_std = 0.1, nuclei_intensity = 1, mix_cyto = 0,
+        tissue_padding = 0.5, epi_count = 80, stroma_density = 0.5, mix_factor = 0,
         ratios = [0, 0.3, 0.4, 0.2, 0.1],
         seed=0, **kwargs):
     '''
@@ -105,21 +112,26 @@ def create_scene(
         my_scene: BioMedicalScene object
     '''
     scene.BioMedicalScene.clear()
-        
+
+    # 0) parameters for variations
+    base_intensity = 100*(1-nuclei_intensity)
+    cells.initialize_mixing_attribute(mix_factor)
+
+
     # 1) initialize microscope objects and add to scene
     params_cell_shading = {
         'PLA': {
-            'Nucleus': {'name': 'Nucleus_PLA', 'color': (0.315, 0.003, 0.631, 1), 'staining_intensity': 170},
+            'Nucleus': {'name': 'Nucleus_PLA', 'color': (0.315, 0.003, 0.631, 1), 'staining_intensity': 170*nuclei_intensity},
             'Cytoplasm': {'name': 'Cytoplasm_PLA', 'color': (0.456, 0.011, 0.356, 1), 'staining_intensity': 140}},
         'LYM': {
-            'Nucleus': {'name': 'Nucleus_LYM', 'color': (0.315, 0.003, 0.631, 1), 'staining_intensity': 400}},
+            'Nucleus': {'name': 'Nucleus_LYM', 'color': interpolate(nuclei_intensity, (0.315, 0.003, 0.631, 1)), 'staining_intensity': 400*nuclei_intensity+base_intensity},},
         'EOS': {
-            'Nucleus': {'name': 'Nucleus_EOS', 'color': (0.315, 0.003, 0.631, 1), 'staining_intensity': 170},
-            'Cytoplasm': {'name': 'Cytoplasm_EOS', 'color': (0.605, 0.017, 0.043, 1), 'staining_intensity': 140}},
+            'Nucleus': {'name': 'Nucleus_EOS', 'color': (0.315, 0.003, 0.631, 1), 'staining_intensity': 170*nuclei_intensity},
+            'Cytoplasm': {'name': 'Cytoplasm_EOS', 'color': interpolate(1-mix_cyto, (0.605, 0.017, 0.043, 1), (0.456, 0.011, 0.356, 1)), 'staining_intensity': 140}},
         'FIB': {
-            'Nucleus': {'name': 'Nucleus_FIB', 'color': (0.315, 0.003, 0.631, 1), 'staining_intensity': 200}},
+            'Nucleus': {'name': 'Nucleus_FIB', 'color': interpolate(nuclei_intensity, (0.315, 0.003, 0.631, 1)), 'staining_intensity': 200*nuclei_intensity+base_intensity},},
         'EPI': {
-            'Nucleus': {'name': 'Nucleus_EPI', 'color': (0.315, 0.003, 0.631, 1), 'staining_intensity': 100}}}
+            'Nucleus': {'name': 'Nucleus_EPI', 'color': interpolate(nuclei_intensity, (0.315, 0.003, 0.631, 1)), 'staining_intensity': 100*nuclei_intensity}}}
     my_materials = materials.Material(
         seed=seed, cell_type_params=params_cell_shading, tissue_rips=tissue_rips, tissue_rips_std=tissue_rips_std)
     my_tissue = tissue.Tissue(
@@ -190,7 +202,7 @@ def create_scene(
     return my_scene
 
 
-class mainpulate_scene(object):
+class MainpulateScene(object):
     def __init__(self, my_scene):
         self.my_scene = my_scene
     
@@ -206,10 +218,11 @@ class mainpulate_scene(object):
     def change_tissue_staining(self, materials):
         pass
 
-    def inflate_cells(self):
-        pass
-    # TODO 
-    # fix indexing problem
+    def inflate_epi_cells(self, factor):
+        for cell in self.my_scene.cell_objects:
+            cell_type = cell.name.split('_')[-2]
+            if cell_type == 'EPI':
+                cell.scale = tuple([cell.scale[i]*factor for i in range(3)])
 
 
 
@@ -225,7 +238,7 @@ def recreate_scene(**kwargs):
     return my_scene
 
 
-def render_scene(my_scene, render_path, sample_name, gpu=True, device=0, output_shape=(512, 512), max_samples=256):
+def render_scene(my_scene, render_path, sample_name, gpu=True, device=0, output_shape=(512, 512), max_samples=256, render_masks=True):
     '''
     renders a scene
     Args:
@@ -237,7 +250,6 @@ def render_scene(my_scene, render_path, sample_name, gpu=True, device=0, output_
         output_shape: tuple, dimensions of output
         max_samples: int, number of samples for rendering
     '''
-    
     # set render engine
     bpy.context.scene.render.engine = 'CYCLES'
     if gpu:
@@ -256,9 +268,9 @@ def render_scene(my_scene, render_path, sample_name, gpu=True, device=0, output_
     
     my_scene.render(filepath = render_path,  # where to save renders
                     scene = True, # if true scene is rendered
-                    single_masks = True, # if true single cell masks are rendered
-                    semantic_mask = True, # if true semantic mask is generated
-                    instance_mask = True, # if true instance mask is generated
+                    single_masks = render_masks, # if true single cell masks are rendered
+                    semantic_mask = render_masks, # if true semantic mask is generated
+                    instance_mask = render_masks, # if true instance mask is generated
                     depth_mask = False, # if true depth mask is generated
                     obj3d = False, # if true scene is saved as 3d object
                     output_shape = output_shape, # dimensions of output
@@ -294,11 +306,11 @@ def main():
         for key, value in args.__dict__.items():
             if key not in paramters.keys():
                 paramters[key] = value
-        with open(dir_parameters+f'/parameters_{i}.json', 'w') as outfile:
+        with open(dir_parameters+f'/parameters_{i+1}.json', 'w') as outfile:
             json.dump(paramters, outfile)
-        my_scene = create_scene(**paramters)
-        render_scene(my_scene, render_path, i+1, gpu=args.gpu, device=args.gpu_device)
-        bpy.ops.wm.read_factory_settings(use_empty=True)
+        # my_scene = create_scene(**paramters)
+        # render_scene(my_scene, render_path, i+1, gpu=args.gpu, device=args.gpu_device)
+        # bpy.ops.wm.read_factory_settings(use_empty=True)
 
 if __name__ == "__main__":
     main()
