@@ -228,3 +228,19 @@ def shade_switch(obj, flat=True):
     bpy.context.view_layer.objects.active = obj
     bpy.ops.object.shade_flat() if flat else bpy.ops.object.shade_smooth()
     
+
+def recompute_normals(obj):
+    '''
+    recompute normals of an object
+    '''
+    bpy.ops.object.select_all(action='DESELECT')
+    obj.select_set(True)
+    bpy.context.view_layer.objects.active = obj
+    # go edit mode
+    bpy.ops.object.mode_set(mode='EDIT')
+    # select al faces
+    bpy.ops.mesh.select_all(action='SELECT')
+    # recalculate outside normals 
+    bpy.ops.mesh.normals_make_consistent(inside=False)
+    # go object mode again
+    bpy.ops.object.editmode_toggle()

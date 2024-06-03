@@ -22,16 +22,17 @@ class build_crypt():
         self._cut_geometry(self.crypt)
 
         # add crypt volumes
-        self.crypt_vol_in = self._make_crypt_vol(thickness=0.01, name='crypt_volume_inner', offset_tol=0.5)
-        self.crypt_vol_out = self._make_crypt_vol(thickness=0.02, name='crypt')
+        self.crypt_vol_in = self._make_crypt_vol(thickness=0.02, name='crypt_volume_inner', offset_tol=0.5)
+        self.crypt_vol_out = self._make_crypt_vol(thickness=0.04, name='crypt')
         
         # TODO inner, outer middle
 
 
         objects = [self.crypt, self.crypt_vol_in, self.crypt_vol_out]
         for obj in objects:
+            
             #self._cut_geometry(obj)
-            self._scale(obj, (10, 10, 10))
+            self._scale(obj, (5, 5, 5))
             # bpy.context.view_layer.objects.active = obj
             # obj.select_set(True)
             # bpy.ops.object.modifier_apply(modifier="Solidify")
@@ -65,7 +66,7 @@ class build_crypt():
         geometry = bpy.context.active_object
         geometry.name = self.name
         return geometry
-        
+
     def _add_geometry_node(self):
         geo_nodes_modifier = self.crypt.modifiers.new(name=self.name, type='NODES')
         node_tree = bpy.data.node_groups.new(name=self.name, type='GeometryNodeTree')

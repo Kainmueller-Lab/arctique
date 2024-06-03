@@ -26,7 +26,7 @@ class TissueArch():
         for obj in objects:
             bpy.context.view_layer.objects.active = obj
             obj.select_set(True)
-            bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+            bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
             
     def random_rotate(self, objects):
         rotation = np.random.uniform([0*np.pi, 0, 2*np.pi])

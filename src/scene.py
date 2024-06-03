@@ -147,13 +147,18 @@ class BioMedicalScene:
 
     def bound_architecture(self, volumes=[], surfaces=[], padding=0.1):
         self.tissue_bound.dimensions.z = self.tissue.dimensions.z + padding
+        bpy.context.view_layer.objects.active = self.tissue_bound
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
         self.volumes = volumes
         self.surfaces = surfaces
         for v in self.volumes:
+            hm.recompute_normals(v)
             boolean = v.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
             boolean.operation = 'INTERSECT'
             boolean.object = self.tissue_bound
             bpy.context.view_layer.objects.active = v
+            bpy.context.object.modifiers["Boolean Modifier"].use_self = True
+            bpy.context.object.modifiers["Boolean Modifier"].use_hole_tolerant = True
             bpy.ops.object.modifier_apply(modifier=boolean.name)
         for s in self.surfaces:
             boolean = s.modifiers.new(name="Boolean Modifier", type='BOOLEAN')

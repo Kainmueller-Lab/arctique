@@ -67,6 +67,10 @@ def parse_dataset_args():
     parser.add_argument("--filler-scale", type=float, default= 0.8, help="Scale of the size of smaller filler nuclei w.r.t to the original nuclei size")
     parser.add_argument("--stroma-density", type=int, default= 0.7, help="density in stroma") # 1200
     parser.add_argument("--ratios", type=list, default=[0, 0.2, 0.4, 0.2, 0.2], help="ratios of different cell types")
+    parser.add_argument("--epi-number", type=int, default=150, help="number of surface cells") # 150
+    parser.add_argument("--filler-scale", type=float, default=0.8, help="Scale of the size of smaller filler nuclei w.r.t to the original nuclei size")
+    parser.add_argument("--stroma-density", type=int, default=0.1, help="density in stroma") # 0.5, 1200
+    parser.add_argument("--ratios", type=list, default=[0.05, 0.25, 0.45, 0.15, 0.1], help="ratios of different cell types")
     parser.add_argument("--surf_scale", type=tuple, default=(0.8, 0.5, 1), help="Surface scale")
     parser.add_argument("--delete-fraction", type=list, default=[0, 0, 0, 0, 0], help="ratios of different cell types")
     parser.add_argument("--nuclei-intensity", type=float, default=1, help="overall intensity of nuclei") # TODO
@@ -308,9 +312,9 @@ def main():
                 paramters[key] = value
         with open(dir_parameters+f'/parameters_{i+1}.json', 'w') as outfile:
             json.dump(paramters, outfile)
-        # my_scene = create_scene(**paramters)
-        # render_scene(my_scene, render_path, i+1, gpu=args.gpu, device=args.gpu_device)
-        # bpy.ops.wm.read_factory_settings(use_empty=True)
+        my_scene = create_scene(**paramters)
+        render_scene(my_scene, render_path, i+1, gpu=args.gpu, device=args.gpu_device)
+        bpy.ops.wm.read_factory_settings(use_empty=True)
 
 if __name__ == "__main__":
     main()
