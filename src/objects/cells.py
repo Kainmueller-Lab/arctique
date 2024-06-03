@@ -51,12 +51,12 @@ class PLA(CellAttribute):
     def __init__(self):
         super().__init__()
         self.cell_type = CellType.PLA
-        self.size = 0.075 # 0.9
-        self.nucleus_size = 0.05
+        self.size = 0.058 # 0.9
+        self.nucleus_size = 0.038
         self.scale = (1,0.8,0.7) # (1, 0.6, 0.5)
         self.deformation_strength = 0.4 # 0.7
         self.attribute_name = "Plasma Cell"
-        self.max_bending_strength = 0.2
+        self.max_bending_strength = 0.3
     
     def add_cell_objects(self, location, direction):
         # Add cytoplasm
@@ -82,10 +82,10 @@ class LYM(CellAttribute):
     def __init__(self):
         super().__init__()
         self.cell_type = CellType.LYM
-        self.size = 0.04 # 0.04,
-        self.nucleus_size = 0.025
+        self.size = 0.031 # 0.04,
+        self.nucleus_size = 0.019
         self.scale = (1, 0.9, 0.8) #(1, 0.9, 0.8)
-        self.deformation_strength = 0.2 #0.7
+        self.deformation_strength = 0.3 #0.7
         self.attribute_name = "Lymphocyte"
         self.max_bending_strength = 0.2
     
@@ -103,8 +103,8 @@ class EOS(CellAttribute):
     def __init__(self):
         super().__init__()
         self.cell_type = CellType.EOS
-        self.size = 0.056
-        self.nucleus_size = 0.025
+        self.size = 0.045
+        self.nucleus_size = 0.02
         self.scale = (1,1,1)
         self.deformation_strength = 0.2
         self.attribute_name = "Eosinophil"
@@ -142,8 +142,8 @@ class FIB(CellAttribute):
     def __init__(self):
         super().__init__()
         self.cell_type = CellType.FIB
-        self.size = 0.1
-        self.nucleus_size = 0.1
+        self.size = 0.079
+        self.nucleus_size = 0.079
         self.scale = (1,0.6,0.5)
         self.deformation_strength = 0.2
         self.attribute_name = "Fibroblast"
@@ -172,7 +172,7 @@ class EPI(CellAttribute):
     def __init__(self):
         super().__init__()
         self.cell_type = CellType.EPI
-        self.size = 0.04
+        self.size = 0.033
         self.attribute_name = "Epithelial Cell"
         self.smooth_factor = 2 # (float 1) Controls the roundness of the object. 0 = identical to surrounding mesh, the higher this number, the rounder the mesh.
         self.smooth_roundness = 2 # (int, 2) Controls the size of objects, the higher this number, the smaller the mesh. Should be at least 2.
