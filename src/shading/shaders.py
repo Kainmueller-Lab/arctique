@@ -13,7 +13,7 @@ imp.reload(shading_utils)
 
 
 class CustomShaderNodes():
-    def __init__(self, start=(0, 0), sep=200, shift=(0, 0, 0)):
+    def __init__(self, start=(0, 0), sep=200, shift=(0, 0, 0), red_points_strength=0):
         self.shift = shift
         self.start = start
         self.sep = sep
@@ -21,7 +21,7 @@ class CustomShaderNodes():
         # general
         self.object_coord = self.add_object_coord(shift=self.shift)
         self.volume = self.add_volume()
-        self.mixing_red = self.add_mixing_red_points()
+        self.mixing_red = self.add_mixing_red_points(strength=red_points_strength)
         self.principle_noise = self.add_principle_noise()
         self.stacked_noise = self.add_stacked_noise()
         
@@ -148,7 +148,7 @@ class CustomShaderNodes():
         
         return node_group
     
-    def add_mixing_red_points(self, node_name='MixingRedPoints'):
+    def add_mixing_red_points(self, node_name='MixingRedPoints', strength=0):
         node_group, inputs, outputs = shading_utils.create_node_group(node_name, start=self.start)
         nodes = node_group.nodes
         links = node_group.links
@@ -162,7 +162,7 @@ class CustomShaderNodes():
         loc = node.location
         node.inputs['AbsorptionColor'].default_value = (0.605, 0.017, 0.043, 1)
         node.inputs['ScatterColor'].default_value = (0.605, 0.019, 0.088, 1)
-        node.inputs['AbsorptionDensity'].default_value = 125
+        node.inputs['AbsorptionDensity'].default_value = 125 * (1+0.3*strength)
         node.inputs['ScatterDensity'].default_value = 0.6
         
         # object centric coordinate system
@@ -178,8 +178,8 @@ class CustomShaderNodes():
         loc = node.location = (loc[0]+self.sep, loc[1])
         node = staining_intensity = nodes.new('ShaderNodeValToRGB')
         loc = node.location = (loc[0]+self.sep, loc[1])
-        node.color_ramp.elements[0].position = 0.559
-        node.color_ramp.elements[1].position = 0.75
+        node.color_ramp.elements[0].position = 0.559 - strength
+        node.color_ramp.elements[1].position = 0.75 - strength
         links.new(coord.outputs[0], staining_noise.inputs['Vector'])
         links.new(staining_noise.outputs[0], staining_intensity.inputs[0])
         

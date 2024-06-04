@@ -16,7 +16,7 @@ imp.reload(shaders)
 
 
 class Material():
-    def __init__(self, seed=0, cell_type_params=None, tissue_rips=-0.5, tissue_rips_std=0.1):
+    def __init__(self, seed=0, cell_type_params=None, tissue_rips=-0.5, tissue_rips_std=0.1, **kwargs):
         # delete all materials
         for material in bpy.data.materials:
             bpy.data.materials.remove(material)
@@ -24,7 +24,7 @@ class Material():
         # add custom nodes
         np.random.seed(seed)
         self.shift = tuple(np.random.randint([10**3]*3))
-        self.custom_nodes = shaders.CustomShaderNodes(shift=self.shift)
+        self.custom_nodes = shaders.CustomShaderNodes(shift=self.shift, **kwargs)
 
         # add materials
         self.light_source = self.add_light_source()

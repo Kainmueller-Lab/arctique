@@ -61,6 +61,7 @@ def parse_dataset_args():
     parser.add_argument("--tissue-rips-std", type=float, default=0.2, help="Degree of rip like structures in tissue")
     parser.add_argument("--stroma-intensity", type=float, default=1, help="Degree of rip like structures in tissue")
     parser.add_argument("--noise-seed-shift", type=float, default=0, help="Degree of rip like structures in tissue")
+    parser.add_argument("--red-points-strength", type=float, default=0, help="Degree of rip like structures in tissue")
     
     # nuclei
     parser.add_argument("--epi-number", type=int, default= 150, help="number of surface cells") # 150
@@ -93,7 +94,7 @@ def create_scene(
         tissue_thickness = 0.05, tissue_size = 1.28, tissue_location = (0, 0, 0.5),
         tissue_rips = -0.5, tissue_rips_std = 0.1, nuclei_intensity = 1, mix_cyto = 0,
         tissue_padding = 0.5, epi_count = 80, stroma_density = 0.5, mix_factor = 0,
-        ratios = [0, 0.3, 0.4, 0.2, 0.1],
+        ratios = [0, 0.3, 0.4, 0.2, 0.1], red_points_strength = 0,
         seed=0, **kwargs):
     '''
     creates a tissue crop with cells and nuclei
@@ -133,7 +134,8 @@ def create_scene(
         'EPI': {
             'Nucleus': {'name': 'Nucleus_EPI', 'color': interpolate(nuclei_intensity, (0.315, 0.003, 0.631, 1)), 'staining_intensity': 100*nuclei_intensity}}}
     my_materials = materials.Material(
-        seed=seed, cell_type_params=params_cell_shading, tissue_rips=tissue_rips, tissue_rips_std=tissue_rips_std)
+        seed=seed, cell_type_params=params_cell_shading, tissue_rips=tissue_rips, 
+        tissue_rips_std=tissue_rips_std, red_points_strength=red_points_strength)
     my_tissue = tissue.Tissue(
         my_materials.muscosa, thickness=tissue_thickness,
         size=tissue_size, location=tissue_location)
@@ -308,9 +310,9 @@ def main():
                 paramters[key] = value
         with open(dir_parameters+f'/parameters_{i+1}.json', 'w') as outfile:
             json.dump(paramters, outfile)
-        # my_scene = create_scene(**paramters)
-        # render_scene(my_scene, render_path, i+1, gpu=args.gpu, device=args.gpu_device)
-        # bpy.ops.wm.read_factory_settings(use_empty=True)
+        my_scene = create_scene(**paramters)
+        render_scene(my_scene, render_path, i+1, gpu=args.gpu, device=args.gpu_device)
+        bpy.ops.wm.read_factory_settings(use_empty=True)
 
 if __name__ == "__main__":
     main()
