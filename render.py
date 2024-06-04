@@ -149,17 +149,23 @@ def create_scene(
     # 2) create macrostructures in tissue block, rotate and scale them and cut them
     tissue_arch = arch.TissueArch(seed=seed)
     tissue_arch.random_crop(my_tissue.tissue)
-    macro_structure = tissue_arch.get_architecture()
+    macro_structure = tissue_arch.get_architecture()   # NOTE crypt is bad news, dont touch it
     crypt, crypt_vol_1, crypt_vol_2, vol_goblet, mucosa = macro_structure
     my_scene.bound_architecture(
-       volumes=[crypt_vol_1, vol_goblet, mucosa, crypt_vol_2], surfaces=[crypt],
+       volumes=[mucosa, crypt_vol_1, vol_goblet, crypt_vol_2], surfaces=[crypt],
        padding=tissue_padding)
+    ext_crypt = hm.copy_object(crypt_vol_2, 'ext_crypt')
     ext_stroma = hm.copy_object(mucosa, 'ext_stroma')
+    mucosa_fill = hm.copy_object(mucosa, 'mucosa_fill')
     
-    hm.recompute_normals(crypt_vol_2)
+    #hm.recompute_normals(crypt_vol_2)
     hm.recompute_normals(mucosa)
+    hm.recompute_normals(mucosa_fill)
+    hm.recompute_normals(ext_crypt)
     hm.recompute_normals(crypt)
+    hm.add_boolean_modifier(ext_crypt, crypt, operation='UNION', name='add epi to stroma', apply=True)
     hm.add_boolean_modifier(mucosa, crypt_vol_2, name='add epi to stroma', apply=True)
+    hm.add_boolean_modifier(mucosa_fill, crypt_vol_2, name='add epi to stroma', apply=True)
 
     # 3) populate scene with nuclei/cells
     # add epi volume filling
@@ -176,11 +182,29 @@ def create_scene(
         cells.CellType.LYM, 
         cells.CellType.EOS, 
         cells.CellType.FIB]
+    hm.recompute_normals(mucosa)
+    stroma_fill = hm.copy_object(mucosa, name='stroma_fill')
+    hm.convert2mesh(stroma_fill)
     volume_fill = arr.VolumeFill(
-        mucosa, stroma_density, MIX_TYPES, ratios, strict_boundary=True, seed=seed)
+        mucosa_fill, stroma_density, MIX_TYPES, ratios, strict_boundary=True, seed=seed)
     my_scene.add_arrangement(volume_fill, bounding_mesh=mucosa) # NOTE: 240 nuclei take about 20 s
+    #my_scene.cut_cytoplasm_nuclei()
 
     # 4) cut objects and add staining
+    # my_scene.remove_cells_volume(mucosa)
+    # my_scene.delete_cells()
+    # hm.recompute_normals(mucosa)
+    # my_scene.cut_tissue()
+    # my_scene.add_cell_params(params_cell_shading)
+    # my_scene.cut_cytoplasm_nuclei()
+    # my_scene.remove_goblet_volume(crypt_vol_2)
+    # my_scene.cut_cells()
+    # #hm.add_boolean_modifier(my_scene.tissue, ext_crypt, name='subtract_crypt')
+    # my_scene.add_tissue_staining(materials=[my_materials.muscosa, my_materials.crypt_staining])
+    # my_scene.add_nuclei_mask(material=my_materials.nuclei_mask)
+    # my_scene.add_staining_to_cell(materials=my_materials.cell_staining)
+    # mucosa.location.z = mucosa.location.z + 0.0005
+
     my_scene.add_cell_params(params_cell_shading)
     my_scene.delete_cells()
     my_scene.cut_cytoplasm_nuclei()
@@ -188,9 +212,11 @@ def create_scene(
     my_scene.remove_cells_volume(mucosa)
     my_scene.cut_cells()
     my_scene.cut_tissue()
+    hm.add_boolean_modifier(my_scene.tissue, ext_crypt, name='subtract_crypt')
     my_scene.add_tissue_staining(materials=[my_materials.muscosa, my_materials.crypt_staining])
     my_scene.add_nuclei_mask(material=my_materials.nuclei_mask)
     my_scene.add_staining_to_cell(materials=my_materials.cell_staining)
+    mucosa.location.z = mucosa.location.z - 0.0005
 
     # 5) hide non cell objects
     goblet_cells = []
@@ -198,7 +224,7 @@ def create_scene(
         cell_type = cell.name.split('_')[-2]
         if cell_type == 'GOB':
             goblet_cells.append(cell)
-    for obj in [crypt, crypt_vol_1, ext_stroma, vol_goblet]+goblet_cells:
+    for obj in [crypt, crypt_vol_1, stroma_fill, ext_crypt, mucosa_fill, ext_stroma, vol_goblet]+goblet_cells:
         obj.hide_viewport = True
         obj.hide_render = True
 

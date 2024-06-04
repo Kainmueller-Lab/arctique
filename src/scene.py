@@ -152,9 +152,9 @@ class BioMedicalScene:
         self.volumes = volumes
         self.surfaces = surfaces
         for i, v in enumerate(self.volumes):
-            self.tissue_bound.dimensions.z = self.tissue.dimensions.z + padding + i*tolerance
-            self.tissue_bound.scale.x = 1 + i*tolerance
-            self.tissue_bound.scale.y = 1 + i*tolerance
+            self.tissue_bound.dimensions.z = self.tissue.dimensions.z + padding + (i+1)*tolerance
+            self.tissue_bound.scale.x = 1 + (i+1)*tolerance
+            self.tissue_bound.scale.y = 1 + (i+1)*tolerance
             #self.tissue_bound.dimensions.y = self.tissue.dimensions.y + i*tolerance
             hm.recompute_normals(v)
             boolean = v.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
@@ -164,7 +164,10 @@ class BioMedicalScene:
             bpy.context.object.modifiers["Boolean Modifier"].use_self = True
             bpy.context.object.modifiers["Boolean Modifier"].use_hole_tolerant = True
             bpy.ops.object.modifier_apply(modifier=boolean.name)
-        for s in self.surfaces:
+        for i, s in enumerate(self.surfaces):
+            self.tissue_bound.dimensions.z = self.tissue.dimensions.z + padding + (i+2)*tolerance
+            self.tissue_bound.scale.x = 1 + (i+2)*tolerance
+            self.tissue_bound.scale.y = 1 + (i+2)*tolerance
             boolean = s.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
             boolean.operation = 'INTERSECT'
             boolean.object = self.tissue_bound
@@ -222,7 +225,7 @@ class BioMedicalScene:
     #                 bpy.context.view_layer.objects.active = v
     #                 bpy.ops.object.modifier_apply(modifier=boolean.name)
                 
-    def delete_cells(self):
+    def delete_cells(self, tissue=None, strict=True, type=('EOS', 'FIB', 'PLA', 'LYM')):
         # Remove all cell objects that do not intersect with the tissue 
         # NOTE: Use bounding box comparison first, so there will be less objects to intersect -> faster. - ck
         # TODO: handle object and list entry removal better. - ck
@@ -237,6 +240,9 @@ class BioMedicalScene:
                 par.set_postfix({"deleted": frac_deleted})
         for cell in deleted_names:
             self.cell_objects.remove(cell)
+
+        # if strict:
+        #     self.cell_objects = hm.delete_cells_outside_tissue(self.cell_objects, tissue, type=type)
     
     def cut_cells(self):
         for cell in self.cell_objects:
@@ -295,7 +301,7 @@ class BioMedicalScene:
             if cell_type == 'GOB':
                 hm.add_boolean_modifier(volume, cell, name='remove goblet', operation='DIFFERENCE', apply=True)
 
-    def remove_cells_volume(self, volume, tolerance=-0.005):
+    def remove_cells_volume(self, volume, tolerance=-0.007):
         cell_copies = [hm.copy_object(cell, cell.name + '_copy') for cell in self.cell_objects]
         scales = [cell.scale for cell in cell_copies]
         bpy.ops.object.select_all(action='DESELECT')

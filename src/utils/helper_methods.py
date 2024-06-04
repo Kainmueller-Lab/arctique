@@ -203,12 +203,13 @@ def object_in_hull(obj, hull):
     # for poly in me.polygons:
     #     print("Polygon index: %d, length: %d" % (poly.index, poly.loop_total))
 
-    enclosed = check_obj_empty(obj_copy)
+    enclosed = check_obj_empty(obj_copy, threshold_polygons=0)
     bpy.data.objects.remove(obj_copy)
+
     return enclosed
 
 
-def delete_cells_outside_tissue(cells, tissue):
+def delete_cells_outside_tissue(cells, tissue, type=[]):
     '''
     deletes all cells that are outside the tissue
     Args:
@@ -217,9 +218,15 @@ def delete_cells_outside_tissue(cells, tissue):
     '''
     remaining_cells = []
     for cell in cells:
-        if not object_in_hull(cell, tissue):
-            print(f"Removed {cell.name}")
-            bpy.data.objects.remove(cell)
+        t = cell.name.split('_')[2]
+        print(t)
+        if t in type:
+            if not object_in_hull(cell, tissue):
+                print(f"Removed {cell.name}")
+                bpy.data.objects.remove(cell)
+            else:
+                remaining_cells.append(cell)
+                print(f"Kept {cell.name}")
         else:
             remaining_cells.append(cell)
             print(f"Kept {cell.name}")
