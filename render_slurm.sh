@@ -1,15 +1,13 @@
 #!/bin/sh
-#SBATCH --gres=gpu:full:1
+#SBATCH --gres=gpu:1
 #SBATCH -n 8
-#SBATCH --cpus-per-task=4
-#SBATCH -e /home/hgf_mdc/hgf_ysb1444/logging/log_%j.err
-#SBATCH --output /home/hgf_mdc/hgf_ysb1444/logging/log_%j.out
-#SBATCH --time 0-08:00:00
-#SBATCH --partition=advanced
+#SBATCH -e /home/hk-project-p0021769/hgf_ysb1444/logging/log_%j.err
+#SBATCH --output /home/hk-project-p0021769/hgf_ysb1444/logging/log_%j.out
+#SBATCH --time 0-02:00:00
+#SBATCH --partition=accelerated-h100
 
-N_GPUS=1
 echo $SLURM_JOB_ID
-PYTHONPATH=/hkfs/work/workspace_haic/scratch/hgf_ysb1444-rendered_HE/rendered_HE python render.py "$@"
+PYTHONPATH=/hkfs/work/workspace/scratch/hgf_ysb1444-renderingHE/rendered_HE python render.py "$@"
 
 retVal=$?
 if [ $retVal -ne 0 ]; then
