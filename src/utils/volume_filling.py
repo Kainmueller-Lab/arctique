@@ -161,6 +161,8 @@ def nearest_vertex(obj, q):
     v_coords = [obj.matrix_world @ v.co for v in obj.data.vertices]
     distances = [np.linalg.norm(p-q) for p in v_coords]
     # TODO fix error if necessary
+    if distances == []:
+        return None, None
     min_index = np.argmin(distances)
     nearest_vertex = vertices[min_index]
     min_distance = distances[min_index]
@@ -171,6 +173,8 @@ def is_inside(point, obj, shrink=0):
     Checks whether a given point lies inside a shrinked version of the given mesh.
     '''
     nearest_vert, _ = nearest_vertex(obj, point)
+    if nearest_vert is None:
+        return False
     normal = nearest_vert.normal
     closest = nearest_vert.co - shrink*normal
     direction = closest - point
