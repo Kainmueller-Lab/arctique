@@ -90,7 +90,7 @@ def get_universal_cell_ids(cell_part_names):
             idx += 1
     return look_up_indices
 
-def map_16bit_to_index(values, sep=55, tol=10):
+def map_16bit_to_index(values, sep=55, tol=20):
     '''
     maps back the values blender assigns integers when saving a 16 bit image
     back to the original indices
@@ -155,6 +155,14 @@ def convert2mesh(obj):
     obj.select_set(True)
     bpy.context.view_layer.objects.active = obj
     bpy.ops.object.convert(target='MESH')
+
+
+def apply_transform(obj):
+    '''
+    applies the transformation of an object
+    '''
+    bpy.context.view_layer.objects.active = obj
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
 
 def add_boolean_modifier(obj, target, name='Boolean Modifier', operation='DIFFERENCE', apply=True):

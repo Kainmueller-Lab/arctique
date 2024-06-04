@@ -160,6 +160,7 @@ def nearest_vertex(obj, q):
     vertices = [v for v in obj.data.vertices]
     v_coords = [obj.matrix_world @ v.co for v in obj.data.vertices]
     distances = [np.linalg.norm(p-q) for p in v_coords]
+    # TODO fix error if necessary
     min_index = np.argmin(distances)
     nearest_vertex = vertices[min_index]
     min_distance = distances[min_index]

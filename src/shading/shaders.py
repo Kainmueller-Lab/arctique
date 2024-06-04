@@ -13,7 +13,7 @@ imp.reload(shading_utils)
 
 
 class CustomShaderNodes():
-    def __init__(self, start=(0, 0), sep=200, shift=(0, 0, 0)):
+    def __init__(self, start=(0, 0), sep=200, shift=(0, 0, 0), stroma_intensity=1):
         self.shift = shift
         self.start = start
         self.sep = sep
@@ -26,7 +26,7 @@ class CustomShaderNodes():
         self.stacked_noise = self.add_stacked_noise()
         
         # tissue
-        self.lamina_propria_tissue_base = self.add_lamina_propria_tissue_base()
+        self.lamina_propria_tissue_base = self.add_lamina_propria_tissue_base(stroma_intensity=stroma_intensity)
     
     def add_object_coord(self, node_name='Coord', shift=(0, 0, 0)):
         '''
@@ -90,7 +90,7 @@ class CustomShaderNodes():
         
         return node_group
     
-    def add_lamina_propria_tissue_base(self, node_name='LaminaPropBase'):
+    def add_lamina_propria_tissue_base(self, node_name='LaminaPropBase', stroma_intensity=1, stroma_color=(0.5, 0.5, 0.5)):
         node_group, inputs, outputs = shading_utils.create_node_group(node_name, start=self.start)
         nodes = node_group.nodes
         links = node_group.links
@@ -115,7 +115,7 @@ class CustomShaderNodes():
         node.color_ramp.elements[1].position = 0.190
         node = color_ramp_2 = nodes.new('ShaderNodeValToRGB')
         loc = node.location = (loc[0]+1.5*self.sep, loc[1])
-        node.color_ramp.elements[0].color = (0.409, 0.215, 0.430, 1)
+        node.color_ramp.elements[0].color = (0.07, 0.04, 0.08, 1)
         node.color_ramp.elements[1].color = (0.456, 0.011, 0.356, 1)
         node.color_ramp.elements[1].position = 0.1
         links.new(musgrave_noise.outputs[0], color_ramp_1.inputs[0])
@@ -131,7 +131,7 @@ class CustomShaderNodes():
         node = density_strength = nodes.new('ShaderNodeMath')
         loc = node.location = (loc[0]+1.5*self.sep, loc[1])
         node.operation = 'MULTIPLY'
-        node.inputs[1].default_value = 130
+        node.inputs[1].default_value = 180 * stroma_intensity
         links.new(musgrave_noise.outputs[0], density_ramp.inputs[0])
         links.new(density_ramp.outputs[0], density_strength.inputs[0])
         

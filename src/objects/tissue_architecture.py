@@ -11,12 +11,12 @@ class TissueArch():
         np.random.seed(self.seed)
         self.crypt = macro.build_crypt()
         # 1b) build surronding muscosa layer
-        self.tissue = macro.build_muscosa(self.crypt.crypt)
+        self.tissue = macro.build_muscosa(self.crypt)
 
     def get_architecture(self):
         return [
             self.crypt.crypt, self.crypt.crypt_vol_in, 
-            self.crypt.crypt_vol_out, self.tissue.muscosa]
+            self.crypt.crypt_vol_out, self.crypt.crypt_goblet, self.tissue.muscosa]
     
     def random_crop(self, crop):
         objects = self.get_architecture()

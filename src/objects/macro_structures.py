@@ -22,17 +22,23 @@ class build_crypt():
         self._cut_geometry(self.crypt)
 
         # add crypt volumes
-        self.crypt_vol_in = self._make_crypt_vol(thickness=0.02, name='crypt_volume_inner', offset_tol=0.5)
-        self.crypt_vol_out = self._make_crypt_vol(thickness=0.04, name='crypt')
+        a = 0.015
+        b = 0.04
+        tol = 0.002
+        c = 2*b/(a+tol+b)
+        offset_c = 1-c
+        self.crypt_vol_in = self._make_crypt_vol(thickness=a, name='crypt_volume_inner', offset_tol=1)
+        self.crypt_goblet = self._make_crypt_vol(thickness=b, name='goblet_volume', offset_tol=-1)
+        self.crypt_vol_out = self._make_crypt_vol(thickness=a+b+tol, name='crypt', offset_tol=offset_c)
         
         # TODO inner, outer middle
 
 
-        objects = [self.crypt, self.crypt_vol_in, self.crypt_vol_out]
+        objects = [self.crypt, self.crypt_vol_in, self.crypt_vol_out, self.crypt_goblet]
         for obj in objects:
             
             #self._cut_geometry(obj)
-            self._scale(obj, (5, 5, 5))
+            self._scale(obj, (7, 7, 7))
             # bpy.context.view_layer.objects.active = obj
             # obj.select_set(True)
             # bpy.ops.object.modifier_apply(modifier="Solidify")
@@ -55,14 +61,14 @@ class build_crypt():
         bpy.context.view_layer.objects.active = crypt_vol        
         bpy.ops.object.modifier_add(type='SOLIDIFY')
         bpy.context.object.modifiers['Solidify'].thickness = thickness
-        bpy.context.object.modifiers['Solidify'].offset = bpy.context.object.modifiers['Solidify'].offset + offset_tol
+        bpy.context.object.modifiers['Solidify'].offset = offset_tol
         bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
         bpy.ops.object.modifier_apply(modifier="Solidify")
 
         return crypt_vol
 
     def _add_geometry(self):
-        bpy.ops.mesh.primitive_plane_add(size=2, location=(0, 0, 0))
+        bpy.ops.mesh.primitive_plane_add(size=1, location=(0, 0, 0))  # NOTE may change back to 2
         geometry = bpy.context.active_object
         geometry.name = self.name
         return geometry
@@ -88,7 +94,7 @@ class build_crypt():
         # Subdivide mesh for many crypts
         subdivide = nodes.new(type='GeometryNodeSubdivideMesh')
         subdivide.location = start_pos
-        subdivide.inputs['Level'].default_value = 4 
+        subdivide.inputs['Level'].default_value = 3  # NOTE may change back to 4 
         if in_link is not None:
             links.new(in_link, subdivide.inputs['Mesh'])
         
@@ -112,11 +118,14 @@ class build_crypt():
         
         # make mesh quadratic again
         cube_bool = nodes.new(type='GeometryNodeMeshCube')
+        # scale cube
+        #cube_bool.inputs['Size'].default_value = 1
         cube_bool.location = (dual_mesh.location[0], dual_mesh.location[1]-sep)
         mesh_bool = nodes.new(type='GeometryNodeMeshBoolean')
         mesh_bool.location = (dual_mesh.location[0]+sep, dual_mesh.location[1])
         mesh_bool.operation = 'INTERSECT'
         links.new(dual_mesh.outputs['Dual Mesh'], mesh_bool.inputs['Mesh 2'])
+        links.new(cube_bool.outputs['Mesh'], mesh_bool.inputs['Mesh 1'])
         
         if out_link is not None:
             links.new(mesh_bool.outputs['Mesh'], out_link)
@@ -188,7 +197,7 @@ class build_crypt():
         ### C) Increase details
         subdivide = nodes.new(type='GeometryNodeSubdivisionSurface')
         subdivide.location = (pos.location[0]+sep, pos.location[1])
-        subdivide.inputs['Level'].default_value = 4
+        subdivide.inputs['Level'].default_value = 3 # TODO change back 4
         links.new(pos.outputs['Geometry'], subdivide.inputs['Mesh'])
         
         if out_link is not None:
@@ -202,6 +211,10 @@ class build_crypt():
 
         # 1. Create a helper cube
         bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, 0))
+
+        # rescale x and y-axis 
+        bpy.context.object.scale = (size, size, 1)
+
         helper_cube = bpy.context.object
 
         # 2. Apply a Boolean Modifier to 'mesh'
@@ -224,13 +237,13 @@ class build_muscosa():
     def __init__(self, crypt, name='muscosa', buffer=(0.2, 0.2, 0.1)):
         self.name = name
         self.buffer = buffer
-        self.size = crypt.dimensions
+        self.size = crypt.crypt.dimensions
         self.crypt = crypt
         self.muscosa = self._add_geometry()
         self._remove_crypts()
 
     def _add_geometry(self):
-        bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, self.size[2]/2+0.0001))
+        bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, self.size[2]/2+0.01))  #0.0001
         geometry = bpy.context.active_object
         geometry.name = self.name
         geometry.scale = (self.size[0]*(1-self.buffer[0]), self.size[1]*(1-self.buffer[1]), self.size[2]*(1+self.buffer[2]))
@@ -242,9 +255,18 @@ class build_muscosa():
     def _remove_crypts(self):
         # Apply a Boolean Modifier to 'mesh'
         boolean_modifier = self.muscosa.modifiers.new(name='BooleanOp', type='BOOLEAN')
-        boolean_modifier.object = self.crypt
+        boolean_modifier.object = self.crypt.crypt
         boolean_modifier.operation = 'DIFFERENCE' 
 
         # Apply the modifier
         bpy.context.view_layer.objects.active = self.muscosa
         bpy.ops.object.modifier_apply(modifier=boolean_modifier.name)
+
+        # remove extended crypt
+        #boolean_modifier = self.muscosa.modifiers.new(name='BooleanOp', type='BOOLEAN')
+        #boolean_modifier.object = self.crypt.crypt_vol_out
+        #boolean_modifier.operation = 'DIFFERENCE' 
+
+        # Apply the modifier
+        #bpy.context.view_layer.objects.active = self.muscosa
+        #bpy.ops.object.modifier_apply(modifier=boolean_modifier.name)

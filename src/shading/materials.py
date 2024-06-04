@@ -16,7 +16,7 @@ imp.reload(shaders)
 
 
 class Material():
-    def __init__(self, seed=0, cell_type_params=None, tissue_rips=-0.5, tissue_rips_std=0.1):
+    def __init__(self, seed=0, cell_type_params=None, tissue_rips=-0.5, tissue_rips_std=0.1, stroma_intensity=1, stroma_color=(0.62, 0.25, 0.65, 1.0)):
         # delete all materials
         for material in bpy.data.materials:
             bpy.data.materials.remove(material)
@@ -24,14 +24,14 @@ class Material():
         # add custom nodes
         np.random.seed(seed)
         self.shift = tuple(np.random.randint([10**3]*3))
-        self.custom_nodes = shaders.CustomShaderNodes(shift=self.shift)
+        self.custom_nodes = shaders.CustomShaderNodes(shift=self.shift, stroma_intensity=stroma_intensity)
 
         # add materials
         self.light_source = self.add_light_source()
         rips = np.random.normal(tissue_rips, tissue_rips_std)
-        self.muscosa = self.add_mucosa_staining(threshold_rips=-rips)
+        self.muscosa = self.add_mucosa_staining(threshold_rips=-rips, stroma_intensity=stroma_intensity, base_color=stroma_color)
         self.nuclei_mask = self.add_nuclei_mask()
-        self.crypt_staining = self.add_crypt_staining()
+        self.crypt_staining = self.add_crypt_staining(staining_intensity=270*stroma_intensity)
         self.cell_staining = []
         if cell_type_params is None:
             self.nuclei_staining = self.add_nuclei_staining(name="Nucleus")
@@ -81,7 +81,7 @@ class Material():
 
     def add_crypt_staining(
             self, name="crypt", color=(0.456, 0.011, 0.356, 1),
-            staining_intensity=170, start_pos=(0, 0), sep=200):
+            staining_intensity=220, start_pos=(0, 0), sep=200):
         
         material, nodes, links = shading_utils.initialize_material(name)
         
@@ -183,9 +183,16 @@ class Material():
         volume.inputs['AbsorptionColor'].default_value = color
         volume.inputs['ScatterDensity'].default_value = 0
 
+        # add principal noise
+        node = noise = shading_utils.add_node_group(
+            nodes, self.custom_nodes.principle_noise, pos=(loc[0]+sep, loc[1]))
+        loc = node.location
+        node.inputs['Size'].default_value = 60
+        links.new(volume.outputs[0], noise.inputs[0])
+
         # link nodes
         node = material_output = nodes.new('ShaderNodeOutputMaterial')
-        links.new(volume.outputs[0], material_output.inputs['Volume'])
+        links.new(noise.outputs[0], material_output.inputs['Volume'])
         loc = node.location = (loc[0]+sep, loc[1])
 
         return material
@@ -193,7 +200,7 @@ class Material():
 
     def add_mucosa_staining(
             self, name="muscosa", base_color=(0.62, 0.25, 0.65, 1.0),
-            start_pos=(0, 0), sep=200, threshold_rips=0.5, tissue_intensity=1):
+            start_pos=(0, 0), sep=200, threshold_rips=0.5, stroma_intensity=1):
         
         material, nodes, links = shading_utils.initialize_material(name)
         

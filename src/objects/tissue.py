@@ -9,6 +9,8 @@ class Tissue():
         self.size = size
         self.location = location
 
+        print(size, location, thickness, material)
+
         # create tissue mesh
         bpy.ops.mesh.primitive_cube_add(size=size, location=location)
         self.tissue = bpy.context.active_object

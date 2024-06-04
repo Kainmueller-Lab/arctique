@@ -55,22 +55,19 @@ def parse_dataset_args():
     # tissue
     parser.add_argument("--tissue-thickness", type=float, default=0.05, help="Tissue thickness")
     parser.add_argument("--tissue-size", type=float, default=1.28, help="Tissue size")
+    parser.add_argument("--tissue-color", type=tuple, default=(0.409, 0.215, 0.430, 1), help="Tissue location")
     parser.add_argument("--tissue-location", type=tuple, default=(0, 0, 0.5), help="Tissue location")
     parser.add_argument("--tissue-padding", type=float, default=0.2, help="Tissue padding")
     parser.add_argument("--tissue-rips", type=float, default=0, help="Degree of rip like structures in tissue")
     parser.add_argument("--tissue-rips-std", type=float, default=0.2, help="Degree of rip like structures in tissue")
-    parser.add_argument("--stroma-intensity", type=float, default=1, help="Degree of rip like structures in tissue")
+    parser.add_argument("--stroma-intensity", type=float, default=0.7, help="Degree of rip like structures in tissue")
     parser.add_argument("--noise-seed-shift", type=float, default=0, help="Degree of rip like structures in tissue")
-    
+
     # nuclei
-    parser.add_argument("--epi-number", type=int, default= 150, help="number of surface cells") # 150
-    parser.add_argument("--filler-scale", type=float, default= 0.8, help="Scale of the size of smaller filler nuclei w.r.t to the original nuclei size")
-    parser.add_argument("--stroma-density", type=int, default= 0.7, help="density in stroma") # 1200
-    parser.add_argument("--ratios", type=list, default=[0, 0.2, 0.4, 0.2, 0.2], help="ratios of different cell types")
     parser.add_argument("--epi-number", type=int, default=150, help="number of surface cells") # 150
     parser.add_argument("--filler-scale", type=float, default=0.8, help="Scale of the size of smaller filler nuclei w.r.t to the original nuclei size")
-    parser.add_argument("--stroma-density", type=int, default=0.1, help="density in stroma") # 0.5, 1200
-    parser.add_argument("--ratios", type=list, default=[0.05, 0.25, 0.45, 0.15, 0.1], help="ratios of different cell types")
+    parser.add_argument("--stroma-density", type=int, default= 1, help="density in stroma") # 0.5, 1200
+    parser.add_argument("--ratios", type=list, default=[0, 0.25, 0.45, 0.15, 0.15], help="ratios of different cell types")
     parser.add_argument("--surf_scale", type=tuple, default=(0.8, 0.5, 1), help="Surface scale")
     parser.add_argument("--delete-fraction", type=list, default=[0, 0, 0, 0, 0], help="ratios of different cell types")
     parser.add_argument("--nuclei-intensity", type=float, default=1, help="overall intensity of nuclei") # TODO
@@ -96,7 +93,7 @@ def interpolate(alpha, t1, t2 =(0.409, 0.215, 0.430, 1)):
 def create_scene(
         tissue_thickness = 0.05, tissue_size = 1.28, tissue_location = (0, 0, 0.5),
         tissue_rips = -0.5, tissue_rips_std = 0.1, nuclei_intensity = 1, mix_cyto = 0,
-        tissue_padding = 0.5, epi_count = 80, stroma_density = 0.5, mix_factor = 0,
+        tissue_padding = 0.5, epi_count = 80, stroma_density = 0.5, mix_factor = 0, stroma_intensity = 1,
         ratios = [0, 0.3, 0.4, 0.2, 0.1],
         seed=0, **kwargs):
     '''
@@ -125,19 +122,21 @@ def create_scene(
     # 1) initialize microscope objects and add to scene
     params_cell_shading = {
         'PLA': {
-            'Nucleus': {'name': 'Nucleus_PLA', 'color': (0.315, 0.003, 0.631, 1), 'staining_intensity': 170*nuclei_intensity},
-            'Cytoplasm': {'name': 'Cytoplasm_PLA', 'color': (0.456, 0.011, 0.356, 1), 'staining_intensity': 140}},
+            'Nucleus': {'name': 'Nucleus_PLA', 'color': (0.315, 0.003, 0.531, 1), 'staining_intensity': 350*nuclei_intensity},
+            'Cytoplasm': {'name': 'Cytoplasm_PLA', 'color': (0.456, 0.011, 0.356, 1), 'staining_intensity': 200}},
         'LYM': {
-            'Nucleus': {'name': 'Nucleus_LYM', 'color': interpolate(nuclei_intensity, (0.315, 0.003, 0.631, 1)), 'staining_intensity': 400*nuclei_intensity+base_intensity},},
+            'Nucleus': {'name': 'Nucleus_LYM', 'color': interpolate(nuclei_intensity, (0.315, 0.003, 0.531, 1)), 'staining_intensity': 400*nuclei_intensity+base_intensity},},
         'EOS': {
-            'Nucleus': {'name': 'Nucleus_EOS', 'color': (0.315, 0.003, 0.631, 1), 'staining_intensity': 170*nuclei_intensity},
-            'Cytoplasm': {'name': 'Cytoplasm_EOS', 'color': interpolate(1-mix_cyto, (0.605, 0.017, 0.043, 1), (0.456, 0.011, 0.356, 1)), 'staining_intensity': 140}},
+            'Nucleus': {'name': 'Nucleus_EOS', 'color': (0.315, 0.003, 0.531, 1), 'staining_intensity': 450*nuclei_intensity},
+            'Cytoplasm': {'name': 'Cytoplasm_EOS', 'color': interpolate(1-mix_cyto, (0.605, 0.017, 0.043, 1), (0.456, 0.011, 0.356, 1)), 'staining_intensity': 200}},
         'FIB': {
-            'Nucleus': {'name': 'Nucleus_FIB', 'color': interpolate(nuclei_intensity, (0.315, 0.003, 0.631, 1)), 'staining_intensity': 200*nuclei_intensity+base_intensity},},
+            'Nucleus': {'name': 'Nucleus_FIB', 'color': interpolate(nuclei_intensity, (0.315, 0.003, 0.531, 1)), 'staining_intensity': 300*nuclei_intensity+base_intensity},},
         'EPI': {
-            'Nucleus': {'name': 'Nucleus_EPI', 'color': interpolate(nuclei_intensity, (0.315, 0.003, 0.631, 1)), 'staining_intensity': 100*nuclei_intensity}}}
+            'Nucleus': {'name': 'Nucleus_EPI', 'color': interpolate(nuclei_intensity, (0.315, 0.003, 0.531, 1)), 'staining_intensity': 100*nuclei_intensity}}}
     my_materials = materials.Material(
-        seed=seed, cell_type_params=params_cell_shading, tissue_rips=tissue_rips, tissue_rips_std=tissue_rips_std)
+        seed=seed, cell_type_params=params_cell_shading, tissue_rips=tissue_rips, 
+        tissue_rips_std=tissue_rips_std, stroma_intensity=stroma_intensity)
+    print(tissue_location)
     my_tissue = tissue.Tissue(
         my_materials.muscosa, thickness=tissue_thickness,
         size=tissue_size, location=tissue_location)
@@ -151,19 +150,21 @@ def create_scene(
     tissue_arch = arch.TissueArch(seed=seed)
     tissue_arch.random_crop(my_tissue.tissue)
     macro_structure = tissue_arch.get_architecture()
-    crypt, crypt_vol_1, crypt_vol_2, mucosa = macro_structure
+    crypt, crypt_vol_1, crypt_vol_2, vol_goblet, mucosa = macro_structure
     my_scene.bound_architecture(
-        volumes=[crypt_vol_1, crypt_vol_2, mucosa], surfaces=[crypt],
-        padding=tissue_padding)
-    vol_goblet = hm.copy_object(crypt_vol_2, 'vol_goblet')
-    extended_stroma = hm.copy_object(mucosa, 'extended_stroma')
-    hm.add_boolean_modifier(extended_stroma, crypt_vol_1, operation='UNION', name='add epi to stroma', apply=True)
-    hm.add_boolean_modifier(vol_goblet, extended_stroma, name='Remove inner volume', apply=True)
+       volumes=[crypt_vol_1, vol_goblet, mucosa, crypt_vol_2], surfaces=[crypt],
+       padding=tissue_padding)
+    ext_stroma = hm.copy_object(mucosa, 'ext_stroma')
+    
+    hm.recompute_normals(crypt_vol_2)
+    hm.recompute_normals(mucosa)
+    hm.recompute_normals(crypt)
+    hm.add_boolean_modifier(mucosa, crypt_vol_2, name='add epi to stroma', apply=True)
 
     # 3) populate scene with nuclei/cells
     # add epi volume filling
-    crypt_goblet = arr.VoronoiFill(vol_goblet, extended_stroma, cells.CellType.GOB)
-    crypt_fill = arr.VoronoiFill(crypt_vol_1, mucosa, cells.CellType.EPI)
+    crypt_goblet = arr.VoronoiFill(vol_goblet, ext_stroma, cells.CellType.GOB)
+    crypt_fill = arr.VoronoiFill(crypt_vol_1, ext_stroma, cells.CellType.EPI)
     my_scene.add_arrangement(crypt_fill) # NOTE: 200 nuclei take about 40 s
     my_scene.add_arrangement(crypt_goblet)
 
@@ -175,16 +176,14 @@ def create_scene(
         cells.CellType.LYM, 
         cells.CellType.EOS, 
         cells.CellType.FIB]
-    stroma_fill = hm.copy_object(mucosa, name='stroma_fill')
-    hm.convert2mesh(stroma_fill)
     volume_fill = arr.VolumeFill(
         mucosa, stroma_density, MIX_TYPES, ratios, strict_boundary=True, seed=seed)
-    my_scene.add_arrangement(volume_fill, bounding_mesh=stroma_fill) # NOTE: 240 nuclei take about 20 s
-    #my_scene.cut_cytoplasm_nuclei()
+    my_scene.add_arrangement(volume_fill, bounding_mesh=mucosa) # NOTE: 240 nuclei take about 20 s
 
     # 4) cut objects and add staining
     my_scene.add_cell_params(params_cell_shading)
     my_scene.delete_cells()
+    my_scene.cut_cytoplasm_nuclei()
     my_scene.remove_goblet_volume(crypt_vol_2)
     my_scene.remove_cells_volume(mucosa)
     my_scene.cut_cells()
@@ -199,7 +198,7 @@ def create_scene(
         cell_type = cell.name.split('_')[-2]
         if cell_type == 'GOB':
             goblet_cells.append(cell)
-    for obj in [crypt, crypt_vol_1, stroma_fill, vol_goblet, extended_stroma]+goblet_cells:
+    for obj in [crypt, crypt_vol_1, ext_stroma, vol_goblet]+goblet_cells:
         obj.hide_viewport = True
         obj.hide_render = True
 
@@ -242,7 +241,7 @@ def recreate_scene(**kwargs):
     return my_scene
 
 
-def render_scene(my_scene, render_path, sample_name, gpu=True, device=0, output_shape=(512, 512), max_samples=256, render_masks=True):
+def render_scene(my_scene, render_path, sample_name, gpu=True, device=0, output_shape=(512, 512), max_samples=1024, render_masks=True):
     '''
     renders a scene
     Args:
@@ -260,6 +259,7 @@ def render_scene(my_scene, render_path, sample_name, gpu=True, device=0, output_
         bpy.context.scene.cycles.device = 'GPU'
     bpy.context.preferences.addons['cycles'].preferences.compute_device_type = "CUDA"
     bpy.context.preferences.addons["cycles"].preferences.get_devices()
+    bpy.context.scene.cycles.use_denoising = False
     print(bpy.context.preferences.addons["cycles"].preferences.compute_device_type)
     for j, d in enumerate(bpy.context.preferences.addons["cycles"].preferences.devices):
         if j == device:
@@ -270,11 +270,13 @@ def render_scene(my_scene, render_path, sample_name, gpu=True, device=0, output_
     
     my_scene.sample_name = sample_name
     
+    
     my_scene.render(filepath = render_path,  # where to save renders
                     scene = True, # if true scene is rendered
                     single_masks = render_masks, # if true single cell masks are rendered
                     semantic_mask = render_masks, # if true semantic mask is generated
                     instance_mask = render_masks, # if true instance mask is generated
+                    cyto_mask = render_masks, # if true cytoplasm mask is generated
                     depth_mask = False, # if true depth mask is generated
                     obj3d = False, # if true scene is saved as 3d object
                     output_shape = output_shape, # dimensions of output
