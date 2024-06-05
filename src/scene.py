@@ -156,7 +156,7 @@ class BioMedicalScene:
             self.tissue_bound.scale.x = 1 + (i+1)*tolerance
             self.tissue_bound.scale.y = 1 + (i+1)*tolerance
             #self.tissue_bound.dimensions.y = self.tissue.dimensions.y + i*tolerance
-            hm.recompute_normals(v)
+            #hm.recompute_normals(v)
             boolean = v.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
             boolean.operation = 'INTERSECT'
             boolean.object = self.tissue_bound
