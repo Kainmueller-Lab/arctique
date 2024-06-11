@@ -39,7 +39,7 @@ class VolumeFill(CellArrangement):
     Ratios of corresponding types must be given and determine how many nuclei of each type should be placed.
     If strict_boundary is set to true, nuclei objects will be placed only inside the mesh, otherwise only their locations will be inside the mesh.
     '''
-    def __init__(self, mesh, density, types, ratios, strict_boundary = True, seed=None):
+    def __init__(self, mesh, density, types, ratios, strict_boundary = True, seed=None, bounding_box=None):
         """
         Initializes a CellArrangement object with the given parameters.
         Fills a volume with randomly placed nuclei of different types without intersection.
@@ -70,13 +70,17 @@ class VolumeFill(CellArrangement):
         # TODO: Generate based on Mahalanobis distance for scaled spheres
         self.points_per_type = fill_volume(
             self.counts, self.density, self.attributes, self.mesh, self.strict_boundary, seed=seed)
+        # remove all points outside of bounding box before adding objects
+        # print('points per type', self.points_per_type)
+        # if bounding_box is not None:
+        #     self._remove_outside_bbox(bounding_box)
 
     def add(self):
         for locations, radius, type in self.points_per_type:
             attribute = CellAttribute.from_type(type)
             for idx, location in enumerate(locations):
                 direction = Vector(random_unit_vector())
-                cell_objects = attribute.add_cell_objects(location, direction)
+                cell_objects = attribute.add_cell_objects(location, direction, apply_subdivide=True)
                 cytoplasm = None
                 if len(cell_objects) == 2:
                     cytoplasm = cell_objects[1]
@@ -88,10 +92,23 @@ class VolumeFill(CellArrangement):
                 nucleus.name = f"Nucleus_Type_{type.name}_{idx}"
                 self.objects.append(nucleus)
                 self.nuclei.append(nucleus)
+        #convert2mesh_list(self.objects)
+    
+    def _remove_outside_bbox(self, bbox):
+        deleted_objects = []
+        for obj in self.points_per_type:
+            # construct bounding box
+            pass
+            
+        #     if not bounding_boxes_intersect(obj, bbox):
+        #         deleted_objects.append(obj)
+        # remove_objects(deleted_objects)
+        # for obj in deleted_objects:
+        #     self.objects.remove(obj)
 
 
 class VoronoiFill(CellArrangement):
-    def __init__(self, mesh_obj, surface_obj, type):
+    def __init__(self, mesh_obj, surface_obj, type, bounding_box=None):
         """
         Initializes a CellArrangement object with the given parameters.
         Takes as input a mesh_obj which needs to consist of an outer and an inner wall mesh, e.g. an annulus.
@@ -101,16 +118,18 @@ class VoronoiFill(CellArrangement):
         Parameters:
             - mesh_obj: object of volume to populate with nuclei
             - attribute: nuclei type attribute that should populate the mesh
+            - bounding_box: optional bounding box to delete compartments before placing nuclei
         """
         super().__init__()
         self.name = "VoronoiFill"
         self.mesh_obj = mesh_obj
         self.surface_obj = surface_obj
         self.type = type
+        self.bounding_box = bounding_box
         self.attribute = CellAttribute.from_type(self.type)
         self.radius = self.attribute.size
         self.max_count = 500 # NOTE: The volume will be filled up with maximally this number of nuclei
-        self.surface_subdivision_levels = 3 # NOTE: Increase this for finer subdvision and more quasi-random placement, but will be slower
+        self.surface_subdivision_levels = 2  # 3 # NOTE: Increase this for finer subdvision and more quasi-random placement, but will be slower
         self.add_nuclei() 
 
 
@@ -147,6 +166,19 @@ class VoronoiFill(CellArrangement):
             region_objects.append(region)
         region_objects = intersect_with_object(region_objects, self.mesh_obj)
 
+        print('part 1 done')
+        # delete compartments outside of bounding box -> we could put this into a dedicated function
+        if self.bounding_box is not None:
+            deleted_objects = []
+            for obj in region_objects:
+                if not bounding_boxes_intersect(obj, self.bounding_box):
+                    deleted_objects.append(obj)
+            remove_objects(deleted_objects)
+            for obj in deleted_objects:
+                region_objects.remove(obj)
+            print('deleted compartments', len(deleted_objects))
+
+        # Place nuclei
         for idx, obj in enumerate(region_objects):
             remove_loose_vertices(obj) # NOTE: For some strange reason the intersection with "FAST" solver leads to ca 1000 loose vertices per region. - ck
             prism_coords = [obj.matrix_world @ v.co for v in obj.data.vertices]
@@ -156,17 +188,21 @@ class VoronoiFill(CellArrangement):
 
             bpy.ops.mesh.primitive_ico_sphere_add(radius=3, location=centroid(prism_coords))
             nucleus = bpy.context.active_object
-            shrinkwrap(obj, nucleus)
-            smoothen_object(nucleus, self.attribute.smooth_factor, self.attribute.smooth_roundness)
-            subdivide(nucleus, self.attribute.subdivision_levels)
-            
+            shrinkwrap(obj, nucleus, apply=False, viewport=True)
+            smoothen_object(nucleus, self.attribute.smooth_factor, self.attribute.smooth_roundness, apply=False, viewport=True)
+            subdivide(nucleus, self.attribute.subdivision_levels, apply=False, viewport=True)
+
             if self.type.name == "GOB":
                 nucleus.name = f"Goblet_Type_{self.type.name}_{idx}"
             else:
                 nucleus.name = f"Nucleus_Type_{self.type.name}_{idx}"
             self.objects.append(nucleus)
             self.nuclei.append(nucleus)
+        convert2mesh_list(self.objects)
         remove_objects(region_objects + [surface_obj])
+
+        print('part 2 done')
+
         return []
 
     def split_vertices(self, mesh):

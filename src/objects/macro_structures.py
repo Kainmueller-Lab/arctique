@@ -23,7 +23,7 @@ class build_crypt():
 
         # add crypt volumes
         a = 0.015
-        b = 0.04
+        b = 0.034  # 0.04
         tol = 0.002
         c = 2*b/(a+tol+b)
         offset_c = 1-c
@@ -157,7 +157,7 @@ class build_crypt():
         factor = nodes.new(type='ShaderNodeMath')
         factor.operation = 'MULTIPLY'
         factor.location = (face_area.location[0]+sep, face_area.location[1])
-        factor.inputs[1].default_value = 150
+        factor.inputs[1].default_value = 200
         links.new(face_area.outputs['Area'], factor.inputs['Value'])
         
         # extrude crypts
@@ -197,7 +197,7 @@ class build_crypt():
         ### C) Increase details
         subdivide = nodes.new(type='GeometryNodeSubdivisionSurface')
         subdivide.location = (pos.location[0]+sep, pos.location[1])
-        subdivide.inputs['Level'].default_value = 3 # TODO change back 4
+        subdivide.inputs['Level'].default_value = 4 # TODO change back 4
         links.new(pos.outputs['Geometry'], subdivide.inputs['Mesh'])
         
         if out_link is not None:
@@ -205,7 +205,7 @@ class build_crypt():
             
         return extrude.inputs['Mesh'], subdivide.outputs['Mesh']
     
-    def _cut_geometry(self, mesh_object, size=1):
+    def _cut_geometry(self, mesh_object, size=0.5): # 1
         # Ensure the context is correct
         bpy.ops.object.mode_set(mode='OBJECT')
 
@@ -251,6 +251,7 @@ class build_muscosa():
         #ägeometry.scale = (self.size[0]*(1-self.buffer[0]), self.size[1]*(1-self.buffer[1]), self.size[2]*(1+self.buffer[2]))
         #geometry.scale.z = geometry.scale.z*(1+self.buffer[2])
         bpy.ops.object.origin_set(type='ORIGIN_CURSOR', center='MEDIAN')
+        geometry.scale.z = geometry.scale.z*(1+self.buffer[2])
         bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
         return geometry
     

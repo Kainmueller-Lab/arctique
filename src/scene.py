@@ -30,7 +30,7 @@ def fn_print_time_when_render_done(dummy):
 class Camera:
     def __init__(
             self, name='camera 1', pos=(0, 0, 1.5622), rot=(0, 0, 0), size=1.28,
-            focus_pos=(0, 0, 0.62), fstop=0.8, sensor_width=36):
+            focus_pos=0.62, fstop=0.8, sensor_width=36):
         self.scene = bpy.context.scene
         
         # add camera to scene
@@ -45,7 +45,7 @@ class Camera:
         self.cam_obj.data.dof.aperture_fstop = fstop
 
         # add focus plane to scene
-        bpy.ops.mesh.primitive_plane_add(size=2.5, location=focus_pos)
+        bpy.ops.mesh.primitive_plane_add(size=2.5, location=(0, 0, focus_pos))
         self.focus = bpy.context.active_object
         self.focus.name = 'focus'
         self.focus.hide_viewport = True
@@ -159,6 +159,7 @@ class BioMedicalScene:
             #hm.recompute_normals(v)
             boolean = v.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
             boolean.operation = 'INTERSECT'
+            boolean.show_viewport = False
             boolean.object = self.tissue_bound
             bpy.context.view_layer.objects.active = v
             bpy.context.object.modifiers["Boolean Modifier"].use_self = True
@@ -187,6 +188,7 @@ class BioMedicalScene:
             hm.apply_transform(v)
             hm.apply_transform(self.tissue_empty)
             boolean = v.modifiers.new(name="tissue cutting", type='BOOLEAN')
+            boolean.show_viewport = False
             boolean.operation = 'INTERSECT'
             #boolean.solver = 'FAST'
             boolean.object = self.tissue_empty
@@ -207,6 +209,7 @@ class BioMedicalScene:
                         cell_nucleus.scale.y = cell_nucleus.scale.y*(1+tolerance)
                         cell_nucleus.scale.z = cell_nucleus.scale.z*(1+tolerance)
                         boolean = cyto.modifiers.new(name="nuclei_cut", type='BOOLEAN')
+                        boolean.show_viewport = False
                         boolean.operation = 'DIFFERENCE'
                         boolean.object = cell_nucleus
                         bpy.context.view_layer.objects.active = cyto
@@ -215,15 +218,6 @@ class BioMedicalScene:
                         cell_nucleus.scale.y = cell_nucleus_scale[1]*(1-tolerance)
                         cell_nucleus.scale.z = cell_nucleus_scale[2]*(1-tolerance)
 
-    # def cut_tissue_nuclei(self, tolerance=0.02): # TODO
-    #     for v in self.volumes:
-    #         for cell_nucleus in self.cell_objects:
-    #             if cell_nucleus.name.startswith('Nucleus'):
-    #                 boolean = v.modifiers.new(name="nuclei_cut", type='BOOLEAN')
-    #                 boolean.operation = 'DIFFERENCE'
-    #                 boolean.object = cell_nucleus
-    #                 bpy.context.view_layer.objects.active = v
-    #                 bpy.ops.object.modifier_apply(modifier=boolean.name)
                 
     def delete_cells(self, tissue=None, strict=True, type=('EOS', 'FIB', 'PLA', 'LYM')):
         # Remove all cell objects that do not intersect with the tissue 
@@ -251,6 +245,7 @@ class BioMedicalScene:
                 hm.apply_transform(cell)
                 hm.apply_transform(self.tissue_empty)
                 boolean = cell.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
+                boolean.show_viewport = False
                 boolean.operation = 'INTERSECT'
                 boolean.object = self.tissue_empty if cell.name.startswith('Nucleus') else self.tissue_empty_cytoplasm
                 #boolean.solver = 'FAST' # NOTE: FAST leads to artifacts here. - ck
@@ -301,28 +296,25 @@ class BioMedicalScene:
             if cell_type == 'GOB':
                 hm.add_boolean_modifier(volume, cell, name='remove goblet', operation='DIFFERENCE', apply=True)
 
-    def remove_cells_volume(self, volume, tolerance=-0.007):
-        cell_copies = [hm.copy_object(cell, cell.name + '_copy') for cell in self.cell_objects]
-        scales = [cell.scale for cell in cell_copies]
-        bpy.ops.object.select_all(action='DESELECT')
-        for scale, cell in zip(scales, cell_copies):
-            cell.scale = scale*(1+tolerance) 
-            cell.select_set(True)
-            # apply scale
-            bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-        if cell_copies:
-            bpy.context.view_layer.objects.active = cell_copies[0]
-        #ctx = bpy.context.copy()
-        #ctx['active_object'] = cell_copies[0]
-        #ctx['selected_objects'] = cell_copies
-        bpy.ops.object.join()
-        # #bpy.ops.object.select_all(action='DESELECT')
-        joined_cells = bpy.context.active_object
-        hm.convert2mesh(volume)
-        hm.add_boolean_modifier(volume, joined_cells, name='remove cell', operation='DIFFERENCE', apply=True)
-        bpy.data.objects.remove(joined_cells)
-        for cell in self.cell_objects:
-            cell.scale = cell.scale*(1-tolerance)
+    def remove_cells_volume(self, volume, tolerance=-0.007, types=('EOS', 'FIB', 'PLA', 'LYM')):
+        cell_objects = [cell for cell in self.cell_objects if cell.name.split('_')[-2] in types]
+        if len(cell_objects) != 0:
+            cell_copies = [hm.copy_object(cell, cell.name + '_copy') for cell in cell_objects]
+            scales = [cell.scale for cell in cell_copies]
+            bpy.ops.object.select_all(action='DESELECT')
+            for scale, cell in zip(scales, cell_copies):
+                cell.scale = scale*(1+tolerance) 
+                cell.select_set(True)
+                bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+            if cell_copies:
+                bpy.context.view_layer.objects.active = cell_copies[0]
+            bpy.ops.object.join()
+            joined_cells = bpy.context.active_object
+            hm.convert2mesh(volume)
+            hm.add_boolean_modifier(volume, joined_cells, name='remove cell', operation='DIFFERENCE', apply=True)
+            bpy.data.objects.remove(joined_cells)
+            for cell in cell_objects:
+                cell.scale = cell.scale*(1-tolerance)
 
     
     def add_cell_params(self, cell_params):

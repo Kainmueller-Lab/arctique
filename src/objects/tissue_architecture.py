@@ -29,7 +29,7 @@ class TissueArch():
             bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
             
     def random_rotate(self, objects):
-        rotation = np.random.uniform([0*np.pi, 0, 2*np.pi])
+        rotation = np.random.uniform([0, 0, 0], [np.pi/2, 0, 2*np.pi])
         for obj in objects:
             # Apply the rotation around the Z axis
             obj.rotation_mode = 'XYZ'
@@ -37,7 +37,7 @@ class TissueArch():
                 obj.rotation_euler[i] += rotation[i]
     
     def random_translate(self, objects):
-        translation = np.random.uniform(0, 3)
+        translation = np.random.uniform(0, 3.5)
         for obj in objects:
             obj.location[2] -= translation
             bpy.context.scene.cursor.location = (0, 0, 0)

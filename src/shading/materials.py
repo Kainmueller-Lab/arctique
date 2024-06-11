@@ -16,7 +16,10 @@ imp.reload(shaders)
 
 
 class Material():
-    def __init__(self, seed=0, cell_type_params=None, tissue_rips=-0.5, tissue_rips_std=0.1, stroma_intensity=1, stroma_color=(0.62, 0.25, 0.65, 1.0)):
+    def __init__(
+            self, seed=0, cell_type_params=None, tissue_rips=-0.5,
+            tissue_rips_std=0.1, stroma_intensity=1, stroma_color=(0.62, 0.25, 0.65, 1.0),
+            brightness=60):
         # delete all materials
         for material in bpy.data.materials:
             bpy.data.materials.remove(material)
@@ -27,7 +30,7 @@ class Material():
         self.custom_nodes = shaders.CustomShaderNodes(shift=self.shift, stroma_intensity=stroma_intensity)
 
         # add materials
-        self.light_source = self.add_light_source()
+        self.light_source = self.add_light_source(brightness=brightness)
         rips = np.random.normal(tissue_rips, tissue_rips_std)
         self.muscosa = self.add_mucosa_staining(threshold_rips=-rips, stroma_intensity=stroma_intensity, base_color=stroma_color)
         self.nuclei_mask = self.add_nuclei_mask()

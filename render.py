@@ -5,6 +5,8 @@ import argparse
 import glob
 from tqdm import tqdm
 import json
+import time
+import numpy as np
 
 # IMPORT SOURCES
 dir = os.path.dirname(bpy.data.filepath)
@@ -52,16 +54,21 @@ def parse_dataset_args():
     parser.add_argument("--n-samples", type=int, default=200, help="Dataset size")
 
     # DATASET PARAMETERS
-    # tissue
+    # tissue parameters (when adaptive they orientate at a default tissue thickness of 0.05 and a default tissue size of 1.28)
     parser.add_argument("--tissue-thickness", type=float, default=0.05, help="Tissue thickness")
+    parser.add_argument("--tissue-thickness_lb", type=float, default=0.02, help="Tissue thickness")
     parser.add_argument("--tissue-size", type=float, default=1.28, help="Tissue size")
     parser.add_argument("--tissue-color", type=tuple, default=(0.409, 0.215, 0.430, 1), help="Tissue location")
+    parser.add_argument("--nucleus-color", type=tuple, default=(0.315, 0.003, 0.48, 1), help="Tissue location")
     parser.add_argument("--tissue-location", type=tuple, default=(0, 0, 0.5), help="Tissue location")
-    parser.add_argument("--tissue-padding", type=float, default=0.2, help="Tissue padding")
+    parser.add_argument("--tissue-padding", type=float, default=0.15, help="Tissue padding")  # 0.2
     parser.add_argument("--tissue-rips", type=float, default=0, help="Degree of rip like structures in tissue")
     parser.add_argument("--tissue-rips-std", type=float, default=0.2, help="Degree of rip like structures in tissue")
     parser.add_argument("--stroma-intensity", type=float, default=0.7, help="Degree of rip like structures in tissue")
     parser.add_argument("--noise-seed-shift", type=float, default=0, help="Degree of rip like structures in tissue")
+    parser.add_argument("--light-source-brightness", type=float, default=32, help="Degree of rip like structures in tissue")
+    parser.add_argument("--adaptiv-brightness", type=bool, default=True, help="Use GPU for rendering")
+    parser.add_argument("--focal-offset", type=float, default=0, help="Degree of rip like structures in tissue")
 
     # nuclei
     parser.add_argument("--epi-number", type=int, default=150, help="number of surface cells") # 150
@@ -74,10 +81,6 @@ def parse_dataset_args():
     parser.add_argument("--mix-factor", type=float, default=0, help="overall intensity of nuclei") # TODO
     parser.add_argument("--epi-rescaling", type=int, default=0, help="overall intensity of nuclei") # TODO
     parser.add_argument("--mix-cyto", type=float, default=0, help="overall intensity of nuclei") # TODO
-
-    # TODO add manipulation paramter of same scene
-
-    #other default value for --output_dir: "/Volumes/ag_kainmueller/vguarin/synthetic_HE" via internal VPN
     
     args = parser.parse_args()
     
@@ -90,8 +93,16 @@ def interpolate(alpha, t1, t2 =(0.409, 0.215, 0.430, 1)):
     return tuple([t1[i]*alpha + t2[i]*(1-alpha) for i in range(len(t1))])
 
 
+def uniform_sample(min, max, seed=0):
+    np.random.seed(seed)
+    return np.random.uniform(min, max)
+
+
 def create_scene(
         tissue_thickness = 0.05, tissue_size = 1.28, tissue_location = (0, 0, 0.5),
+        tissue_thickness_lb = 0.05, 
+        light_source_brightness = 60, adaptiv_brightness = True,
+        nucleus_color = (0.315, 0.003, 0.531, 1),
         tissue_rips = -0.5, tissue_rips_std = 0.1, nuclei_intensity = 1, mix_cyto = 0,
         tissue_padding = 0.5, epi_count = 80, stroma_density = 0.5, mix_factor = 0, stroma_intensity = 1,
         ratios = [0, 0.3, 0.4, 0.2, 0.1],
@@ -117,56 +128,88 @@ def create_scene(
     # 0) parameters for variations
     base_intensity = 100*(1-nuclei_intensity)
     cells.initialize_mixing_attribute(mix_factor)
-
+    if tissue_thickness != tissue_thickness_lb:
+        tissue_thickness = uniform_sample(tissue_thickness_lb, tissue_thickness, seed=seed)
+        print(f"Adaptiv thickness: {tissue_thickness}")
+    if adaptiv_brightness:
+        light_source_brightness = (light_source_brightness)**(0.01/0.05*tissue_thickness/0.01)
+        print(f"Adaptiv brightness: {light_source_brightness}")
 
     # 1) initialize microscope objects and add to scene
+    start = time.time()
     params_cell_shading = {
         'PLA': {
-            'Nucleus': {'name': 'Nucleus_PLA', 'color': (0.315, 0.003, 0.531, 1), 'staining_intensity': 350*nuclei_intensity},
+            'Nucleus': {'name': 'Nucleus_PLA', 'color': nucleus_color, 'staining_intensity': 300*nuclei_intensity},
             'Cytoplasm': {'name': 'Cytoplasm_PLA', 'color': (0.456, 0.011, 0.356, 1), 'staining_intensity': 200}},
         'LYM': {
-            'Nucleus': {'name': 'Nucleus_LYM', 'color': interpolate(nuclei_intensity, (0.315, 0.003, 0.531, 1)), 'staining_intensity': 400*nuclei_intensity+base_intensity},},
+            'Nucleus': {'name': 'Nucleus_LYM', 'color': interpolate(nuclei_intensity, nucleus_color), 'staining_intensity': 350*nuclei_intensity+base_intensity},},
         'EOS': {
-            'Nucleus': {'name': 'Nucleus_EOS', 'color': (0.315, 0.003, 0.531, 1), 'staining_intensity': 450*nuclei_intensity},
+            'Nucleus': {'name': 'Nucleus_EOS', 'color': nucleus_color, 'staining_intensity': 350*nuclei_intensity},
             'Cytoplasm': {'name': 'Cytoplasm_EOS', 'color': interpolate(1-mix_cyto, (0.605, 0.017, 0.043, 1), (0.456, 0.011, 0.356, 1)), 'staining_intensity': 200}},
         'FIB': {
-            'Nucleus': {'name': 'Nucleus_FIB', 'color': interpolate(nuclei_intensity, (0.315, 0.003, 0.531, 1)), 'staining_intensity': 300*nuclei_intensity+base_intensity},},
+            'Nucleus': {'name': 'Nucleus_FIB', 'color': interpolate(nuclei_intensity, nucleus_color), 'staining_intensity': 270*nuclei_intensity+base_intensity},},
         'EPI': {
-            'Nucleus': {'name': 'Nucleus_EPI', 'color': interpolate(nuclei_intensity, (0.315, 0.003, 0.531, 1)), 'staining_intensity': 100*nuclei_intensity}}}
+            'Nucleus': {'name': 'Nucleus_EPI', 'color': interpolate(nuclei_intensity, nucleus_color), 'staining_intensity': 100*nuclei_intensity}}}
     my_materials = materials.Material(
         seed=seed, cell_type_params=params_cell_shading, tissue_rips=tissue_rips, 
-        tissue_rips_std=tissue_rips_std, stroma_intensity=stroma_intensity)
+        tissue_rips_std=tissue_rips_std, stroma_intensity=stroma_intensity,
+        brightness=light_source_brightness)
     print(tissue_location)
     my_tissue = tissue.Tissue(
         my_materials.muscosa, thickness=tissue_thickness,
         size=tissue_size, location=tissue_location)
     my_light_source = scene.LightSource(material=my_materials.light_source)
-    my_camera = scene.Camera()
+    my_camera = scene.Camera(focus_pos=0.6221+(tissue_thickness-0.05))
     my_scene = scene.BioMedicalScene(my_light_source, my_camera)
     my_scene.add_cell_params(params_cell_shading)
     my_scene.add_tissue(tissue=my_tissue.tissue)
+    end = time.time()
+    print(f"Initialization took {end - start} s")
 
     # 2) create macrostructures in tissue block, rotate and scale them and cut them
+    start = time.time()
     tissue_arch = arch.TissueArch(seed=seed)
+    elapsed = time.time() - start
+    print(f"Architecture init took {elapsed} s")
     tissue_arch.random_crop(my_tissue.tissue)
+    elapsed_old = elapsed
+    elapsed = time.time() - start 
+    print(f"Architecture crop took {elapsed-elapsed_old} s")
     macro_structure = tissue_arch.get_architecture()   # NOTE crypt is bad news, dont touch it
+    for obj in macro_structure:
+        obj.location[2] += 0.5  # move up to the tissue surface
+    elapsed_old = elapsed
+    elapsed = time.time() - start 
+    print(f"Architecture get took {elapsed-elapsed_old} s")
     crypt, crypt_vol_1, crypt_vol_2, vol_goblet, mucosa = macro_structure
     mucosa_fill = hm.copy_object(mucosa, 'muscosa_fill')
     my_scene.bound_architecture(
        volumes=[mucosa_fill, crypt_vol_1, vol_goblet, crypt_vol_2], surfaces=[crypt],
        padding=tissue_padding)
     ext_stroma = hm.copy_object(mucosa_fill, 'ext_stroma')
+    elapsed_old = elapsed
+    elapsed = time.time() - start
+    print(f"Architecture bound took {elapsed-elapsed_old} s")
     hm.add_boolean_modifier(mucosa_fill, crypt_vol_2, name='add epi to stroma', apply=True)
+    elapsed_old = elapsed
+    elapsed = time.time() - start 
+    print(f"Architecture boolean took {elapsed-elapsed_old} s")
+    end = time.time()
+    print(f"Architecture creation took {end - start} s")
 
     # 3) populate scene with nuclei/cells
     # add epi volume filling
+    start = time.time()
     crypt_goblet = arr.VoronoiFill(vol_goblet, ext_stroma, cells.CellType.GOB)
     crypt_fill = arr.VoronoiFill(crypt_vol_1, ext_stroma, cells.CellType.EPI)
-    my_scene.add_arrangement(crypt_fill) # NOTE: 200 nuclei take about 40 s
-    my_scene.add_arrangement(crypt_goblet)
+    my_scene.add_arrangement(crypt_fill, my_scene.tissue_empty) # NOTE: 200 nuclei take about 40 s
+    my_scene.add_arrangement(crypt_goblet, my_scene.tissue_empty)
+    end = time.time()
+    print(f"Voronoi filling took {end - start} s")
 
     # Add volume filling
     # add tissue padding befor filling
+    start = time.time()
     MIX_TYPES = [
         cells.CellType.MIX,
         cells.CellType.PLA, 
@@ -175,22 +218,58 @@ def create_scene(
         cells.CellType.FIB]
     volume_fill = arr.VolumeFill(
         mucosa_fill, stroma_density, MIX_TYPES, ratios, strict_boundary=True, seed=seed)
-    my_scene.add_arrangement(volume_fill, bounding_mesh=mucosa) # NOTE: 240 nuclei take about 20 s
+    my_scene.add_arrangement(volume_fill, bounding_mesh=mucosa_fill) # NOTE: 240 nuclei take about 20 s
+    end = time.time()
+    print(f"Volume filling took {end - start} s")
 
     # 4) cut objects and add staining
+    start = time.time()
     my_scene.add_cell_params(params_cell_shading)
+    elapsed = time.time() - start
+    print(f"Adding cell params took {elapsed} s")
     my_scene.delete_cells()
+    elapsed_old = elapsed
+    elapsed = time.time() - start
+    print(f"Deleting cells took {elapsed-elapsed_old} s")
     my_scene.cut_cytoplasm_nuclei()
-    my_scene.remove_goblet_volume(crypt_vol_2)
+    elapsed_old = elapsed
+    elapsed = time.time() - start
+    print(f"Cutting cytoplasm and nuclei took {elapsed-elapsed_old} s")
+    #my_scene.remove_goblet_volume(crypt_vol_2)
+    my_scene.remove_cells_volume(crypt_vol_2, tolerance=0, types=('GOB'))
+    elapsed_old = elapsed
+    elapsed = time.time() - start
+    print(f"Removing goblet volume took {elapsed-elapsed_old} s")
     my_scene.remove_cells_volume(mucosa_fill)
+    elapsed_old = elapsed
+    elapsed = time.time() - start
+    print(f"Removing cells volume took {elapsed-elapsed_old} s")
     my_scene.cut_cells()
+    elapsed_old = elapsed
+    elapsed = time.time() - start
+    print(f"Cutting cells took {elapsed-elapsed_old} s")
     my_scene.cut_tissue()
+    elapsed_old = elapsed
+    elapsed = time.time() - start
+    print(f"Cutting tissue took {elapsed-elapsed_old} s")
     my_scene.add_tissue_staining(materials=[my_materials.muscosa, my_materials.crypt_staining])
+    elapsed_old = elapsed
+    elapsed = time.time() - start
+    print(f"Adding tissue staining took {elapsed-elapsed_old} s")
     my_scene.add_nuclei_mask(material=my_materials.nuclei_mask)
+    elapsed_old = elapsed
+    elapsed = time.time() - start
+    print(f"Adding nuclei mask took {elapsed-elapsed_old} s")
     my_scene.add_staining_to_cell(materials=my_materials.cell_staining)
+    elapsed_old = elapsed
+    elapsed = time.time() - start
+    print(f"Adding cell staining took {elapsed-elapsed_old} s")
     mucosa_fill.location.z = mucosa_fill.location.z - 0.0005
+    end = time.time()
+    print(f"Cutting and staining took {end - start} s")
 
     # 5) hide non cell objects
+    start = time.time()
     goblet_cells = []
     for cell in my_scene.cell_objects:
         cell_type = cell.name.split('_')[-2]
@@ -199,6 +278,8 @@ def create_scene(
     for obj in [crypt, crypt_vol_1, mucosa, ext_stroma, vol_goblet]+goblet_cells:
         obj.hide_viewport = True
         obj.hide_render = True
+    end = time.time()
+    print(f"Hiding non cell objects took {end - start} s")
 
     return my_scene
 
@@ -300,12 +381,6 @@ def main():
 
     # render individual samples
     for i in tqdm(range(args.start_idx, args.start_idx + args.n_samples)):
-        # paramters = {
-        #     'tissue_thickness': args.tissue_thickness, 'tissue_size': args.tissue_size,
-        #     'tissue_location': args.tissue_location, 'tissue_padding': args.tissue_padding,
-        #     'tissue_rips': args.tissue_rips,
-        #     'epi_count': args.epi_number, 'stroma_density': args.stroma_density, 'ratios': args.ratios,
-        #     'seed': i}
         paramters = {'seed': i}
         for key, value in args.__dict__.items():
             if key not in paramters.keys():

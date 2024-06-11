@@ -57,7 +57,7 @@ def get_objects_with(string):
 
 def subdivide_object(obj, level, type='SIMPLE'):
     bpy.context.view_layer.objects.active = obj
-    bpy.ops.object.modifier_add(type='SUBSURF')
+    mod = bpy.ops.object.modifier_add(type='SUBSURF')
     bpy.context.object.modifiers["Subdivision"].subdivision_type = type
     bpy.context.object.modifiers["Subdivision"].levels = level
     bpy.ops.object.modifier_set_active(modifier="Subdivision")
@@ -157,6 +157,17 @@ def convert2mesh(obj):
     bpy.ops.object.convert(target='MESH')
 
 
+def convert2mesh_list(obj_list):
+    '''
+    converts a list of objects to mesh objects
+    '''
+    bpy.ops.object.select_all(action='DESELECT')
+    for obj in obj_list:
+        obj.select_set(True)
+        bpy.context.view_layer.objects.active = obj
+    bpy.ops.object.convert(target='MESH')
+
+
 def apply_transform(obj):
     '''
     applies the transformation of an object
@@ -170,6 +181,7 @@ def add_boolean_modifier(obj, target, name='Boolean Modifier', operation='DIFFER
     adds a boolean modifier to an object
     '''
     boolean = obj.modifiers.new(name=name, type='BOOLEAN')
+    boolean.show_viewport = False
     boolean.operation = operation
     boolean.object = target
     boolean.use_self = True # NOTE: This line seems to fix artifacts when using 'DIFFERENCE' operator to create goblet volume. - ck

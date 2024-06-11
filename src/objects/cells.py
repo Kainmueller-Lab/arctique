@@ -29,7 +29,7 @@ class CellAttribute():
         self.attribute_name = None
         self.subdivision_levels = 1
 
-    def add_cell_objects(self, location, direction):
+    def add_cell_objects(self, location, direction, apply_subdivide=False):
         '''
         Returns a 1- or 2-element list of blender objects representing the nucleus and optionally cytoplasm.
         The cytoplasm is optional and depends on the cell type.
@@ -58,12 +58,12 @@ class PLA(CellAttribute):
         self.attribute_name = "Plasma Cell"
         self.max_bending_strength = 0.3
     
-    def add_cell_objects(self, location, direction):
+    def add_cell_objects(self, location, direction, apply_subdivide=False):
         # Add cytoplasm
         bpy.ops.mesh.primitive_ico_sphere_add(radius=self.size)
         cytoplasm = bpy.context.active_object
         deform_mesh(cytoplasm, self)
-        subdivide(cytoplasm, self.subdivision_levels)
+        subdivide(cytoplasm, self.subdivision_levels, apply=apply_subdivide)
         set_orientation(cytoplasm, direction)
         cytoplasm.location = location
         cytoplasm.scale = self.scale
@@ -72,7 +72,7 @@ class PLA(CellAttribute):
         bpy.ops.mesh.primitive_ico_sphere_add(radius=self.nucleus_size)
         nucleus = bpy.context.active_object
         deform_mesh(nucleus, self)
-        subdivide(nucleus, self.subdivision_levels)
+        subdivide(nucleus, self.subdivision_levels, apply=apply_subdivide)
         set_orientation(nucleus, direction)
         nucleus.location = location
         nucleus.scale = self.scale
@@ -89,11 +89,11 @@ class LYM(CellAttribute):
         self.attribute_name = "Lymphocyte"
         self.max_bending_strength = 0.2
     
-    def add_cell_objects(self, location, direction):
+    def add_cell_objects(self, location, direction, apply_subdivide=False):
         bpy.ops.mesh.primitive_ico_sphere_add(radius=self.size)
         nucleus = bpy.context.active_object
         deform_mesh(nucleus, self)
-        subdivide(nucleus, self.subdivision_levels)
+        subdivide(nucleus, self.subdivision_levels, apply=apply_subdivide)
         set_orientation(nucleus, direction)
         nucleus.location = location
         nucleus.scale = self.scale
@@ -110,12 +110,12 @@ class EOS(CellAttribute):
         self.attribute_name = "Eosinophil"
         self.max_bending_strength = 0.2
 
-    def add_cell_objects(self, location, direction):
+    def add_cell_objects(self, location, direction, apply_subdivide=False):
         # Add cytoplasm
         bpy.ops.mesh.primitive_ico_sphere_add(radius=self.size)
         cytoplasm = bpy.context.active_object
         deform_mesh(cytoplasm, self)
-        subdivide(cytoplasm, self.subdivision_levels)
+        subdivide(cytoplasm, self.subdivision_levels, apply=apply_subdivide)
         set_orientation(cytoplasm, direction)
         cytoplasm.location = location
         cytoplasm.scale = self.scale
@@ -149,7 +149,7 @@ class FIB(CellAttribute):
         self.attribute_name = "Fibroblast"
         self.max_bending_strength = 0.7
 
-    def add_cell_objects(self, location, direction):
+    def add_cell_objects(self, location, direction, apply_subdivide=False):
         coeff = 0.3 # Controls the displacement between to metaballs, 0: no distance
         delta = 2.0*coeff*self.size
         rad1 = self.size*(1-coeff) + self.deformation_strength*self.size*random.uniform(-1,1)
@@ -177,7 +177,7 @@ class EPI(CellAttribute):
         self.smooth_factor = 2 # (float 1) Controls the roundness of the object. 0 = identical to surrounding mesh, the higher this number, the rounder the mesh.
         self.smooth_roundness = 2 # (int, 2) Controls the size of objects, the higher this number, the smaller the mesh. Should be at least 2.
 
-    def add_cell_objects(self, location, direction):
+    def add_cell_objects(self, location, direction, apply_subdivide=False):
         pass
 
 class GOB(CellAttribute):
@@ -188,9 +188,9 @@ class GOB(CellAttribute):
         self.attribute_name = "Goblet Cell"
         self.smooth_factor = 1.5 # (float, 1) Controls the roundness of the object. 0 = identical to surrounding mesh, the higher this number, the rounder the mesh.
         self.smooth_roundness = 2 # (int, 2) Controls the size of objects, the higher this number, the smaller the mesh. Should be at least 2.
-        self.subdivision_levels = 2 
+        self.subdivision_levels = 1 
 
-    def add_cell_objects(self, location, direction):
+    def add_cell_objects(self, location, direction, apply_subdivide=False):
         pass
 
 
@@ -219,11 +219,11 @@ class MixAttribute(CellAttribute):
     def lerp(a, b, t):
         return a*(1-t) + b*t
     
-    def add_cell_objects(self, location, direction):
+    def add_cell_objects(self, location, direction, apply_subdivide=False):
             bpy.ops.mesh.primitive_ico_sphere_add(radius=self.nucleus_size)
             nucleus = bpy.context.active_object
             deform_mesh(nucleus, self)
-            subdivide(nucleus, self.subdivision_levels)
+            subdivide(nucleus, self.subdivision_levels, apply=apply_subdivide)
             set_orientation(nucleus, direction)
             nucleus.location = location
             nucleus.scale = self.scale
