@@ -52,6 +52,7 @@ def parse_dataset_args():
     parser.add_argument("--output-dir", type=str, default="rendered", help="Set output folder")
     parser.add_argument("--start-idx", type=int, default=0, help="Dataset size")
     parser.add_argument("--n-samples", type=int, default=200, help="Dataset size")
+    parser.add_argument("--16bit-base", type=tuple, default=55, help="Output shape")
 
     # DATASET PARAMETERS
     # tissue parameters (when adaptive they orientate at a default tissue thickness of 0.05 and a default tissue size of 1.28)
@@ -320,7 +321,9 @@ def recreate_scene(**kwargs):
     return my_scene
 
 
-def render_scene(my_scene, render_path, sample_name, gpu=True, device=0, output_shape=(512, 512), max_samples=1024, render_masks=True):
+def render_scene(
+        my_scene, render_path, sample_name, gpu=True, device=0, 
+        output_shape=(512, 512), max_samples=1024, render_masks=True, base_16bit=55):
     '''
     renders a scene
     Args:
@@ -359,7 +362,8 @@ def render_scene(my_scene, render_path, sample_name, gpu=True, device=0, output_
                     depth_mask = False, # if true depth mask is generated
                     obj3d = False, # if true scene is saved as 3d object
                     output_shape = output_shape, # dimensions of output
-                    max_samples = max_samples) # number of samples for rendering. Fewer samples will render more quickly. Default is 1024
+                    max_samples = max_samples,
+                    base_16bit = base_16bit) # number of samples for rendering. Fewer samples will render more quickly. Default is 1024
 
 
 def main():
@@ -388,7 +392,7 @@ def main():
         with open(dir_parameters+f'/parameters_{i+1}.json', 'w') as outfile:
             json.dump(paramters, outfile)
         my_scene = create_scene(**paramters)
-        render_scene(my_scene, render_path, i+1, gpu=args.gpu, device=args.gpu_device)
+        render_scene(my_scene, render_path, i+1, gpu=args.gpu, device=args.gpu_device, base_16bit=args.16bit_base)
         bpy.ops.wm.read_factory_settings(use_empty=True)
 
 if __name__ == "__main__":

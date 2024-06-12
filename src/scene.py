@@ -599,7 +599,7 @@ class BioMedicalScene:
         colored_instance_mask.save(str(Path(self.semantic_path).joinpath(f"{self.sample_name}.png")))
         
         # convert the mask to correct cell ids
-        ids = hm.map_16bit_to_index(values)
+        ids = hm.map_16bit_to_index(values, sep=self.base_16bit)
         mask_indexing = ph.put_palette_1d(mask, ids, values)
         if not os.path.exists(self.semantic_path+'_indexing'):
             os.makedirs(self.semantic_path+'_indexing')
@@ -704,7 +704,8 @@ class BioMedicalScene:
                output_shape = (512, 512), 
                max_samples = 10,
                n_slices = 10, 
-               slice_thickness = None):
+               slice_thickness = None,
+               base_16bit = 55):
         '''
         filepath: the folder where all outputs will be stored
         scene: if true a png of the scene will be generated
@@ -718,6 +719,7 @@ class BioMedicalScene:
         '''
         self.filepath = filepath        
         bpy.app.handlers.render_complete.append(fn_print_time_when_render_done)
+        self.base_16bit = base_16bit
 
         if scene: 
             print("rendering scene")
@@ -817,7 +819,7 @@ class BioMedicalScene:
             instance_mask_3d.append(colored_instance_mask)
             
             # save correct index mask
-            ids = hm.map_16bit_to_index(values)
+            ids = hm.map_16bit_to_index(values, sep=self.base_16bit)
             ids = ids[:len(values)]
             indexing = ph.put_palette_1d(mask, ids, values)
             new_filepath = self.filepath + f'/masks/instance_3d_indexing/{self.sample_name}/'
