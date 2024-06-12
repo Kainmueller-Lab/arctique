@@ -165,7 +165,8 @@ def convert2mesh_list(obj_list):
     for obj in obj_list:
         obj.select_set(True)
         bpy.context.view_layer.objects.active = obj
-    bpy.ops.object.convert(target='MESH')
+    if len(obj_list) > 0:
+        bpy.ops.object.convert(target='MESH')
 
 
 def apply_transform(obj):
