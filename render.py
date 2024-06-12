@@ -52,7 +52,7 @@ def parse_dataset_args():
     parser.add_argument("--output-dir", type=str, default="rendered", help="Set output folder")
     parser.add_argument("--start-idx", type=int, default=0, help="Dataset size")
     parser.add_argument("--n-samples", type=int, default=200, help="Dataset size")
-    parser.add_argument("--16bit-base", type=tuple, default=55, help="Output shape")
+    parser.add_argument("--16bit-base", type=int, default=55, help="Output shape")
 
     # DATASET PARAMETERS
     # tissue parameters (when adaptive they orientate at a default tissue thickness of 0.05 and a default tissue size of 1.28)
