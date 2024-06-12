@@ -9,7 +9,7 @@ class TissueArch():
         # 1a) build crypt
         self.seed = seed
         np.random.seed(self.seed)
-        self.crypt = macro.build_crypt()
+        self.crypt = macro.build_crypt(seed=self.seed)
         # 1b) build surronding muscosa layer
         self.tissue = macro.build_muscosa(self.crypt)
 

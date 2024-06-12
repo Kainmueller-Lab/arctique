@@ -1,4 +1,5 @@
 import bpy
+import numpy as np
 
 from src.shading.materials import Material
 import src.utils.helper_methods as hm
@@ -12,7 +13,9 @@ import src.utils.helper_methods as hm
 
 
 class build_crypt():
-    def __init__(self, name='crypt_structure'):
+    def __init__(self, name='crypt_structure', seed=0):
+        np.random.seed(seed)
+        strength_scaling = np.random.uniform(0, 1)
         self.name = name
         self.crypt = self._add_geometry()
         self.node_tree, self.input, self.output = self._add_geometry_node()
@@ -37,6 +40,22 @@ class build_crypt():
         objects = [self.crypt, self.crypt_vol_in, self.crypt_vol_out, self.crypt_goblet]
         for obj in objects:
             
+            # noisy distortion
+            self.node_tree, self.input, self.output = self._add_geometry_node(obj, name=obj.name+'_distortion')
+            self.noisy_input, self.noisy_output = self._noisy_distortion(
+                self.input.outputs['Geometry'], self.output.inputs['Geometry'],
+                strength=0.1*strength_scaling)
+            bpy.context.view_layer.objects.active = obj
+            bpy.ops.object.modifier_apply(modifier=obj.name+'_distortion')
+
+            # noisy distortion
+            self.node_tree, self.input, self.output = self._add_geometry_node(obj, name=obj.name+'_distortion')
+            self.noisy_input, self.noisy_output = self._noisy_distortion(
+                self.input.outputs['Geometry'], self.output.inputs['Geometry'],
+                size=10, strength=0.05*strength_scaling)
+            bpy.context.view_layer.objects.active = obj
+            bpy.ops.object.modifier_apply(modifier=obj.name+'_distortion')
+
             #self._cut_geometry(obj)
             self._scale(obj, (7, 7, 7))
             # bpy.context.view_layer.objects.active = obj
@@ -73,9 +92,13 @@ class build_crypt():
         geometry.name = self.name
         return geometry
 
-    def _add_geometry_node(self):
-        geo_nodes_modifier = self.crypt.modifiers.new(name=self.name, type='NODES')
-        node_tree = bpy.data.node_groups.new(name=self.name, type='GeometryNodeTree')
+    def _add_geometry_node(self, obj=None, name=None):
+        if obj is None:
+            obj = self.crypt
+        if name is None:
+            name = self.name
+        geo_nodes_modifier = obj.modifiers.new(name=name, type='NODES')
+        node_tree = bpy.data.node_groups.new(name=name, type='GeometryNodeTree')
         geo_nodes_modifier.node_group = node_tree
         nodes = node_tree.nodes
         group_input = nodes.new(type='NodeGroupInput')
@@ -132,6 +155,35 @@ class build_crypt():
         
         return subdivide.inputs['Mesh'], mesh_bool.outputs['Mesh']
     
+    def _noisy_distortion(self, in_link=None, out_link=None, start_pos=(0, -400), sep=200, strength=0.1, size=1.8):
+        nodes = self.node_tree.nodes
+        links = self.node_tree.links
+        
+        # noise texture
+        noise = nodes.new(type='ShaderNodeTexNoise')
+        noise.location = start_pos
+        noise.inputs['Scale'].default_value = size
+        noise.inputs['Roughness'].default_value = 0.0
+        
+        # scale (zero out z-axis)
+        factor = nodes.new(type='ShaderNodeVectorMath')
+        factor.location = (noise.location[0]+sep, noise.location[1])
+        factor.operation = 'MULTIPLY'
+        factor.inputs[1].default_value = [strength, strength, 0]
+        links.new(noise.outputs['Color'], factor.inputs[0])
+        
+        # apply
+        pos = nodes.new(type='GeometryNodeSetPosition')
+        pos.location = (factor.location[0]+sep, factor.location[1])
+        if in_link is not None:
+            links.new(in_link, pos.inputs['Geometry'])
+        links.new(factor.outputs['Vector'], pos.inputs['Offset'])
+        
+        if out_link is not None:
+            links.new(pos.outputs['Geometry'], out_link)
+        
+        return pos.inputs['Geometry'], pos.outputs['Geometry']
+    
     def _add_crypts(self, in_link=None, out_link=None, start_pos=(1500, -400), sep=200, sep_y=400):
         nodes = self.node_tree.nodes
         links = self.node_tree.links
@@ -185,7 +237,7 @@ class build_crypt():
         factor_2 = nodes.new(type='ShaderNodeVectorMath')
         factor_2.location = (noise.location[0]+sep, noise.location[1])
         factor_2.operation = 'MULTIPLY'
-        factor_2.inputs[1].default_value = [0.3, 0.3, 0]
+        factor_2.inputs[1].default_value = [0.1, 0.1, 0]
         links.new(noise.outputs['Color'], factor_2.inputs[0])
         
         # apply
@@ -205,7 +257,7 @@ class build_crypt():
             
         return extrude.inputs['Mesh'], subdivide.outputs['Mesh']
     
-    def _cut_geometry(self, mesh_object, size=0.5): # 1
+    def _cut_geometry(self, mesh_object, size=0.6): # 1
         # Ensure the context is correct
         bpy.ops.object.mode_set(mode='OBJECT')
 
@@ -234,7 +286,7 @@ class build_crypt():
 
 
 class build_muscosa():
-    def __init__(self, crypt, name='muscosa', buffer=(0.2, 0.2, 0.1)):
+    def __init__(self, crypt, name='muscosa', buffer=(0.35, 0.35, 0.1)):
         self.name = name
         self.buffer = buffer
         self.size = crypt.crypt.dimensions

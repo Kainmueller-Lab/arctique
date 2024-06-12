@@ -51,7 +51,7 @@ def parse_dataset_args():
     parser.add_argument("--gpu", type=bool, default=True, help="Use GPU for rendering")
     parser.add_argument("--output-dir", type=str, default="rendered", help="Set output folder")
     parser.add_argument("--start-idx", type=int, default=0, help="Dataset size")
-    parser.add_argument("--n-samples", type=int, default=200, help="Dataset size")
+    parser.add_argument("--n-samples", type=int, default=100, help="Dataset size")
     parser.add_argument("--base-16bit", type=int, default=55, help="Output shape")
 
     # DATASET PARAMETERS
@@ -179,6 +179,11 @@ def create_scene(
     macro_structure = tissue_arch.get_architecture()   # NOTE crypt is bad news, dont touch it
     for obj in macro_structure:
         obj.location[2] += 0.5  # move up to the tissue surface
+    for obj in macro_structure[:-1]:
+        smooth = obj.modifiers.new(name='smooth', type='SMOOTH')
+        smooth.iterations = 20
+        bpy.context.view_layer.objects.active = obj
+        bpy.ops.object.modifier_apply(modifier=smooth.name)
     elapsed_old = elapsed
     elapsed = time.time() - start 
     print(f"Architecture get took {elapsed-elapsed_old} s")
