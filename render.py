@@ -52,7 +52,7 @@ def parse_dataset_args():
     parser.add_argument("--output-dir", type=str, default="rendered", help="Set output folder")
     parser.add_argument("--start-idx", type=int, default=0, help="Dataset size")
     parser.add_argument("--n-samples", type=int, default=200, help="Dataset size")
-    parser.add_argument("--16bit-base", type=int, default=55, help="Output shape")
+    parser.add_argument("--base-16bit", type=int, default=55, help="Output shape")
 
     # DATASET PARAMETERS
     # tissue parameters (when adaptive they orientate at a default tissue thickness of 0.05 and a default tissue size of 1.28)
@@ -392,7 +392,7 @@ def main():
         with open(dir_parameters+f'/parameters_{i+1}.json', 'w') as outfile:
             json.dump(paramters, outfile)
         my_scene = create_scene(**paramters)
-        render_scene(my_scene, render_path, i+1, gpu=args.gpu, device=args.gpu_device, base_16bit=args.16bit_base)
+        render_scene(my_scene, render_path, i+1, gpu=args.gpu, device=args.gpu_device, base_16bit=args.base_16bit)
         bpy.ops.wm.read_factory_settings(use_empty=True)
 
 if __name__ == "__main__":
