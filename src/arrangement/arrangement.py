@@ -129,7 +129,7 @@ class VoronoiFill(CellArrangement):
         self.attribute = CellAttribute.from_type(self.type)
         self.radius = self.attribute.size
         self.max_count = 500 # NOTE: The volume will be filled up with maximally this number of nuclei
-        self.surface_subdivision_levels = 2  # 3 # NOTE: Increase this for finer subdvision and more quasi-random placement, but will be slower
+        self.surface_subdivision_levels = 2 # NOTE: Increase this for finer subdvision and more quasi-random placement, but will be slower
         self.add_nuclei() 
 
 
