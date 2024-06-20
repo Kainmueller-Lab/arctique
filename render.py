@@ -82,6 +82,7 @@ def parse_dataset_args():
     parser.add_argument("--mix-factor", type=float, default=0, help="overall intensity of nuclei") # TODO
     parser.add_argument("--epi-rescaling", type=int, default=0, help="overall intensity of nuclei") # TODO
     parser.add_argument("--mix-cyto", type=float, default=0, help="overall intensity of nuclei") # TODO
+    parser.add_argument("--red-points-strength", type=float, default=0, help="Degree of rip like structures in tissue")
     
     args = parser.parse_args()
     
@@ -103,7 +104,7 @@ def create_scene(
         tissue_thickness = 0.05, tissue_size = 1.28, tissue_location = (0, 0, 0.5),
         tissue_thickness_lb = 0.05, 
         light_source_brightness = 60, adaptiv_brightness = True,
-        nucleus_color = (0.315, 0.003, 0.531, 1),
+        nucleus_color = (0.315, 0.003, 0.531, 1), red_points_strength = 0,
         tissue_rips = -0.5, tissue_rips_std = 0.1, nuclei_intensity = 1, mix_cyto = 0,
         tissue_padding = 0.5, epi_count = 80, stroma_density = 0.5, mix_factor = 0, stroma_intensity = 1,
         ratios = [0, 0.3, 0.4, 0.2, 0.1],
@@ -154,7 +155,7 @@ def create_scene(
     my_materials = materials.Material(
         seed=seed, cell_type_params=params_cell_shading, tissue_rips=tissue_rips, 
         tissue_rips_std=tissue_rips_std, stroma_intensity=stroma_intensity,
-        brightness=light_source_brightness)
+        brightness=light_source_brightness, red_points_strength=red_points_strength)
     print(tissue_location)
     my_tissue = tissue.Tissue(
         my_materials.muscosa, thickness=tissue_thickness,
