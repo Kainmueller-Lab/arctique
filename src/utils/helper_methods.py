@@ -177,11 +177,13 @@ def apply_transform(obj):
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
 
-def add_boolean_modifier(obj, target, name='Boolean Modifier', operation='DIFFERENCE', apply=True):
+def add_boolean_modifier(obj, target, name='Boolean Modifier', operation='DIFFERENCE', apply=True, self=False):
     '''
     adds a boolean modifier to an object
     '''
     boolean = obj.modifiers.new(name=name, type='BOOLEAN')
+    if self:
+        boolean.use_self = True
     boolean.show_viewport = False
     boolean.operation = operation
     boolean.object = target

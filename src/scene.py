@@ -177,24 +177,12 @@ class BioMedicalScene:
             bpy.ops.object.modifier_apply(modifier=boolean.name)
 
     def cut_tissue(self, tolerance=0.00001):
-        # create new cube with same properties as tissue
-        # bpy.ops.mesh.primitive_cube_add(size=0.97, location=self.tissue.location)  #0.0001
-        # cube = bpy.context.active_object
-        # cube.name = 'cutting_cube'
-        # cube.dimensions.z = self.tissue.dimensions.z
-        # bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-        
         for i, v in enumerate(self.volumes):
             hm.apply_transform(v)
             hm.apply_transform(self.tissue_empty)
-            boolean = v.modifiers.new(name="tissue cutting", type='BOOLEAN')
-            boolean.show_viewport = False
-            boolean.operation = 'INTERSECT'
-            #boolean.solver = 'FAST'
-            boolean.object = self.tissue_empty
-            bpy.context.view_layer.objects.active = v
-            bpy.ops.object.modifier_apply(modifier=boolean.name)
-            #v.scale.z = v.scale.z*(1+i*tolerance)
+            hm.add_boolean_modifier(
+                v, self.tissue_empty, name='tissue cutting',
+                operation='INTERSECT', apply=True, self=True)
             v.location.z = v.location.z + i*tolerance
 
     def cut_cytoplasm_nuclei(self, tolerance=-0.1):
@@ -290,12 +278,6 @@ class BioMedicalScene:
                     cell.data.materials.append(m)
                     cell.active_material = m
 
-    def remove_goblet_volume(self, volume):
-        for cell in self.cell_objects:
-            cell_type = cell.name.split('_')[-2]
-            if cell_type == 'GOB':
-                hm.add_boolean_modifier(volume, cell, name='remove goblet', operation='DIFFERENCE', apply=True)
-
     def remove_cells_volume(self, volume, tolerance=-0.007, types=('EOS', 'FIB', 'PLA', 'LYM')):
         cell_objects = [cell for cell in self.cell_objects if cell.name.split('_')[-2] in types]
         if len(cell_objects) != 0:
@@ -311,11 +293,12 @@ class BioMedicalScene:
             bpy.ops.object.join()
             joined_cells = bpy.context.active_object
             hm.convert2mesh(volume)
-            hm.add_boolean_modifier(volume, joined_cells, name='remove cell', operation='DIFFERENCE', apply=True)
+            hm.add_boolean_modifier(
+                volume, joined_cells, name='remove cell',
+                operation='DIFFERENCE', apply=True, self=True)
             bpy.data.objects.remove(joined_cells)
             for cell in cell_objects:
                 cell.scale = cell.scale*(1-tolerance)
-
     
     def add_cell_params(self, cell_params):
         for cell_type, params in cell_params.items():

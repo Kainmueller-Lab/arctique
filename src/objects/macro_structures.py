@@ -286,7 +286,7 @@ class build_crypt():
 
 
 class build_muscosa():
-    def __init__(self, crypt, name='muscosa', buffer=(0.35, 0.35, 0.1)):
+    def __init__(self, crypt, name='muscosa', buffer=(0.38, 0.38, 0.1)):  #, buffer=(0.35, 0.35, 0.1)):
         self.name = name
         self.buffer = buffer
         self.size = crypt.crypt.dimensions
@@ -308,20 +308,15 @@ class build_muscosa():
         return geometry
     
     def _remove_crypts(self):
-        # Apply a Boolean Modifier to 'mesh'
-        boolean_modifier = self.muscosa.modifiers.new(name='BooleanOp', type='BOOLEAN')
-        boolean_modifier.object = self.crypt.crypt
-        boolean_modifier.operation = 'DIFFERENCE' 
+        hm.add_boolean_modifier(
+            self.muscosa, self.crypt.crypt, name='Boolean Modifier',
+            operation='DIFFERENCE', apply=True, self=True)
 
-        # Apply the modifier
-        bpy.context.view_layer.objects.active = self.muscosa
-        bpy.ops.object.modifier_apply(modifier=boolean_modifier.name)
+        # # Apply a Boolean Modifier to 'mesh'
+        # boolean_modifier = self.muscosa.modifiers.new(name='BooleanOp', type='BOOLEAN')
+        # boolean_modifier.object = self.crypt.crypt
+        # boolean_modifier.operation = 'DIFFERENCE' 
 
-        # remove extended crypt
-        #boolean_modifier = self.muscosa.modifiers.new(name='BooleanOp', type='BOOLEAN')
-        #boolean_modifier.object = self.crypt.crypt_vol_out
-        #boolean_modifier.operation = 'DIFFERENCE' 
-
-        # Apply the modifier
-        #bpy.context.view_layer.objects.active = self.muscosa
-        #bpy.ops.object.modifier_apply(modifier=boolean_modifier.name)
+        # # Apply the modifier
+        # bpy.context.view_layer.objects.active = self.muscosa
+        # bpy.ops.object.modifier_apply(modifier=boolean_modifier.name)
