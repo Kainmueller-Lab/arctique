@@ -18,9 +18,9 @@
 #$ -V
 #$ -e error_log_$JOB_ID
 #$ -o out_log_$JOB_ID
-#$ -l h_rt=30:00:00
+#$ -l h_rt=20:00:00
 #$ -A kainmueller
-#$ -pe mpi 8
+#$ -pe mpi 4
 
 CUDA_VISIBLE_DEVICES=0
 
