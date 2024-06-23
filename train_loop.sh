@@ -10,7 +10,6 @@ fi
 
 for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
 do
-    # start a python script
-    start_idx = $((start_base + i * n_samples))
-    qsub render.sh render.py --start-idx $start_idx --n-samples $n_samples
+    # start a python script 
+    qsub render.sh render.py --start-idx $((start_base + i * n_samples)) --n-samples $n_samples
 done
