@@ -4,10 +4,11 @@ N_SAMPLES=50
 BASE_16BIT=257
 
 # add adjustable start shift as entry from shell
-if [ $# -eq 1 ]
-then
-    START_BASE = $1
-fi
+if [ -z "$1" ]; then
+    START_BASE=0
+else
+    START_BASE=$1
+    fi
 
 for i in $(seq 0 99)
 do
