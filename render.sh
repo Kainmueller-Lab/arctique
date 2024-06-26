@@ -5,22 +5,21 @@
 ### -cwd: job is started in current directory
 ### -l h=maxg03,h=maxg04,h=maxg05,h=maxg06,h=maxg07,h=maxg08,gpu=1: nodes with the V100 GPUs installed (not T4) - will change soon!
 ### cuda_name = "A40-PCIE-45G"
-
 ### $ -l gpu=1 -l cuda_name="Tesla-V100-SXM2-32GB"
 ### $ -l gpu=1 -l cuda_name="Tesla-V100-PCIE-32GB"
 ### $ -l gpu=1 -l cuda_name="Tesla-V100-SXM2-16GB"
 ### $ -l h=maxg03,h=maxg04,h=maxg05,h=maxg06,h=maxg07,h=maxg08,gpu=1
-#$ -l gpu=1
 ###$ -l cuda_name = "A40-PCIE-45G"
-#$ -l cuda_type=A40
+
+#$ -l gpu=1
 #$ -l m_mem_free=40G
 #$ -cwd
 #$ -V
 #$ -e error_log_$JOB_ID
 #$ -o out_log_$JOB_ID
-#$ -l h_rt=20:00:00
+#$ -l h_rt=5:00:00
 #$ -A kainmueller
-#$ -pe mpi 4
+#$ -pe mpi 1-10
 
 CUDA_VISIBLE_DEVICES=0
 
