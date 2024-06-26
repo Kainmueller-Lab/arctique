@@ -10,7 +10,7 @@
 ### $ -l gpu=1 -l cuda_name="Tesla-V100-SXM2-16GB"
 ### $ -l h=maxg03,h=maxg04,h=maxg05,h=maxg06,h=maxg07,h=maxg08,gpu=1
 ###$ -l cuda_name = "A40-PCIE-45G"
-### $ -pe mpi 4
+### $ -pe mpi 1
 
 #$ -l gpu=1
 #$ -l m_mem_free=40G
@@ -20,7 +20,7 @@
 #$ -o out_log_$JOB_ID
 #$ -l h_rt=5:00:00
 #$ -A kainmueller
-#$ -pe smp 1-10
+#$ -pe mpi 2-4
 
 
 CUDA_VISIBLE_DEVICES=0
