@@ -14,13 +14,14 @@
 
 #$ -l gpu=1
 #$ -l m_mem_free=40G
+#$ -l gpu_memory=16G
 #$ -cwd
 #$ -V
 #$ -e error_log_$JOB_ID
 #$ -o out_log_$JOB_ID
 #$ -l h_rt=5:00:00
 #$ -A kainmueller
-#$ -pe mpi 2-4
+#$ -pe mpi 2
 
 
 CUDA_VISIBLE_DEVICES=0
