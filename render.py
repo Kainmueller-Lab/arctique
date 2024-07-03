@@ -107,7 +107,7 @@ def create_scene(
         nucleus_color = (0.315, 0.003, 0.531, 1), red_points_strength = 0,
         tissue_rips = -0.5, tissue_rips_std = 0.1, nuclei_intensity = 1, mix_cyto = 0,
         tissue_padding = 0.5, epi_count = 80, stroma_density = 0.5, mix_factor = 0, stroma_intensity = 1,
-        ratios = [0, 0.3, 0.4, 0.2, 0.1],
+        ratios = [0, 0.3, 0.4, 0.2, 0.1], focal_offset = 0,
         seed=0, **kwargs):
     '''
     creates a tissue crop with cells and nuclei
@@ -161,7 +161,7 @@ def create_scene(
         my_materials.muscosa, thickness=tissue_thickness,
         size=tissue_size, location=tissue_location)
     my_light_source = scene.LightSource(material=my_materials.light_source)
-    my_camera = scene.Camera(focus_pos=0.6221+(tissue_thickness-0.05))
+    my_camera = scene.Camera(focus_pos=0.6221+(tissue_thickness*(1+focal_offset)-0.05))
     my_scene = scene.BioMedicalScene(my_light_source, my_camera)
     my_scene.add_cell_params(params_cell_shading)
     my_scene.add_tissue(tissue=my_tissue.tissue)
