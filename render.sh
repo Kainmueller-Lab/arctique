@@ -14,12 +14,12 @@
 
 #$ -l gpu=1
 #$ -l m_mem_free=40G
-#$ -l gpu_memory=16G
+#$ -l gpu_mem=16000
 #$ -cwd
 #$ -V
 #$ -e error_log_$JOB_ID
 #$ -o out_log_$JOB_ID
-#$ -l h_rt=5:00:00
+#$ -l h_rt=0:29:00
 #$ -A kainmueller
 #$ -pe mpi 2
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 START_BASE=0
-N_SAMPLES=50
+N_SAMPLES=5
 BASE_16BIT=257
 
 # add adjustable start shift as entry from shell
