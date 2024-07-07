@@ -51,6 +51,7 @@ def parse_dataset_args():
     parser.add_argument("--gpu", type=bool, default=True, help="Use GPU for rendering")
     parser.add_argument("--output-dir", type=str, default="rendered", help="Set output folder")
     parser.add_argument("--start-idx", type=int, default=0, help="Dataset size")
+    parser.add_argument("--index-list", type=str, default='', help="ony considered if len>1, List of indices to render")
     parser.add_argument("--n-samples", type=int, default=100, help="Dataset size")
     parser.add_argument("--base-16bit", type=int, default=55, help="Output shape")
 
@@ -387,10 +388,20 @@ def main():
         os.makedirs(dir)
     if not os.path.exists(dir_parameters):
         os.makedirs(dir_parameters)
-    
+
+    # if index list is given, render only these indices
+    if len(args.index_list) > 1:
+        with open(render_path + '/' + args.index_list, 'r') as f:
+            indices = f.read().splitlines()
+        indices = [int(i) for i in indices]
+        indices = [i-1 for i in indices]  # NOTE tempory fix, due to 1-indexing
+        indices = indices[args.start_idx: args.start_idx + args.n_samples]
+    else:
+        indices = list(range(args.start_idx, args.start_idx + args.n_samples))
+    print(f'Indices: {indices}')
 
     # render individual samples
-    for i in tqdm(range(args.start_idx, args.start_idx + args.n_samples)):
+    for i in tqdm(indices):
         paramters = {'seed': i}
         for key, value in args.__dict__.items():
             if key not in paramters.keys():

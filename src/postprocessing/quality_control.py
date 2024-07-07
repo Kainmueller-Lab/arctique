@@ -82,3 +82,38 @@ def remove_files(dir, indices, check=True):
                 os.remove(path)
     
     print(f'Removed {len(files_to_removed)} Files in {dir}')
+
+
+def check_missing_renders(
+        index_range,
+        file_path,
+        dirs=[
+            'images/', 
+            'masks/cytoplasm_indexing/', 
+            'masks/instance_3d_indexing/', 
+            'masks/instance_indexing/',
+            'masks/semantic_indexing/',
+            'metadata/',
+            'parameters/'],
+        save_path='missing_renders.txt',
+        folder_files=11):
+    '''
+    checks for missing renders in the given range
+    Args:
+        index_range (list): range of indices to check, e.g. [1, 100]
+        file_path (str): path to the files
+        dirs (list): list of directories
+        folder_files (int): number of files in each folder
+    Returns:
+        list: list of indices that are missing
+    '''
+    missing_indices = []
+    complete_indices, _, _ = check_complete_pairs(file_path, dirs, folder_files)
+    for i in range(index_range[0], index_range[1]+1):
+        if i not in complete_indices:
+            missing_indices.append(i)
+    if save_path:
+        with open(file_path+save_path, 'w') as f:
+            for i in missing_indices:
+                f.write(f'{i}\n')
+    return missing_indices
