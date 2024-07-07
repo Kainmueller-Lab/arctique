@@ -18,7 +18,7 @@
 #$ -V
 #$ -e error_log_$JOB_ID
 #$ -o out_log_$JOB_ID
-#$ -l h_rt=0:29:00
+#$ -l h_rt=7:00:00
 #$ -A kainmueller
 #$ -pe mpi 2
 
