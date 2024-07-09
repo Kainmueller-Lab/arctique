@@ -449,6 +449,10 @@ class BioMedicalScene:
             if cell_type in self.cell_params:
                 if cell_part in self.cell_params[cell_type]:
                     cell_params = self.cell_params[cell_type][cell_part]
+                else:
+                    continue  # TODO test if this works properly
+            else:
+                continue
 
             # get unique id for each cell type
             if cell_type not in unique_type_dict:

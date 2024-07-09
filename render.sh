@@ -13,7 +13,7 @@
 
 #$ -l gpu=1
 #$ -l m_mem_free=40G
-#$ -l cuda_name = "A40-PCIE-45G"
+#$ -l cuda_name="A40-PCIE-45G"
 #$ -cwd
 #$ -V
 #$ -e error_log_$JOB_ID
