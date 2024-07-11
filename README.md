@@ -1,4 +1,6 @@
-# rHEnder
+# Arctique
+
+Arctique: ARtificial Colon Tissue for Quantitativ Uncertainty Evaluation
 
 rHEnder is a package that lets you create synthetic biomedical data, together with their corresponding masks.
 The package is specifically designed for H&E stained biomedical images, but could be easily 
