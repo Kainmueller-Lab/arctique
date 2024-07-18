@@ -2,6 +2,10 @@
 
 Arctique: ARtificial Colon Tissue for Quantitativ Uncertainty Evaluation
 
+![Graphical Abstract](examples/generation_overview.png)
+
+
+
 ## Installation via pip and requirements
 
 1) Clone the repository
@@ -24,6 +28,8 @@ done :) Now we can use blender without the need to install the full suite.
 ## Quickstart
 
 ### Generate an image with the corresponding mask
+ 
+- example
 
 In order to generate an image with the corresponding mask, you can use the following command:
 
@@ -46,6 +52,8 @@ render
 ```
 
 ### Generate a variation of a rendered example
+
+- example
 
 In order to generate a variation of a rendered example, you can use the following command:
 
