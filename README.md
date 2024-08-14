@@ -7,6 +7,8 @@ With this tool you can generate synthetic images of microscopic colon tissue ima
 As shown below, to mimic the complex structure of real colon tissue images ...
 
 ![Graphical Abstract](examples/generation_overview.png#gh-light-mode-only)
+![Graphical Abstract](examples/generation_overview_dark.png#gh-dark-mode-only)
+
 
 
 
