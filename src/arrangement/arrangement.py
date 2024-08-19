@@ -68,35 +68,34 @@ class VolumeFill(CellArrangement):
         self.counts = [int(ratio*self.max_count) for ratio in normalized_ratios]
         # Generate points inside mesh with given minimum distance
         # TODO: Generate based on Mahalanobis distance for scaled spheres
-        self.points_per_type = fill_volume(
-            self.counts, self.density, self.attributes, self.mesh, self.strict_boundary, seed=seed)
+        self.points_per_attribute = fill_volume(
+            self.counts, self.density, self.attributes, self.mesh, self.strict_boundary, self.seed)
         # remove all points outside of bounding box before adding objects
         # print('points per type', self.points_per_type)
         # if bounding_box is not None:
         #     self._remove_outside_bbox(bounding_box)
 
     def add(self):
-        for locations, radius, type in self.points_per_type:
-            attribute = CellAttribute.from_type(type)
+        for locations, attribute in self.points_per_attribute:
             for idx, location in enumerate(locations):
                 direction = Vector(random_unit_vector())
                 cell_objects = attribute.add_cell_objects(location, direction, apply_subdivide=True)
                 cytoplasm = None
                 if len(cell_objects) == 2:
                     cytoplasm = cell_objects[1]
-                    cytoplasm.name = f"Cytoplasm_Type_{type.name}_{idx}"
+                    cytoplasm.name = f"Cytoplasm_Type_{attribute.cell_type}_{idx}"
                     self.objects.append(cytoplasm)
                     self.cytoplasm.append(cytoplasm)
                 nucleus = cell_objects[0]
                 hm.shade_switch(nucleus, flat=True)
-                nucleus.name = f"Nucleus_Type_{type.name}_{idx}"
+                nucleus.name = f"Nucleus_Type_{attribute.cell_type}_{idx}"
                 self.objects.append(nucleus)
                 self.nuclei.append(nucleus)
         #convert2mesh_list(self.objects)
     
     def _remove_outside_bbox(self, bbox):
         deleted_objects = []
-        for obj in self.points_per_type:
+        for obj in self.points_per_attribute:
             # construct bounding box
             pass
             
