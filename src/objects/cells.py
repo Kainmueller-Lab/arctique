@@ -62,8 +62,8 @@ class PLA(CellAttribute):
         # Add cytoplasm
         bpy.ops.mesh.primitive_ico_sphere_add(radius=self.size)
         cytoplasm = bpy.context.active_object
-        deform_mesh(cytoplasm, self)
-        subdivide(cytoplasm, self.subdivision_levels, apply=apply_subdivide)
+        #deform_mesh(cytoplasm, self)
+        #subdivide(cytoplasm, self.subdivision_levels, apply=apply_subdivide)
         set_orientation(cytoplasm, direction)
         cytoplasm.location = location
         cytoplasm.scale = self.scale
@@ -71,8 +71,8 @@ class PLA(CellAttribute):
         # Add nucleus
         bpy.ops.mesh.primitive_ico_sphere_add(radius=self.nucleus_size)
         nucleus = bpy.context.active_object
-        deform_mesh(nucleus, self)
-        subdivide(nucleus, self.subdivision_levels, apply=apply_subdivide)
+        #deform_mesh(nucleus, self)
+        #subdivide(nucleus, self.subdivision_levels, apply=apply_subdivide)
         set_orientation(nucleus, direction)
         nucleus.location = location
         nucleus.scale = self.scale
@@ -92,8 +92,8 @@ class LYM(CellAttribute):
     def add_cell_objects(self, location, direction, apply_subdivide=False):
         bpy.ops.mesh.primitive_ico_sphere_add(radius=self.size)
         nucleus = bpy.context.active_object
-        deform_mesh(nucleus, self)
-        subdivide(nucleus, self.subdivision_levels, apply=apply_subdivide)
+        #deform_mesh(nucleus, self)
+        #subdivide(nucleus, self.subdivision_levels, apply=apply_subdivide)
         set_orientation(nucleus, direction)
         nucleus.location = location
         nucleus.scale = self.scale
@@ -114,8 +114,8 @@ class EOS(CellAttribute):
         # Add cytoplasm
         bpy.ops.mesh.primitive_ico_sphere_add(radius=self.size)
         cytoplasm = bpy.context.active_object
-        deform_mesh(cytoplasm, self)
-        subdivide(cytoplasm, self.subdivision_levels, apply=apply_subdivide)
+        #deform_mesh(cytoplasm, self)
+        #subdivide(cytoplasm, self.subdivision_levels, apply=apply_subdivide)
         set_orientation(cytoplasm, direction)
         cytoplasm.location = location
         cytoplasm.scale = self.scale
@@ -207,7 +207,6 @@ class MixAttribute(CellAttribute):
         self.mixing_attribute = mixing_attribute
         self.mix = mix
 
-        # TODO: Add lerp function
         self.cell_type = CellType.MIX
         self.size = lerp(true_attribute.size, mixing_attribute.size, mix)
         self.nucleus_size = lerp(true_attribute.nucleus_size, mixing_attribute.nucleus_size, mix)
@@ -222,8 +221,8 @@ class MixAttribute(CellAttribute):
     def add_cell_objects(self, location, direction, apply_subdivide=False):
             bpy.ops.mesh.primitive_ico_sphere_add(radius=self.nucleus_size)
             nucleus = bpy.context.active_object
-            deform_mesh(nucleus, self)
-            subdivide(nucleus, self.subdivision_levels, apply=apply_subdivide)
+            #deform_mesh(nucleus, self)
+            #subdivide(nucleus, self.subdivision_levels, apply=apply_subdivide)
             set_orientation(nucleus, direction)
             nucleus.location = location
             nucleus.scale = self.scale
@@ -237,12 +236,12 @@ cell_type_to_attribute = {
     CellType.FIB.name : FIB(),
     CellType.EPI.name : EPI(),
     CellType.GOB.name : GOB(),
-    CellType.MIX.name : MixAttribute(PLA(), LYM(), TYPE_MIXING),
+    CellType.MIX.name : MixAttribute(EOS(), PLA(), TYPE_MIXING),
 }
 
 def initialize_mixing_attribute(mixing_coefficient):
     '''
     Initializes the mixing attribute with the given mixing coefficient.
     '''
-    cell_type_to_attribute[CellType.MIX.name] = MixAttribute(PLA(), LYM(), mixing_coefficient)
+    cell_type_to_attribute[CellType.MIX.name] = MixAttribute(EOS(), EOS(), mixing_coefficient)
     

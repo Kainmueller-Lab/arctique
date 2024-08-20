@@ -78,12 +78,11 @@ def fill_volume(counts, density, attributes, volume, use_strict_boundary, seed=N
         np.random.seed(seed)
 
     MAX_COUNT = 900
-    M = 16
-    N = 12
+    M = 12
+    N = 8
     # Get a set of directions that cover the sphere
     directions = [Vector((cos(2*pi*i/M) * sin(pi*j/N), sin(2*pi*i/M) * sin(pi*j/N), cos(pi*j/N))) for i in range(M) for j in range(1,N)] + [Vector((0,0,1)), Vector((0,0,-1))]
     density_distance = 0.0
-    print(density_distance)
     density = 1
     use_strict_boundary = False
     # TODO:
@@ -112,12 +111,12 @@ def fill_volume(counts, density, attributes, volume, use_strict_boundary, seed=N
     while True:
         pos = Vector((random.uniform(min_corner[0], max_corner[0]), random.uniform(min_corner[1], max_corner[1]), random.uniform(min_corner[2], max_corner[2])))
         if is_inside(pos, volume, 0):
-            root = (pos, attributes[0])
+            root = (pos, attribute_list[0])
             break
 
     placed_seeds = [root]
     placed_seeds_by_level = {0 : [root]}
-    
+
     while True:
         level = len(placed_seeds_by_level)
         placed_seeds_by_level[level] = []
@@ -130,6 +129,20 @@ def fill_volume(counts, density, attributes, volume, use_strict_boundary, seed=N
                 new_attribute = attribute_list[len(placed_seeds)]
                 new_position = seed[0] + direction*(seed[1].size + new_attribute.size + density_distance)
                 if not do_intersect(placed_seeds, (new_position, new_attribute)) and is_inside(new_position, volume, new_attribute.size) and is_inside_bbox(new_position, min_corner, max_corner):
+                    # test += 1
+                    # if test == 100:
+                    #     bpy.ops.object.empty_add(location=seed[0])
+                    #     empty_object = bpy.context.object
+                    #     empty_object.name = f"test_seed_{seed[0]}_{seed[1].cell_type}"
+                    #     bpy.ops.object.empty_add(location=new_position)
+                    #     empty_object = bpy.context.object
+                    #     empty_object.name = f"test_new_seed_{new_position}_{new_attribute.cell_type}"
+                    #     bpy.ops.mesh.primitive_uv_sphere_add(location=seed[0], radius = seed[1].size)
+                    #     # make it wireframe
+                    #     bpy.context.object.display_type = 'WIRE'
+                    #     bpy.ops.mesh.primitive_uv_sphere_add(location=new_position, radius = new_attribute.size)
+                    #     bpy.context.object.display_type = 'WIRE'
+
                     placed_seeds.append((new_position, new_attribute))
                     placed_seeds_by_level[level].append((new_position, new_attribute))
                 if len(placed_seeds) >= MAX_COUNT:
