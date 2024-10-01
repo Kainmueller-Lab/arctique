@@ -71,7 +71,7 @@ def bbox_center(bbox):
     (min_x, max_x), (min_y, max_y), (min_z, max_z) = bbox
     return (min_x + max_x) / 2, (min_y + max_y) / 2, (min_z + max_z) / 2
 
-def fill_volume(counts, density, attributes, volume, use_strict_boundary, seed=None):
+def fill_volume_by_tree(counts, density, attributes, volume, use_strict_boundary, seed=None):
     assert len(counts) == len(attributes), "counts and attributes not same length :(("
     if seed is not None:
         random.seed(seed)
@@ -162,13 +162,13 @@ def fill_volume(counts, density, attributes, volume, use_strict_boundary, seed=N
     return points_per_attribute
 
 
-def fill_volume_old(counts, density, attributes, volume, use_strict_boundary, seed=None):
+def fill_volume(counts, density, attributes, volume, use_strict_boundary, seed=None):
     assert len(counts) == len(attributes), "counts and attributes not same length :(("
     if seed is not None:
         random.seed(seed)
         np.random.seed(seed)
 
-    MAX_COUNT = 20000 # Default: 5000 / Maximum number of cells placed in the volume
+    MAX_COUNT = 5000 # Default: 5000 / Maximum number of cells placed in the volume
     DELTA = 0.005 # Default: 0.01 / Lattice spacing, smaller values yield more random placements but increases processing time
     density_distance = 0.0
     density = 1
@@ -176,7 +176,6 @@ def fill_volume_old(counts, density, attributes, volume, use_strict_boundary, se
     # TODO:
     # - Make the params input params
     # - Implement strict boundary
-    # - Turn seeds into points_per_type
 
     attribute_list = [attribute for attribute, count in zip(attributes, counts) for _ in range(count)]
     random.shuffle(attribute_list)
@@ -233,7 +232,7 @@ def fill_volume_old(counts, density, attributes, volume, use_strict_boundary, se
 
 
 
-def fill_volume_very_old(counts, density, attributes, volume, use_strict_boundary, seed=None):
+def fill_volume_old(counts, density, attributes, volume, use_strict_boundary, seed=None):
     radii = [attribute.size for attribute in attributes]
     types = [attribute.cell_type for attribute in attributes]
     assert len(counts) == len(radii), "Counts and radii must have the same length"
