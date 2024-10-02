@@ -144,7 +144,7 @@ class FIB(CellAttribute):
         self.cell_type = CellType.FIB
         self.size = 0.079
         self.nucleus_size = 0.079
-        self.scale = (1,0.6,0.5)
+        self.scale = (1,0.65,0.65)
         self.deformation_strength = 0.2
         self.attribute_name = "Fibroblast"
         self.max_bending_strength = 0.7

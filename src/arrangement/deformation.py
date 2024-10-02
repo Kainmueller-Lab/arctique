@@ -93,7 +93,7 @@ def deformation(input_vector, params, seed=42):
     dz = perlin(input_vector[0] + 200, input_vector[1] + 200, input_vector[2] + 200, amplitude, frequency, octave_count, persistence, lacunarity)
 
     # Create deformation vector
-    # NOTE: We normalize the deformation vector to aunit vector. Is this a god idea? - ck
+    # NOTE: We normalize the deformation vector to a unit vector. Otherwise the deformations could be to drastic. 
     deformation_vector = Vector((dx, dy, dz)).normalized() 
     return deformation_vector 
 

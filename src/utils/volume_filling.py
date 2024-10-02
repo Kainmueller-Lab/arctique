@@ -71,6 +71,106 @@ def bbox_center(bbox):
     (min_x, max_x), (min_y, max_y), (min_z, max_z) = bbox
     return (min_x + max_x) / 2, (min_y + max_y) / 2, (min_z + max_z) / 2
 
+
+def fill_volume(counts, density, attributes, volume, use_strict_boundary, seed=None):
+    '''
+    Idea: Fill volume first with few large cell types randomly placed
+    Then fill the remaining space with small cell types densely.
+    '''
+    assert len(counts) == len(attributes), "counts and attributes not same length :(("
+    if seed is not None:
+        random.seed(seed)
+        np.random.seed(seed)
+
+    ## TEST
+    counts = (0,20,100,20,10) # total: 150
+
+    lattice_points = get_sorted_lattice_points(volume)
+    inner_points = [point for point in lattice_points if is_inside(point, volume)]
+
+    def do_intersect(seeds, candidate_seed, min_distance=0):
+        current_point, current_attribute = candidate_seed
+        for seed_point, seed_attribute in seeds:
+            if (seed_point - current_point).length <= current_attribute.size + seed_attribute.size + min_distance:
+                return True
+        return False
+
+    random_seeds = []
+    # Fill all but LYM
+    for attribute, count in zip(attributes, counts):
+        if not attribute.cell_type.name =="LYM" and count > 0:
+            # Set randomly placed seeds within bounding box
+            idx = 0
+            while idx < count:
+                pos = random.choice(lattice_points)
+                if not do_intersect(random_seeds, (pos, attribute)):
+                    random_seeds.append((pos, attribute))
+                    idx += 1
+    placed_first_seeds = [seed for seed in random_seeds if is_inside(seed[0], volume, seed[1].size)]
+    # Fill LYM
+    MAX_COUNT = 2000
+    M = 12
+    N = 8
+    fill_attribute = [attribute for attribute in attributes if attribute.cell_type.name == "LYM"][0]
+    # Get a set of directions that cover the sphere
+    directions = [Vector((cos(2*pi*i/M) * sin(pi*j/N), sin(2*pi*i/M) * sin(pi*j/N), cos(pi*j/N))) for i in range(M) for j in range(1,N)] + [Vector((0,0,1)), Vector((0,0,-1))]
+    density_distance = 0.0
+    density = 1
+    use_strict_boundary = False
+    # TODO:
+    # - Make the params input params
+    # - Implement strict boundary
+    
+    bounds = volume.bound_box
+    world_corners = [volume.matrix_world @ Vector(corner) for corner in bounds]
+    min_corner = Vector((min(x for x, y, z in world_corners), min(y for x, y, z in world_corners), min(z for x, y, z in world_corners)))
+    max_corner = Vector((max(x for x, y, z in world_corners), max(y for x, y, z in world_corners), max(z for x, y, z in world_corners)))
+
+    def is_inside_bbox(seed_point, min_corner, max_corner):
+        return (min_corner[0] <= seed_point[0] <= max_corner[0] and min_corner[1] <= seed_point[1] <= max_corner[1] and min_corner[2] <= seed_point[2] <= max_corner[2])
+    
+    center = (min_corner + max_corner) / 2
+    root = (center, fill_attribute)
+    placed_seeds = [root]
+    placed_seeds_by_level = {0 : [root]}
+
+    while True:
+        level = len(placed_seeds_by_level)
+        placed_seeds_by_level[level] = []
+        if len(placed_seeds_by_level[level-1]) == 0:
+            break
+        for seed in placed_seeds_by_level[level-1]:
+            # rotate all directions by random 3d angle
+            rotated_directions = [Matrix.Rotation(random.uniform(0, 2 * pi), 4, Vector((random.random(), random.random(), random.random())).normalized()) @ v for v in directions] 
+            for direction in rotated_directions:
+                new_attribute = fill_attribute
+                new_position = seed[0] + direction*(seed[1].size + new_attribute.size + density_distance)
+                if not do_intersect(placed_seeds, (new_position, new_attribute)) and is_inside_bbox(new_position, min_corner, max_corner):
+                    placed_seeds.append((new_position, new_attribute))
+                    placed_seeds_by_level[level].append((new_position, new_attribute))
+                if len(placed_seeds) >= MAX_COUNT:
+                    break
+            if len(placed_seeds) >= MAX_COUNT:
+                break
+        if len(placed_seeds) >= MAX_COUNT:
+            break
+    print(f"{len(placed_seeds_by_level)} levels used.")
+
+    placed_seeds = [seed for seed in placed_seeds if is_inside(seed[0], volume, seed[1].size) and not do_intersect(placed_first_seeds, seed, min_distance=0)]
+    random.shuffle(placed_seeds)
+    placed_seeds = placed_seeds[:int(len(placed_seeds)*density)]
+    placed_seeds += placed_first_seeds
+
+
+    points_per_attribute = []
+    for attribute in attributes: 
+        points = [seed[0] for seed in placed_seeds if seed[1] == attribute]
+        points_per_attribute.append((points, attribute))
+    return points_per_attribute
+
+
+
+
 def fill_volume_by_tree(counts, density, attributes, volume, use_strict_boundary, seed=None):
     assert len(counts) == len(attributes), "counts and attributes not same length :(("
     if seed is not None:
@@ -129,20 +229,6 @@ def fill_volume_by_tree(counts, density, attributes, volume, use_strict_boundary
                 new_attribute = attribute_list[len(placed_seeds)]
                 new_position = seed[0] + direction*(seed[1].size + new_attribute.size + density_distance)
                 if not do_intersect(placed_seeds, (new_position, new_attribute)) and is_inside(new_position, volume, new_attribute.size) and is_inside_bbox(new_position, min_corner, max_corner):
-                    # test += 1
-                    # if test == 100:
-                    #     bpy.ops.object.empty_add(location=seed[0])
-                    #     empty_object = bpy.context.object
-                    #     empty_object.name = f"test_seed_{seed[0]}_{seed[1].cell_type}"
-                    #     bpy.ops.object.empty_add(location=new_position)
-                    #     empty_object = bpy.context.object
-                    #     empty_object.name = f"test_new_seed_{new_position}_{new_attribute.cell_type}"
-                    #     bpy.ops.mesh.primitive_uv_sphere_add(location=seed[0], radius = seed[1].size)
-                    #     # make it wireframe
-                    #     bpy.context.object.display_type = 'WIRE'
-                    #     bpy.ops.mesh.primitive_uv_sphere_add(location=new_position, radius = new_attribute.size)
-                    #     bpy.context.object.display_type = 'WIRE'
-
                     placed_seeds.append((new_position, new_attribute))
                     placed_seeds_by_level[level].append((new_position, new_attribute))
                 if len(placed_seeds) >= MAX_COUNT:
@@ -162,14 +248,28 @@ def fill_volume_by_tree(counts, density, attributes, volume, use_strict_boundary
     return points_per_attribute
 
 
-def fill_volume(counts, density, attributes, volume, use_strict_boundary, seed=None):
+def get_sorted_lattice_points(volume):
+    MAX_COUNT = 6000 # Default: 5000 / Maximum number of cells placed in the volume
+    DELTA = 0.005 # Default: 0.01 / Lattice spacing, smaller values yield more random placements but increases processing time
+    
+    bounds = volume.bound_box
+    world_corners = [volume.matrix_world @ Vector(corner) for corner in bounds]
+    min_corner = Vector((min(x for x, y, z in world_corners), min(y for x, y, z in world_corners), min(z for x, y, z in world_corners)))
+    max_corner = Vector((max(x for x, y, z in world_corners), max(y for x, y, z in world_corners), max(z for x, y, z in world_corners)))
+
+    lattice_counts = (int((max_corner[0] - min_corner[0]) / DELTA), int((max_corner[1] - min_corner[1]) / DELTA), int((max_corner[2] - min_corner[2]) / DELTA))
+    lattice_points = [min_corner + Vector((x*DELTA, y*DELTA, z*DELTA)) for x in range(lattice_counts[0]) for y in range(lattice_counts[1]) for z in range(lattice_counts[2])]
+    midpoint = min_corner + Vector((lattice_counts[0]/2, lattice_counts[1]/2, lattice_counts[2]/2)) * DELTA
+    random.shuffle(lattice_points)
+    lattice_points = lattice_points[:MAX_COUNT]
+    return sorted(lattice_points, key=lambda point: (point - midpoint).length)
+
+def fill_volume_old(counts, density, attributes, volume, use_strict_boundary, seed=None):
     assert len(counts) == len(attributes), "counts and attributes not same length :(("
     if seed is not None:
         random.seed(seed)
         np.random.seed(seed)
 
-    MAX_COUNT = 5000 # Default: 5000 / Maximum number of cells placed in the volume
-    DELTA = 0.005 # Default: 0.01 / Lattice spacing, smaller values yield more random placements but increases processing time
     density_distance = 0.0
     density = 1
     use_strict_boundary = False
@@ -179,27 +279,8 @@ def fill_volume(counts, density, attributes, volume, use_strict_boundary, seed=N
 
     attribute_list = [attribute for attribute, count in zip(attributes, counts) for _ in range(count)]
     random.shuffle(attribute_list)
-    
-    bounds = volume.bound_box
-    world_corners = [volume.matrix_world @ Vector(corner) for corner in bounds]
-    # def add_point_cloud(locations, radius, name=None):
-    #     # Create a small sphere object for each base point
-    #     for idx, location in enumerate(locations):
-    #         bpy.ops.mesh.primitive_uv_sphere_add(radius=radius, location=location)
-    #         sphere = bpy.context.active_object
-    #         sphere.name = f"Point_{name}_{idx}" if name!=None else f"Point_{idx}"
-    # add_point_cloud(world_corners, 0.1)
-    min_corner = Vector((min(x for x, y, z in world_corners), min(y for x, y, z in world_corners), min(z for x, y, z in world_corners)))
-    max_corner = Vector((max(x for x, y, z in world_corners), max(y for x, y, z in world_corners), max(z for x, y, z in world_corners)))
 
-    lattice_counts = (int((max_corner[0] - min_corner[0]) / DELTA), int((max_corner[1] - min_corner[1]) / DELTA), int((max_corner[2] - min_corner[2]) / DELTA))
-    lattice_points = [min_corner + Vector((x*DELTA, y*DELTA, z*DELTA)) for x in range(lattice_counts[0]) for y in range(lattice_counts[1]) for z in range(lattice_counts[2])]
-    midpoint = min_corner + Vector((lattice_counts[0]/2, lattice_counts[1]/2, lattice_counts[2]/2)) * DELTA
-    random.shuffle(lattice_points)
-    lattice_points = lattice_points[:MAX_COUNT]
-    lattice_points = sorted(lattice_points, key=lambda point: (point - midpoint).length)
-    #assert (len(lattice_points) == len(attribute_list)), "attribute_list and lattice_points must have same length :("
-
+    lattice_points = get_sorted_lattice_points(volume)
     def do_intersect(seeds, candidate_seed, min_distance=0):
         current_point, current_attribute = candidate_seed
         for seed_point, seed_attribute in seeds:
