@@ -4,12 +4,12 @@ from collections import namedtuple
 from mathutils import Vector
 
 from src.arrangement.deformation import deform_objects
+from src.arrangement.surface_filling import fill_surface
+from src.arrangement.volume_filling import fill_volume
+from src.arrangement.voronoi import *
 from src.objects.cells import CellAttribute
 from src.utils.geometry import *
 from src.utils.helper_methods import *
-from src.utils.surface_filling import fill_surface
-from src.utils.volume_filling import fill_volume
-from src.utils.voronoi import *
 import src.utils.helper_methods as hm
 
 
@@ -39,7 +39,7 @@ class VolumeFill(CellArrangement):
     Ratios of corresponding types must be given and determine how many nuclei of each type should be placed.
     If strict_boundary is set to true, nuclei objects will be placed only inside the mesh, otherwise only their locations will be inside the mesh.
     '''
-    def __init__(self, mesh, density, types, ratios, strict_boundary = True, seed=None, bounding_box=None):
+    def __init__(self, mesh, density, types, ratios, seed=None):
         """
         Initializes a CellArrangement object with the given parameters.
         Fills a volume with randomly placed nuclei of different types without intersection.
@@ -57,23 +57,13 @@ class VolumeFill(CellArrangement):
         self.mesh = mesh
         self.density = density
         self.subdivision_levels = 2
-        self.max_count = 1000 # Max number of nuclei to be placed
         self.types = types
         self.attributes = [CellAttribute.from_type(type) for type in self.types]
         self.ratios = ratios
-        self.strict_boundary = strict_boundary # If true will place nuclei fully inside the mesh, if false only centroids will be placed fully inside the mesh
-        # Get count
-        sum = np.sum(ratios)
-        normalized_ratios = [ratio/sum for ratio in ratios]
-        self.counts = [int(ratio*self.max_count) for ratio in normalized_ratios]
         # Generate points inside mesh with given minimum distance
-        # TODO: Generate based on Mahalanobis distance for scaled spheres
         self.points_per_attribute = fill_volume(
-            self.counts, self.density, self.attributes, self.mesh, self.strict_boundary, self.seed)
-        # remove all points outside of bounding box before adding objects
-        # print('points per type', self.points_per_type)
-        # if bounding_box is not None:
-        #     self._remove_outside_bbox(bounding_box)
+            self.ratios, self.density, self.attributes, self.mesh, self.seed)
+
 
     def add(self):
         for locations, attribute in self.points_per_attribute:

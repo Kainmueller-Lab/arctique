@@ -14,13 +14,13 @@ if not dir in sys.path:
     sys.path.append(dir)
 
 import src.arrangement.arrangement as arr 
+import src.arrangement.surface_filling as sf
 import src.objects.cells as cells
 import src.objects.tissue as tissue
 import src.shading.materials as materials
 import src.scene as scene
 import src.utils as utils
 import src.utils.geometry as geom
-import src.utils.surface_filling as sf
 import src.objects.tissue_architecture as arch
 import src.utils.helper_methods as hm
 import src.utils.geometry as geo
@@ -76,7 +76,7 @@ def parse_dataset_args():
     parser.add_argument("--epi-number", type=int, default=150, help="number of surface cells") # 150
     parser.add_argument("--filler-scale", type=float, default=0.8, help="Scale of the size of smaller filler nuclei w.r.t to the original nuclei size")
     parser.add_argument("--stroma-density", type=int, default= 1, help="density in stroma") # 0.5, 1200
-    parser.add_argument("--ratios", type=list, default=[0, 0.25, 0.45, 0.15, 0.15], help="ratios of different cell types")
+    parser.add_argument("--ratios", type=list, default=[0, 0.25, 0.45, 0.15, 0.15], help="ratios of different cell types (MIX, PLA, LYM, EOS, FIB)")
     parser.add_argument("--surf_scale", type=tuple, default=(0.8, 0.5, 1), help="Surface scale")
     parser.add_argument("--delete-fraction", type=list, default=[0, 0, 0, 0, 0], help="ratios of different cell types")
     parser.add_argument("--nuclei-intensity", type=float, default=1, help="overall intensity of nuclei") # TODO
@@ -224,8 +224,7 @@ def create_scene(
         cells.CellType.LYM, 
         cells.CellType.EOS, 
         cells.CellType.FIB]
-    volume_fill = arr.VolumeFill(
-        mucosa_fill, stroma_density, MIX_TYPES, ratios, strict_boundary=True, seed=seed)
+    volume_fill = arr.VolumeFill(mucosa_fill, stroma_density, MIX_TYPES, ratios, seed=seed)
     my_scene.add_arrangement(volume_fill, bounding_mesh=mucosa_fill) # NOTE: 240 nuclei take about 20 s
     end = time.time()
     print(f"Volume filling took {end - start} s")

@@ -85,8 +85,7 @@ def perlin(x, y, z, amplitude, frequency, octave_count, persistence, lacunarity)
         frequency *= lacunarity
     return value
 
-def deformation(input_vector, params, seed=42):
-    np.random.seed(seed)   
+def deformation(input_vector, params):
     amplitude, frequency, octave_count, persistence, lacunarity = params
     dx = perlin(input_vector[0], input_vector[1], input_vector[2], amplitude, frequency, octave_count, persistence, lacunarity)
     dy = perlin(input_vector[0] + 100, input_vector[1] + 100, input_vector[2] + 100, amplitude, frequency, octave_count, persistence, lacunarity)
@@ -101,6 +100,7 @@ def deform_objects(obj_list):
     # Set Perlin noise parameters
     # NOTE: Currently amplitude is set to 1 and the final deformation strength should not exceed 1/4 of the object radius.
     # TODO: Is this a good idea? Check this. -ck
+    # It could happen that a deformation of touching large cell and small cell leads to intersection. Check this!
     amplitude = 1 # Max strength of deformation
     wavelength = 0.05 # Average distance between two maximal deformations in same direction
     octave_count = 2
