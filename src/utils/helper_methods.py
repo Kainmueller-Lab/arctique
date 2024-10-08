@@ -57,7 +57,7 @@ def get_objects_with(string):
 
 def subdivide_object(obj, level, type='SIMPLE'):
     bpy.context.view_layer.objects.active = obj
-    bpy.ops.object.modifier_add(type='SUBSURF')
+    mod = bpy.ops.object.modifier_add(type='SUBSURF')
     bpy.context.object.modifiers["Subdivision"].subdivision_type = type
     bpy.context.object.modifiers["Subdivision"].levels = level
     bpy.ops.object.modifier_set_active(modifier="Subdivision")
@@ -90,7 +90,7 @@ def get_universal_cell_ids(cell_part_names):
             idx += 1
     return look_up_indices
 
-def map_16bit_to_index(values, sep=55, tol=10):
+def map_16bit_to_index(values, sep=55, tol=20):
     '''
     maps back the values blender assigns integers when saving a 16 bit image
     back to the original indices
@@ -157,11 +157,34 @@ def convert2mesh(obj):
     bpy.ops.object.convert(target='MESH')
 
 
-def add_boolean_modifier(obj, target, name='Boolean Modifier', operation='DIFFERENCE', apply=True):
+def convert2mesh_list(obj_list):
+    '''
+    converts a list of objects to mesh objects
+    '''
+    bpy.ops.object.select_all(action='DESELECT')
+    for obj in obj_list:
+        obj.select_set(True)
+        bpy.context.view_layer.objects.active = obj
+    if len(obj_list) > 0:
+        bpy.ops.object.convert(target='MESH')
+
+
+def apply_transform(obj):
+    '''
+    applies the transformation of an object
+    '''
+    bpy.context.view_layer.objects.active = obj
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+
+
+def add_boolean_modifier(obj, target, name='Boolean Modifier', operation='DIFFERENCE', apply=True, self=False):
     '''
     adds a boolean modifier to an object
     '''
     boolean = obj.modifiers.new(name=name, type='BOOLEAN')
+    if self:
+        boolean.use_self = True
+    boolean.show_viewport = False
     boolean.operation = operation
     boolean.object = target
     boolean.use_self = True # NOTE: This line seems to fix artifacts when using 'DIFFERENCE' operator to create goblet volume. - ck
@@ -195,12 +218,13 @@ def object_in_hull(obj, hull):
     # for poly in me.polygons:
     #     print("Polygon index: %d, length: %d" % (poly.index, poly.loop_total))
 
-    enclosed = check_obj_empty(obj_copy)
+    enclosed = check_obj_empty(obj_copy, threshold_polygons=0)
     bpy.data.objects.remove(obj_copy)
+
     return enclosed
 
 
-def delete_cells_outside_tissue(cells, tissue):
+def delete_cells_outside_tissue(cells, tissue, type=[]):
     '''
     deletes all cells that are outside the tissue
     Args:
@@ -209,9 +233,15 @@ def delete_cells_outside_tissue(cells, tissue):
     '''
     remaining_cells = []
     for cell in cells:
-        if not object_in_hull(cell, tissue):
-            print(f"Removed {cell.name}")
-            bpy.data.objects.remove(cell)
+        t = cell.name.split('_')[2]
+        print(t)
+        if t in type:
+            if not object_in_hull(cell, tissue):
+                print(f"Removed {cell.name}")
+                bpy.data.objects.remove(cell)
+            else:
+                remaining_cells.append(cell)
+                print(f"Kept {cell.name}")
         else:
             remaining_cells.append(cell)
             print(f"Kept {cell.name}")
@@ -228,3 +258,19 @@ def shade_switch(obj, flat=True):
     bpy.context.view_layer.objects.active = obj
     bpy.ops.object.shade_flat() if flat else bpy.ops.object.shade_smooth()
     
+
+def recompute_normals(obj):
+    '''
+    recompute normals of an object
+    '''
+    bpy.ops.object.select_all(action='DESELECT')
+    obj.select_set(True)
+    bpy.context.view_layer.objects.active = obj
+    # go edit mode
+    bpy.ops.object.mode_set(mode='EDIT')
+    # select al faces
+    bpy.ops.mesh.select_all(action='SELECT')
+    # recalculate outside normals 
+    bpy.ops.mesh.normals_make_consistent(inside=False)
+    # go object mode again
+    bpy.ops.object.editmode_toggle()

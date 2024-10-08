@@ -9,14 +9,14 @@ class TissueArch():
         # 1a) build crypt
         self.seed = seed
         np.random.seed(self.seed)
-        self.crypt = macro.build_crypt()
+        self.crypt = macro.build_crypt(seed=self.seed)
         # 1b) build surronding muscosa layer
-        self.tissue = macro.build_muscosa(self.crypt.crypt)
+        self.tissue = macro.build_muscosa(self.crypt)
 
     def get_architecture(self):
         return [
             self.crypt.crypt, self.crypt.crypt_vol_in, 
-            self.crypt.crypt_vol_out, self.tissue.muscosa]
+            self.crypt.crypt_vol_out, self.crypt.crypt_goblet, self.tissue.muscosa]
     
     def random_crop(self, crop):
         objects = self.get_architecture()
@@ -26,10 +26,10 @@ class TissueArch():
         for obj in objects:
             bpy.context.view_layer.objects.active = obj
             obj.select_set(True)
-            bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+            bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
             
     def random_rotate(self, objects):
-        rotation = np.random.uniform([0*np.pi, 0, 2*np.pi])
+        rotation = np.random.uniform([0, 0, 0], [np.pi/2, 0, 2*np.pi])
         for obj in objects:
             # Apply the rotation around the Z axis
             obj.rotation_mode = 'XYZ'
@@ -37,7 +37,7 @@ class TissueArch():
                 obj.rotation_euler[i] += rotation[i]
     
     def random_translate(self, objects):
-        translation = np.random.uniform(0, 3)
+        translation = np.random.uniform(0, 3.5)
         for obj in objects:
             obj.location[2] -= translation
             bpy.context.scene.cursor.location = (0, 0, 0)

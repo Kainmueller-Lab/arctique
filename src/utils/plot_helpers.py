@@ -36,6 +36,9 @@ def put_palette_1d(image_arr, palette, ids=None):
     '''
     if ids is None:
         ids = np.unique(image_arr)
+    else:
+        print(len(palette), len(ids))
+        print(palette, ids)
     new_image_arr = np.zeros(image_arr.shape, dtype=np.uint8)
     for i, idx in enumerate(ids):
         new_image_arr[image_arr == idx] = palette[i]

@@ -103,7 +103,8 @@ def do_intersect(obj1, obj2):
     # Set the active object for the boolean operation
     bpy.context.view_layer.objects.active = obj1
     # Apply the Boolean modifier with INTERSECT operation
-    bpy.ops.object.modifier_add(type='BOOLEAN')
+    mod = bpy.ops.object.modifier_add(type='BOOLEAN')
+    mod.show_viewport = False
     bpy.context.object.modifiers["Boolean"].operation = 'INTERSECT'
     bpy.context.object.modifiers["Boolean"].use_self = False
     bpy.context.object.modifiers["Boolean"].object = obj2
@@ -172,6 +173,7 @@ def intersect_with_object(target_objects, box_object):
     # Iterate through each target object
     for target_object in target_objects:
         boolean = target_object.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
+        boolean.show_viewport = False
         boolean.operation = 'INTERSECT'
         boolean.object = box_object
         boolean.solver = 'FAST'
@@ -182,6 +184,7 @@ def subtract_object(target_objects, subtract_object):
     # Iterate through each target object
     for target_object in target_objects:
         boolean = target_object.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
+        boolean.show_viewport = False
         boolean.operation = 'DIFFERENCE'
         boolean.use_self = True
         boolean.object = subtract_object
@@ -190,18 +193,24 @@ def subtract_object(target_objects, subtract_object):
         bpy.ops.object.modifier_apply({"object": target_object}, modifier="Boolean Modifier")
     return target_objects
 
-def smoothen_object(obj, factor, iterations):
+def smoothen_object(obj, factor, iterations, apply=True, viewport=True):
     smooth_mod = obj.modifiers.new(name="Smooth Modifier", type='SMOOTH')
+    if not viewport:
+        smooth_mod.show_viewport = False
     smooth_mod.factor = factor
     smooth_mod.iterations = iterations
-    bpy.ops.object.modifier_apply(modifier="Smooth Modifier")
+    if apply:
+        bpy.ops.object.modifier_apply(modifier="Smooth Modifier")
 
-def shrinkwrap(target, wrapper):
+def shrinkwrap(target, wrapper, apply=True, viewport=True):
     shrinkwrap_mod = wrapper.modifiers.new(name="Shrinkwrap", type='SHRINKWRAP')
+    if not viewport:
+        shrinkwrap_mod.show_viewport = False
     shrinkwrap_mod.target = target
     shrinkwrap_mod.wrap_method = 'NEAREST_SURFACEPOINT'  # You can choose other methods like 'PROJECT', 'NEAREST_VERTEX', etc.
     bpy.context.view_layer.objects.active = wrapper
-    bpy.ops.object.modifier_apply(modifier=shrinkwrap_mod.name)
+    if apply:
+        bpy.ops.object.modifier_apply(modifier=shrinkwrap_mod.name)
 
 # NOTE: OLD METHOD
 def shrinkwrap_old(cell_objects, type):
@@ -214,11 +223,14 @@ def shrinkwrap_old(cell_objects, type):
         bpy.ops.object.modifier_apply(modifier="Shrinkwrap Modifier")
     return nucleus_objects
 
-def subdivide(obj, levels):
+def subdivide(obj, levels, apply=True, viewport=True):
     obj.modifiers.new(name="Subdivision", type='SUBSURF')
+    if not viewport:
+        obj.modifiers["Subdivision"].show_viewport = False
     obj.modifiers["Subdivision"].levels = levels
-    bpy.ops.object.modifier_apply({"object": obj}, modifier="Subdivision")
-  
+    if apply:
+        bpy.ops.object.modifier_apply({"object": obj}, modifier="Subdivision")
+    
 
 def move_selection(offset_vector):
     selection = bpy.context.selected_objects
@@ -267,6 +279,7 @@ def bend_mesh(obj, bend):
         Bend mesh along Z axis.
         """
         modifier = obj.modifiers.new("Simple Deform Modifier", "SIMPLE_DEFORM")
+        modifier.show_viewport = False
         modifier.deform_method = 'BEND'
         bpy.ops.object.empty_add(type='ARROWS', align='WORLD', location=obj.location, scale=(1, 1, 1))
         empty = bpy.context.active_object
@@ -401,6 +414,7 @@ def add_dummy_volumes(tissue, padding):
     outer_cylinder = bpy.context.active_object
     outer_cylinder.scale = (0.6, 0.9, 1)
     boolean = mix_vol.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
+    boolean.show_viewport = False
     boolean.operation = 'DIFFERENCE'
     boolean.object = outer_cylinder
     bpy.ops.object.modifier_apply({"object": mix_vol}, modifier="Boolean Modifier")

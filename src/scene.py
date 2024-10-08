@@ -30,7 +30,7 @@ def fn_print_time_when_render_done(dummy):
 class Camera:
     def __init__(
             self, name='camera 1', pos=(0, 0, 1.5622), rot=(0, 0, 0), size=1.28,
-            focus_pos=(0, 0, 0.62), fstop=0.8, sensor_width=36):
+            focus_pos=0.62, fstop=0.8, sensor_width=36):
         self.scene = bpy.context.scene
         
         # add camera to scene
@@ -45,7 +45,7 @@ class Camera:
         self.cam_obj.data.dof.aperture_fstop = fstop
 
         # add focus plane to scene
-        bpy.ops.mesh.primitive_plane_add(size=2.5, location=focus_pos)
+        bpy.ops.mesh.primitive_plane_add(size=2.5, location=(0, 0, focus_pos))
         self.focus = bpy.context.active_object
         self.focus.name = 'focus'
         self.focus.hide_viewport = True
@@ -145,17 +145,30 @@ class BioMedicalScene:
         self.tissue_bound.scale.y = 1.4
         self.tissue_bound.scale.z = 1.4
 
-    def bound_architecture(self, volumes=[], surfaces=[], padding=0.1):
+    def bound_architecture(self, volumes=[], surfaces=[], padding=0.1, tolerance=0.01):
         self.tissue_bound.dimensions.z = self.tissue.dimensions.z + padding
+        bpy.context.view_layer.objects.active = self.tissue_bound
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
         self.volumes = volumes
         self.surfaces = surfaces
-        for v in self.volumes:
+        for i, v in enumerate(self.volumes):
+            self.tissue_bound.dimensions.z = self.tissue.dimensions.z + padding + (i+1)*tolerance
+            self.tissue_bound.scale.x = 1 + (i+1)*tolerance
+            self.tissue_bound.scale.y = 1 + (i+1)*tolerance
+            #self.tissue_bound.dimensions.y = self.tissue.dimensions.y + i*tolerance
+            #hm.recompute_normals(v)
             boolean = v.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
             boolean.operation = 'INTERSECT'
+            boolean.show_viewport = False
             boolean.object = self.tissue_bound
             bpy.context.view_layer.objects.active = v
+            bpy.context.object.modifiers["Boolean Modifier"].use_self = True
+            bpy.context.object.modifiers["Boolean Modifier"].use_hole_tolerant = True
             bpy.ops.object.modifier_apply(modifier=boolean.name)
-        for s in self.surfaces:
+        for i, s in enumerate(self.surfaces):
+            self.tissue_bound.dimensions.z = self.tissue.dimensions.z + padding + (i+2)*tolerance
+            self.tissue_bound.scale.x = 1 + (i+2)*tolerance
+            self.tissue_bound.scale.y = 1 + (i+2)*tolerance
             boolean = s.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
             boolean.operation = 'INTERSECT'
             boolean.object = self.tissue_bound
@@ -163,16 +176,16 @@ class BioMedicalScene:
             boolean.solver = 'FAST'
             bpy.ops.object.modifier_apply(modifier=boolean.name)
 
-    def cut_tissue(self, tolerance=0.02):
+    def cut_tissue(self, tolerance=0.00001):
         for i, v in enumerate(self.volumes):
-            boolean = v.modifiers.new(name="tissue cutting", type='BOOLEAN')
-            boolean.operation = 'INTERSECT'
-            boolean.object = self.tissue
-            bpy.context.view_layer.objects.active = v
-            bpy.ops.object.modifier_apply(modifier=boolean.name)
-            v.scale.z = v.scale.z*(1+i*tolerance)
+            hm.apply_transform(v)
+            hm.apply_transform(self.tissue_empty)
+            hm.add_boolean_modifier(
+                v, self.tissue_empty, name='tissue cutting',
+                operation='INTERSECT', apply=True, self=True)
+            v.location.z = v.location.z + i*tolerance
 
-    def cut_cytoplasm_nuclei(self, tolerance=0.01):
+    def cut_cytoplasm_nuclei(self, tolerance=-0.1):
         for cyto in self.cell_objects:
             if cyto.name.startswith('Cytoplasm'):
                 idx_cytoplasm = cyto.name.split('_')[-1]
@@ -184,23 +197,17 @@ class BioMedicalScene:
                         cell_nucleus.scale.y = cell_nucleus.scale.y*(1+tolerance)
                         cell_nucleus.scale.z = cell_nucleus.scale.z*(1+tolerance)
                         boolean = cyto.modifiers.new(name="nuclei_cut", type='BOOLEAN')
+                        boolean.show_viewport = False
                         boolean.operation = 'DIFFERENCE'
                         boolean.object = cell_nucleus
                         bpy.context.view_layer.objects.active = cyto
                         bpy.ops.object.modifier_apply(modifier=boolean.name)
-                        cell_nucleus.scale = cell_nucleus_scale
+                        cell_nucleus.scale.x = cell_nucleus_scale[0]*(1-tolerance)
+                        cell_nucleus.scale.y = cell_nucleus_scale[1]*(1-tolerance)
+                        cell_nucleus.scale.z = cell_nucleus_scale[2]*(1-tolerance)
 
-    # def cut_tissue_nuclei(self, tolerance=0.02): # TODO
-    #     for v in self.volumes:
-    #         for cell_nucleus in self.cell_objects:
-    #             if cell_nucleus.name.startswith('Nucleus'):
-    #                 boolean = v.modifiers.new(name="nuclei_cut", type='BOOLEAN')
-    #                 boolean.operation = 'DIFFERENCE'
-    #                 boolean.object = cell_nucleus
-    #                 bpy.context.view_layer.objects.active = v
-    #                 bpy.ops.object.modifier_apply(modifier=boolean.name)
                 
-    def delete_cells(self):
+    def delete_cells(self, tissue=None, strict=True, type=('EOS', 'FIB', 'PLA', 'LYM')):
         # Remove all cell objects that do not intersect with the tissue 
         # NOTE: Use bounding box comparison first, so there will be less objects to intersect -> faster. - ck
         # TODO: handle object and list entry removal better. - ck
@@ -215,12 +222,18 @@ class BioMedicalScene:
                 par.set_postfix({"deleted": frac_deleted})
         for cell in deleted_names:
             self.cell_objects.remove(cell)
+
+        # if strict:
+        #     self.cell_objects = hm.delete_cells_outside_tissue(self.cell_objects, tissue, type=type)
     
     def cut_cells(self):
         for cell in self.cell_objects:
             if cell.name.startswith('Nucleus') or cell.name.startswith('Cytoplasm'):
                 hm.shade_switch(cell, flat=True)  # NOTE!!! always before boolean shade flat
+                hm.apply_transform(cell)
+                hm.apply_transform(self.tissue_empty)
                 boolean = cell.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
+                boolean.show_viewport = False
                 boolean.operation = 'INTERSECT'
                 boolean.object = self.tissue_empty if cell.name.startswith('Nucleus') else self.tissue_empty_cytoplasm
                 #boolean.solver = 'FAST' # NOTE: FAST leads to artifacts here. - ck
@@ -252,7 +265,7 @@ class BioMedicalScene:
     
     def add_nuclei_mask(self, material):
         for cell in self.cell_objects:
-            if cell.name.startswith('Nucleus'):
+            if cell.name.startswith(('Nucleus', 'Cytoplasm')):
                 cell.data.materials.append(material)
                 cell.active_material = material
 
@@ -265,35 +278,27 @@ class BioMedicalScene:
                     cell.data.materials.append(m)
                     cell.active_material = m
 
-    def remove_goblet_volume(self, volume):
-        for cell in self.cell_objects:
-            cell_type = cell.name.split('_')[-2]
-            if cell_type == 'GOB':
-                hm.add_boolean_modifier(volume, cell, name='remove goblet', operation='DIFFERENCE', apply=True)
-
-    def remove_cells_volume(self, volume, tolerance=-0.07):
-        cell_copies = [hm.copy_object(cell, cell.name + '_copy') for cell in self.cell_objects]
-        scales = [cell.scale for cell in cell_copies]
-        bpy.ops.object.select_all(action='DESELECT')
-        for scale, cell in zip(scales, cell_copies):
-            cell.scale = scale*(1+tolerance) 
-            cell.select_set(True)
-            # apply scale
-            bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-        if cell_copies:
-            bpy.context.view_layer.objects.active = cell_copies[0]
-        #ctx = bpy.context.copy()
-        #ctx['active_object'] = cell_copies[0]
-        #ctx['selected_objects'] = cell_copies
-        bpy.ops.object.join()
-        # #bpy.ops.object.select_all(action='DESELECT')
-        joined_cells = bpy.context.active_object
-        hm.convert2mesh(volume)
-        hm.add_boolean_modifier(volume, joined_cells, name='remove cell', operation='DIFFERENCE', apply=True)
-        bpy.data.objects.remove(joined_cells)
-        for cell in self.cell_objects:
-            cell.scale = cell.scale*(1-tolerance)
-
+    def remove_cells_volume(self, volume, tolerance=-0.007, types=('EOS', 'FIB', 'PLA', 'LYM')):
+        cell_objects = [cell for cell in self.cell_objects if cell.name.split('_')[-2] in types]
+        if len(cell_objects) != 0:
+            cell_copies = [hm.copy_object(cell, cell.name + '_copy') for cell in cell_objects]
+            scales = [cell.scale for cell in cell_copies]
+            bpy.ops.object.select_all(action='DESELECT')
+            for scale, cell in zip(scales, cell_copies):
+                cell.scale = scale*(1+tolerance) 
+                cell.select_set(True)
+                bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+            if cell_copies:
+                bpy.context.view_layer.objects.active = cell_copies[0]
+            bpy.ops.object.join()
+            joined_cells = bpy.context.active_object
+            hm.convert2mesh(volume)
+            hm.add_boolean_modifier(
+                volume, joined_cells, name='remove cell',
+                operation='DIFFERENCE', apply=True, self=True)
+            bpy.data.objects.remove(joined_cells)
+            for cell in cell_objects:
+                cell.scale = cell.scale*(1-tolerance)
     
     def add_cell_params(self, cell_params):
         for cell_type, params in cell_params.items():
@@ -358,9 +363,12 @@ class BioMedicalScene:
     def hide_non_cell_objects(self, cell_parts = ('Nucleus')):
         '''hide all objects except cells in the scene'''
         for obj in self.scene.objects:
-            if not obj.name.startswith(('Nucleus')):
+            if not obj.name.startswith(cell_parts):
                 obj.hide_viewport = True
                 obj.hide_render = True
+            else:
+                obj.hide_viewport = False
+                obj.hide_render = False
 
     def setup_scene_render_mask(self, output_shape = (500, 500)): 
         '''specify settings for the rendering of the individual cell masks '''
@@ -441,6 +449,10 @@ class BioMedicalScene:
             if cell_type in self.cell_params:
                 if cell_part in self.cell_params[cell_type]:
                     cell_params = self.cell_params[cell_type][cell_part]
+                else:
+                    continue  # TODO test if this works properly
+            else:
+                continue
 
             # get unique id for each cell type
             if cell_type not in unique_type_dict:
@@ -467,6 +479,7 @@ class BioMedicalScene:
         '''
         Assign unique color to each inidividual cell or to each cell type
         '''
+        print(type)
         if type == "semantic": 
             unique_cell_types = set([c["Type"] for c in self.cell_info]) # identify unique cell types
             print(unique_cell_types)
@@ -540,10 +553,18 @@ class BioMedicalScene:
                 cell_object.pass_index = cell_info_dict["ID_Type"]
 
     def export_full_mask(self, type: str = None): 
-        self.hide_non_cell_objects()
+        if type == "instance" or type == "semantic":
+            self.hide_non_cell_objects()
+        else:
+            self.hide_non_cell_objects(cell_parts = ('Cytoplasm'))
+        if type == "cyto":
+            type = "semantic"
+            self.mask_type = "cytoplasm"
+        else:
+            self.mask_type = type
         self.set_object_pass_idx(type)
         self.scene.view_layers["ViewLayer"].use_pass_object_index = True
-        self.mask_type = type
+        
         self.setup_node_tree_full_masks()
         self.scene.render.filepath = str(Path(self.semantic_path).joinpath("empty.png"))
         bpy.ops.render.render('EXEC_DEFAULT', write_still=True) # render single cell mask
@@ -554,7 +575,7 @@ class BioMedicalScene:
         with Image.open(path_temp) as im:
             mask = np.array(im, dtype=np.uint16)
             values = np.unique(mask)
-        if type == "semantic":
+        if type == "semantic" or type == "cyto":
             self.semantic_ids = values
         if type == "instance":
             self.instance_ids = values
@@ -565,7 +586,7 @@ class BioMedicalScene:
         colored_instance_mask.save(str(Path(self.semantic_path).joinpath(f"{self.sample_name}.png")))
         
         # convert the mask to correct cell ids
-        ids = hm.map_16bit_to_index(values)
+        ids = hm.map_16bit_to_index(values, sep=self.base_16bit)
         mask_indexing = ph.put_palette_1d(mask, ids, values)
         if not os.path.exists(self.semantic_path+'_indexing'):
             os.makedirs(self.semantic_path+'_indexing')
@@ -664,12 +685,14 @@ class BioMedicalScene:
                single_masks: bool = True, 
                semantic_mask: bool = False, 
                instance_mask: bool = False,
+               cyto_mask: bool = False,
                depth_mask: bool = False, 
                obj3d: bool = True,
                output_shape = (512, 512), 
                max_samples = 10,
                n_slices = 10, 
-               slice_thickness = None):
+               slice_thickness = None,
+               base_16bit = 55):
         '''
         filepath: the folder where all outputs will be stored
         scene: if true a png of the scene will be generated
@@ -683,13 +706,13 @@ class BioMedicalScene:
         '''
         self.filepath = filepath        
         bpy.app.handlers.render_complete.append(fn_print_time_when_render_done)
+        self.base_16bit = base_16bit
 
         if scene: 
             print("rendering scene")
             self.setup_scene_render_default(output_shape=output_shape, max_samples=max_samples)
             self.export_scene()
             print("scene rendered")
-
         
         # switch to non focus camera and switch material of nuclei
         self.camera.switch_to_mask_camera(self.scene)
@@ -703,6 +726,10 @@ class BioMedicalScene:
         if instance_mask: 
             self.setup_scene_render_full_masks(output_shape=output_shape, max_samples=1)
             self.export_full_mask(type = "instance")
+
+        if cyto_mask:
+            self.setup_scene_render_full_masks(output_shape=output_shape, max_samples=1)
+            self.export_full_mask(type = "cyto")
             
         if single_masks:# or semantic_mask or instance_mask:
             self.scan_through_tissue(
@@ -779,7 +806,8 @@ class BioMedicalScene:
             instance_mask_3d.append(colored_instance_mask)
             
             # save correct index mask
-            ids = hm.map_16bit_to_index(values)
+            ids = hm.map_16bit_to_index(values, sep=self.base_16bit)
+            ids = ids[:len(values)]
             indexing = ph.put_palette_1d(mask, ids, values)
             new_filepath = self.filepath + f'/masks/instance_3d_indexing/{self.sample_name}/'
             if not os.path.exists(new_filepath):
