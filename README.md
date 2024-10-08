@@ -1,6 +1,6 @@
-# Arctique
+# ARCTIQUE
 
-Arctique: ARtificial Colon Tissue Images for Quantitativ Uncertainty Evaluation
+ARCTIQUE: ARtificial Colon Tissue Images for Quantitativ Uncertainty Evaluation
 
 With this tool you can generate synthetic images of microscopic colon tissue images, which A) exhibit a complexity comparable to real images, B) can be manipulated and re-rendered in a controlled fashion, and C) are rendered together with the exact pixelwise nuclei masks - instance and semantic. This makes Arctique a powerful tool for the evaluation of concepts such as uncertainty quantification.
 
@@ -41,7 +41,7 @@ Let's generate an example image and its corresponding masks as shown in the figu
 python render.py --start-idx 42 --n-samples 1
 ```
 
-This will render exactly one example with index 42, which implies the seed in the reandom generation process. To render more subsequent examples, you can increase the `--n-samples` argument. If you want to render examples with different seeds, you can change the `--start-idx` argument.
+This will render exactly one example with index 42, which implies the seed in the reandom generation process. To render more subsequent examples, you can increase the `--n-samples` argument. If you want to render examples with different seeds, you can change the `--start-idx` argument. NOTE: The rendering process can take a couple minutes per image. Hence, we recommend to use HPC with GPU resources for generating large-scale datasets.
 
 The rendered image and its corresponding mask will be saved in the `rendered` folder with the following structure:
 
@@ -71,7 +71,7 @@ render
 
 ### Generate a variation of a rendered example
 
-The full power of the Arctique framework unfolds when varying the scene gradually, which allows to study concepts such as uncertainty in a controlled manner. To this end, we provide parameter sliders such as:
+The full power of the ARCTIQUE framework unfolds when varying the scene gradually, which allows to study concepts such as uncertainty in a controlled manner. To this end, we provide parameter sliders such as:
 
 - example
 
