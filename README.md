@@ -15,12 +15,12 @@ As shown below, to mimic the complex structure of real colon tissue images ...
 ## Installation
 
 1) Clone the repository
-2) Make a new conda/micromamba environment with python 3.10
+2) Make a new conda/micromamba environment with python 3.10 and activate it
 ```bash
-micromamba create -n arctique python=3.10.0
+micromamba create -n arctique python=3.10.0 -c conda-forge
 ```
-```bash
-conda create -n arctique python=3.10.0
+```bash	
+micromamba activate arctique
 ```
 
 2) Install the requirements via pip
@@ -28,7 +28,7 @@ conda create -n arctique python=3.10.0
 pip install -r requirements.txt
 ```
 
-done :) Now we can use blender without the need to install the full suite.
+done :sparkles: Now we can use blender without the need to install the full suite.
 
 
 ## Quickstart
