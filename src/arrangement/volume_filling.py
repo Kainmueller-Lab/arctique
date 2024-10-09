@@ -90,10 +90,10 @@ def fill_volume(ratios, density, attributes, volume, seed=None):
 
     # Remove seeds within epithelial volume and seeds that intersect sparse & large cell types created in first part. 
     placed_seeds = [seed for seed in placed_seeds if is_inside(seed[0], volume, seed[1].size) and not do_seeds_intersect(placed_first_seeds, seed, min_distance=0)]
+    placed_seeds += placed_first_seeds
     random.shuffle(placed_seeds)
     assert density <= 1.0 and density >= 0.0, "Invalid density"
     placed_seeds = placed_seeds[:int(len(placed_seeds)*density)]
-    placed_seeds += placed_first_seeds
 
     points_per_attribute = []
     for attribute in attributes: 
