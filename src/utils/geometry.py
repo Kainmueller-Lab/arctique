@@ -36,7 +36,8 @@ def set_orientation(obj, direction_vector):
     obj.matrix_world = rotation_matrix
 
 def random_unit_vector(seed=None):
-    np.random.seed(seed)
+    if seed is not None:
+        np.random.seed(seed)
     # Generate random values for x, y, and z
     x, y, z = np.random.uniform(-1, 1, 3)
     # Create a vector
