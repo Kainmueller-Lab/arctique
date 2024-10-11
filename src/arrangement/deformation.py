@@ -96,7 +96,7 @@ def deformation(input_vector, params):
     deformation_vector = Vector((dx, dy, dz)).normalized() 
     return deformation_vector 
 
-def deform_objects(obj_list):
+def deform_objects(obj_list, deformation_strength=0.25):
     # Set Perlin noise parameters
     # NOTE: Currently amplitude is set to 1 and the final deformation strength should not exceed 1/4 of the object radius.
     # TODO: Is this a good idea? Check this. -ck
@@ -113,6 +113,6 @@ def deform_objects(obj_list):
         centroid = Vector(np.mean([obj.matrix_world @ v.co for v in obj.data.vertices], axis=0))
         for v in obj.data.vertices:
             rad = (obj.matrix_world @ v.co - centroid).length
-            v.co = v.co + deformation(v.co, parameters) * rad * 0.25
+            v.co = v.co + deformation(v.co, parameters) * rad * deformation_strength
         subdivide(obj, 1)
     print(f"Deformed {len(obj_list)} objects in {time.time() - start} seconds")

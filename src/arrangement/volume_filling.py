@@ -19,12 +19,16 @@ def fill_volume(ratios, density, attributes, volume, seed=None):
         random.seed(seed)
         np.random.seed(seed)
 
-    # TODO: Deal with ratios / counts
-    # sum = np.sum(ratios)
-    # normalized_ratios = [ratio/sum for ratio in ratios]
-    # MAX_COUNT = 600
-    # counts = [int(ratio*MAX_COUNT) for ratio in normalized_ratios]
-    counts = (0,20,100,20,10) # total: 150
+    sum = np.sum(ratios)
+    normalized_ratios = [ratio/sum for ratio in ratios]
+    # NOTE: This is a damn nasty hack to adjust the cell counts with changing tissue volume parameters.
+    # The magic values were found experimentally. Improve this in the future. - ck
+    UNIT_BBOX_VOLUME =  0.3283572139329728 
+    min_corner, max_corner = get_min_max_corners_of_bbox(volume)
+    bbox_volume = (max_corner[0] - min_corner[0]) * (max_corner[1] - min_corner[1]) * (max_corner[2] - min_corner[2])
+    MAX_COUNT = 500 * bbox_volume / UNIT_BBOX_VOLUME
+    counts = [int(ratio*MAX_COUNT) for ratio in normalized_ratios]
+    counts = (0,50,400,30,20)
 
 
     # Fill sparse and large cell types first

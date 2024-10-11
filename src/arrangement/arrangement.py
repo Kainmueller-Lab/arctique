@@ -68,7 +68,7 @@ class VolumeFill(CellArrangement):
     def add(self):
         for locations, attribute in self.points_per_attribute:
             for idx, location in enumerate(locations):
-                direction = Vector(random_unit_vector())
+                direction = Vector(random_unit_vector(self.seed))
                 cell_objects = attribute.add_cell_objects(location, direction, apply_subdivide=True)
                 cytoplasm = None
                 if len(cell_objects) == 2:
