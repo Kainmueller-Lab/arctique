@@ -13,20 +13,35 @@ imp.reload(shading_utils)
 
 
 class CustomShaderNodes():
-    def __init__(self, start=(0, 0), sep=200, shift=(0, 0, 0), stroma_intensity=1, red_points_strength=0):
+    def __init__(self, start=(0, 0), sep=200, shift=(0, 0, 0), stroma_intensity=1, red_points_strength=0, border_fiber_length=0.7, over_staining=1):
         self.shift = shift
         self.start = start
         self.sep = sep
         
         # general
         self.object_coord = self.add_object_coord(shift=self.shift)
+        self.addition = self.add_addition()
         self.volume = self.add_volume()
         self.mixing_red = self.add_mixing_red_points(strength=red_points_strength)
         self.principle_noise = self.add_principle_noise()
         self.stacked_noise = self.add_stacked_noise()
+        self.perlin_noise = self.add_perlin_noise()
         
         # tissue
+        self.fibers_edge = self.add_edge_detector(node_name='FibersEdge', min=0.331, mid=0.475, max=1, strength=1)
+        self.stroma_edge = self.add_edge_detector(node_name='StromaEdge', min=0.422, mid=0.5, max=0.673, strength=0.174)
+        self.fibers_base = self.add_fibers_base()
+        self.fibers = self.add_fibers()
+        self.stacked_fibers = self.add_stacked_fibers(node_name='StackedFibersLarge')
+        self.stacked_fibers_tissue = self.add_stacked_fibers(
+            node_name='StackedFibersTissue',
+            scales=[0.7, 10.8, 12.8, 14.6, 15.3, 27.2, 32.5],
+            scale_distortions=[0.5, 35.9, 39, 22.1, 22.1, 22.1, 22.1],
+            scale_density_noises=[7.9, 8.7, 5, 5, 7.9, 6, 5])
+        self.fiber_network = self.add_fiber_network(fill=0.673*over_staining)
+        self.border_fibers = self.add_border_fibers(length=border_fiber_length)
         self.lamina_propria_tissue_base = self.add_lamina_propria_tissue_base(stroma_intensity=stroma_intensity)
+
     
     def add_object_coord(self, node_name='Coord', shift=(0, 0, 0)):
         '''
@@ -90,6 +105,42 @@ class CustomShaderNodes():
         
         return node_group
     
+    def add_edge_detector(
+            self, node_name='EdgeDetector', min=0.25, mid=0.5, max=0.75, strength=1):
+        
+        node_group, inputs, outputs = shading_utils.create_node_group(node_name, start=self.start)
+        nodes = node_group.nodes
+        links = node_group.links
+        node_group.outputs.new('NodeSocketFloat', 'Value')  # between 0 and strength
+        node_group.inputs.new('NodeSocketFloat', 'Value')  # between 0 and 1
+        node_group.inputs.new('NodeSocketFloat', 'Strength')
+        node_group.inputs['Strength'].default_value = strength
+
+        # add coloramp as edge detector
+        node = color_ramp = nodes.new('ShaderNodeValToRGB')
+        loc = node.location = (self.start[0]+self.sep, self.start[1])
+        node.color_ramp.elements[0].position = min
+        node.color_ramp.elements[1].position = mid
+        # add color ramp element max
+        node.color_ramp.elements.new(max)
+        node.color_ramp.elements[2].position = max
+        node.color_ramp.elements[0].color = (0, 0, 0, 1)
+        node.color_ramp.elements[1].color = (1, 1, 1, 1)
+        node.color_ramp.elements[2].color = (0, 0, 0, 1)
+        links.new(inputs.outputs[0], color_ramp.inputs[0])
+
+        # scale to strength
+        node = scale = nodes.new('ShaderNodeMath')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        scale.operation = 'MULTIPLY'
+        links.new(color_ramp.outputs[0], scale.inputs[0])
+        links.new(inputs.outputs[1], scale.inputs[1])
+
+        # connect to output
+        links.new(scale.outputs[0], outputs.inputs[0])
+
+        return node_group
+    
     def add_lamina_propria_tissue_base(self, node_name='LaminaPropBase', stroma_intensity=1, stroma_color=(0.5, 0.5, 0.5)):
         node_group, inputs, outputs = shading_utils.create_node_group(node_name, start=self.start)
         nodes = node_group.nodes
@@ -142,12 +193,394 @@ class CustomShaderNodes():
         loc = node.location
         links.new(density_strength.outputs[0], vol.inputs['AbsorptionDensity'])
         links.new(color_ramp_2.outputs[0], vol.inputs['AbsorptionColor'])
+        node.inputs['ScatterDensity'].default_value = 30
         
         # connect to inputs and outputs
         links.new(vol.outputs[0], outputs.inputs[0])
         
         return node_group
     
+    def add_fibers_base(self, node_name='FibersBase'):
+
+        node_group, inputs, outputs = shading_utils.create_node_group(node_name, start=self.start)
+        nodes = node_group.nodes
+        links = node_group.links
+        node_group.outputs.new('NodeSocketFloat', 'Color')
+        node_group.inputs.new('NodeSocketFloat', 'Scale')
+        node_group.inputs.new('NodeSocketFloat', 'ScaleDistortion')
+        node_group.inputs.new('NodeSocketFloat', 'DensityShift')
+        node_group.inputs.new('NodeSocketVector', 'CurlVector')
+        node_group.inputs['Scale'].default_value = 6
+        node_group.inputs['ScaleDistortion'].default_value = 30
+        node_group.inputs['DensityShift'].default_value = 0
+        node_group.inputs['CurlVector'].default_value = (140, 0, 0)
+        loc = self.start
+        
+        # object centric coordinate system
+        node = coord = shading_utils.add_node_group(
+            nodes, self.object_coord, pos=(loc[0]+self.sep, loc[1]))
+        loc = node.location
+        
+        # TURBULENCE
+        # turbulence basis
+        node = noise_1 = nodes.new('ShaderNodeTexNoise')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        node.noise_dimensions = '4D'
+        node.inputs['W'].default_value = 22
+        node.inputs['Scale'].default_value = 6
+        node.inputs['Detail'].default_value = 0
+        node.inputs['Roughness'].default_value = 0.633
+        node.inputs['Distortion'].default_value = 0
+        node.noise_dimensions = '4D'
+        links.new(coord.outputs[0], noise_1.inputs['Vector'])
+
+        # turbulence math
+        node = subtract = nodes.new('ShaderNodeVectorMath')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        subtract.operation = 'SUBTRACT'
+        node.inputs[1].default_value = (0.5, 0.5, 0.5)
+        links.new(noise_1.outputs['Color'], subtract.inputs[0])
+        node = mapping = nodes.new('ShaderNodeMapping')
+        loc = node.location = (loc[0]+self.sep, loc[1])        
+        node = cross_product = nodes.new('ShaderNodeVectorMath')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        cross_product.operation = 'CROSS_PRODUCT'
+        links.new(inputs.outputs['CurlVector'], mapping.inputs['Vector'])
+        links.new(subtract.outputs[0], cross_product.inputs[0])
+        links.new(mapping.outputs[0], cross_product.inputs[1])
+
+        # DISTORTION
+        # distortion basis
+        node = noise_2 = nodes.new('ShaderNodeTexNoise')
+        loc = node.location = (coord.location[0]+self.sep, coord.location[1]+self.sep)
+        node.inputs['Scale'].default_value = 30
+        node.inputs['Detail'].default_value = 0
+        node.inputs['Roughness'].default_value = 0.633
+        node.inputs['Distortion'].default_value = 0
+        links.new(coord.outputs[0], noise_2.inputs['Vector'])
+
+        # distortion math
+        node = multiply = nodes.new('ShaderNodeVectorMath')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        multiply.operation = 'SCALE'
+        node.inputs['Scale'].default_value = 7.7
+        links.new(noise_2.outputs['Color'], multiply.inputs[0])
+
+        # ADD
+        node = add = nodes.new('ShaderNodeVectorMath')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        add.operation = 'ADD'
+        links.new(cross_product.outputs[0], add.inputs[0])
+        links.new(multiply.outputs[0], add.inputs[1])
+
+        # APPLY
+        # basis
+        node = noise_3 = nodes.new('ShaderNodeTexNoise')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        node.inputs['Scale'].default_value = 0.1
+        node.inputs['Detail'].default_value = 11.2
+        node.inputs['Roughness'].default_value = 0.5
+        node.inputs['Distortion'].default_value = 0
+        links.new(add.outputs[0], noise_3.inputs['Vector'])
+
+        # density
+        node = density = nodes.new('ShaderNodeMath')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        density.operation = 'ADD'
+        links.new(noise_3.outputs[0], density.inputs[0])
+        links.new(inputs.outputs['DensityShift'], density.inputs[1])
+
+        # sharpening
+        node = sharpening = nodes.new('ShaderNodeValToRGB')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        sharpening.color_ramp.elements[0].color = (1, 1, 1, 1)
+        sharpening.color_ramp.elements[1].color = (0, 0, 0, 1)
+        sharpening.color_ramp.elements[0].position = 0.289
+        sharpening.color_ramp.elements[1].position = 0.523
+        links.new(density.outputs[0], sharpening.inputs[0])
+        
+        # connect to inputs and outputs
+        links.new(sharpening.outputs[0], outputs.inputs[0])
+        links.new(inputs.outputs[0], noise_1.inputs['Scale'])
+        links.new(inputs.outputs[1], noise_2.inputs['Scale'])
+        links.new(inputs.outputs[2], density.inputs[1])
+        
+        return node_group
+    
+
+    def add_fibers(self, node_name='Fibers'):
+        '''
+        Takes the base fibers and adds a perlin noise to to control the density/thickness
+        '''
+        node_group, inputs, outputs = shading_utils.create_node_group(node_name, start=self.start)
+        nodes = node_group.nodes
+        links = node_group.links
+        node_group.outputs.new('NodeSocketFloat', 'Color')
+        node_group.inputs.new('NodeSocketFloat', 'Density')
+        node_group.inputs.new('NodeSocketFloat', 'Scale')
+        node_group.inputs.new('NodeSocketFloat', 'ScaleDistortion')
+        node_group.inputs.new('NodeSocketFloat', 'WeightDensityNoise')
+        node_group.inputs.new('NodeSocketFloat', 'ScaleDensityNoise')
+        node_group.inputs.new('NodeSocketVector', 'CurlVector')
+        node_group.inputs['Density'].default_value = 0.5
+        node_group.inputs['Scale'].default_value = 6
+        node_group.inputs['ScaleDistortion'].default_value = 30
+        node_group.inputs['WeightDensityNoise'].default_value = 0.107
+        node_group.inputs['ScaleDensityNoise'].default_value = 5
+        node_group.inputs['CurlVector'].default_value = (140, 0, 0) 
+        loc = self.start
+
+        # object centric coordinate system
+        node = coord = shading_utils.add_node_group(
+            nodes, self.object_coord, pos=(loc[0]+self.sep, loc[1]))
+        loc = node.location
+
+        # density noise
+        node = noise_density = nodes.new('ShaderNodeTexNoise')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        node.inputs['Detail'].default_value = 2
+        node.inputs['Roughness'].default_value = 0.5
+        node.inputs['Distortion'].default_value = 0
+        links.new(coord.outputs[0], noise_density.inputs['Vector'])
+        node = weight_density = nodes.new('ShaderNodeMath')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        weight_density.operation = 'MULTIPLY'
+        links.new(noise_density.outputs[0], weight_density.inputs[0])
+        links.new(inputs.outputs['WeightDensityNoise'], weight_density.inputs[1])
+
+        # density offset
+        node = density_offset = nodes.new('ShaderNodeMath')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        node.operation = 'MULTIPLY'
+        node.inputs[0].default_value = 0.2
+        links.new(inputs.outputs['Density'], density_offset.inputs[1])
+        node = density_offset_2 = nodes.new('ShaderNodeMath')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        density_offset_2.operation = 'ADD'
+        node.inputs[1].default_value = -0.1
+        links.new(density_offset.outputs[0], density_offset_2.inputs[0])
+
+        # add values
+        node = add = nodes.new('ShaderNodeMath')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        add.operation = 'ADD'
+        links.new(density_offset_2.outputs[0], add.inputs[0])
+        links.new(weight_density.outputs[0], add.inputs[1])
+
+        # add fibers base
+        node = fibers_base = shading_utils.add_node_group(
+            nodes, self.fibers_base, pos=(loc[0]+self.sep, loc[1]))
+        loc = node.location
+        links.new(add.outputs[0], fibers_base.inputs['DensityShift'])
+        links.new(inputs.outputs['Scale'], fibers_base.inputs['Scale'])
+        links.new(inputs.outputs['ScaleDistortion'], fibers_base.inputs['ScaleDistortion'])
+        links.new(inputs.outputs['CurlVector'], fibers_base.inputs['CurlVector'])
+
+        # connect to inputs and outputs
+        links.new(fibers_base.outputs[0], outputs.inputs[0])
+        links.new(inputs.outputs['ScaleDensityNoise'], noise_density.inputs['Scale'])
+
+        return node_group
+
+    def add_stacked_fibers(
+            self, node_name='StackedFibers',
+            scales=[5, 6, 1, 0.7], scale_distortions=[30, 30, 5, 0.5],
+            scale_density_noises=[5, 5, 5, 5]):
+        '''
+        Adds up multiple fiber nodes with different scales
+        '''
+        node_group, inputs, outputs = shading_utils.create_node_group(node_name, start=self.start)
+        nodes = node_group.nodes
+        links = node_group.links
+        node_group.outputs.new('NodeSocketFloat', 'Color')
+        node_group.inputs.new('NodeSocketFloat', 'Density')
+        node_group.inputs['Density'].default_value = 0.5
+        loc = self.start
+
+        # add fiber nodes
+        fibers = []
+        for i in range(len(scales)):
+            node = fiber = shading_utils.add_node_group(
+            nodes, self.fibers, pos=(loc[0]+self.sep, loc[1]))
+            loc = node.location
+            fiber.inputs['Scale'].default_value = scales[i]
+            fiber.inputs['ScaleDistortion'].default_value = scale_distortions[i]
+            fiber.inputs['ScaleDensityNoise'].default_value = scale_density_noises[i]
+            fibers.append(fiber)
+
+        # add values
+        node = add = shading_utils.add_node_group(
+            nodes, self.addition, pos=(loc[0]+self.sep, loc[1]))
+        loc = node.location
+        for i, fiber in enumerate(fibers):
+            links.new(fiber.outputs[0], add.inputs[i])
+            links.new(inputs.outputs[0], fiber.inputs['Density'])
+        
+        # connect to inputs and outputs
+        links.new(add.outputs[0], outputs.inputs[0])
+
+        return node_group
+    
+    def add_fiber_network(self, node_name='FiberNetwork', fill=0.673, density=0.7):
+        '''
+        fiber network with filling tissue in between (softening the effect)
+        '''
+        node_group, inputs, outputs = shading_utils.create_node_group(node_name, start=self.start)
+        nodes = node_group.nodes
+        links = node_group.links
+        loc = self.start
+        node_group.outputs.new('NodeSocketFloat', 'FilledNetwork')
+        node_group.outputs.new('NodeSocketFloat', 'Network')
+
+        # fiber base
+        node = fibers = shading_utils.add_node_group(
+            nodes, self.stacked_fibers_tissue, pos=(loc[0]+self.sep, loc[1]))
+        loc = node.location
+        fibers.inputs['Density'].default_value = density
+
+        # fiber network (adding slightly expanded fibers)
+        node = exp_fibers = nodes.new('ShaderNodeValToRGB')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        exp_fibers.color_ramp.elements[1].position = 0.015
+        exp_fibers.color_ramp.elements[1].color = (0.709, 0.709, 0.709, 1)
+        links.new(fibers.outputs[0], exp_fibers.inputs[0])
+        node = add = nodes.new('ShaderNodeMath')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        add.operation = 'ADD'
+        links.new(exp_fibers.outputs[0], add.inputs[0])
+        links.new(fibers.outputs[0], add.inputs[1])
+
+        # add inverse to fill in between
+        node = inverse = nodes.new('ShaderNodeValToRGB')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        node.color_ramp.elements[1].position = 0.382
+        node.color_ramp.elements[0].color = (fill, fill, fill, 1)
+        node.color_ramp.elements[1].color = (0, 0, 0, 1)
+        links.new(add.outputs[0], inverse.inputs[0])
+        node = add_inverse = nodes.new('ShaderNodeMath')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        add_inverse.operation = 'ADD'
+        links.new(inverse.outputs[0], add_inverse.inputs[0])
+        links.new(add.outputs[0], add_inverse.inputs[1])
+
+        # connect to outputs
+        links.new(add_inverse.outputs[0], outputs.inputs[0])
+        links.new(add.outputs[0], outputs.inputs[1])
+
+        return node_group
+    
+    def add_border_fibers(self, node_name='BorderFibers', length=0.7):
+        '''
+        adds fibres at border of the tissue
+        '''
+        node_group, inputs, outputs = shading_utils.create_node_group(node_name, start=self.start)
+        nodes = node_group.nodes
+        links = node_group.links
+        loc = self.start
+        node_group.outputs.new('NodeSocketFloat', 'Value')
+        node_group.inputs.new('NodeSocketFloat', 'Value')
+
+        # filter region of fibers
+        node = filter = nodes.new('ShaderNodeValToRGB')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        base = 0.518
+        node.color_ramp.elements[0].position = 0.447
+        node.color_ramp.elements[1].position = 0.518
+        node.color_ramp.elements.new(base + length*(1-base))
+        node.color_ramp.elements.new(1)
+        node.color_ramp.elements[0].color = (0, 0, 0, 1)
+        node.color_ramp.elements[1].color = (1, 1, 1, 1)
+        node.color_ramp.elements[2].color = (1, 1, 1, 1)
+        node.color_ramp.elements[3].color = (0, 0, 0, 1)
+        links.new(inputs.outputs[0], filter.inputs[0])
+
+        # add fibers
+        node = offset = nodes.new('ShaderNodeMath')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        node.operation = 'ADD'
+        node.inputs[1].default_value = -1.4
+        links.new(filter.outputs[0], offset.inputs[0])
+        node = fibers = shading_utils.add_node_group(
+            nodes, self.fibers, pos=(loc[0]+self.sep, loc[1]))
+        loc = node.location
+        links.new(offset.outputs[0], fibers.inputs['Density'])
+        node.inputs['Scale'].default_value = 16.6
+        node.inputs['ScaleDistortion'].default_value = 34.1
+        node.inputs['ScaleDensityNoise'].default_value = 8.2
+        node = invert = nodes.new('ShaderNodeValToRGB')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        node.color_ramp.elements[0].color = (1, 1, 1, 1)
+        node.color_ramp.elements[1].color = (0, 0, 0, 1)
+        links.new(fibers.outputs[0], invert.inputs[0])
+
+        # subtract fibers
+        node = subtract = nodes.new('ShaderNodeMath')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        subtract.operation = 'SUBTRACT'
+        links.new(inputs.outputs[0], subtract.inputs[0])
+        links.new(invert.outputs[0], subtract.inputs[1])
+
+        # connect to outputs
+        links.new(subtract.outputs[0], outputs.inputs[0])
+
+        return node_group
+    
+    def add_perlin_noise(self, node_name='PerlinNoise', cutoff_min=0.25, cutoff_max=0.6):
+        '''
+        adds a perlin noise with a cutoff with object centric coordinate system
+        '''
+        node_group, inputs, outputs = shading_utils.create_node_group(node_name, start=self.start)
+        nodes = node_group.nodes
+        links = node_group.links
+        node_group.outputs.new('NodeSocketFloat', 'Value')
+        node_group.inputs.new('NodeSocketFloat', 'Scale')
+        node_group.inputs.new('NodeSocketFloat', 'Detail')
+        node_group.inputs.new('NodeSocketFloat', 'Roughness')
+        node_group.inputs.new('NodeSocketFloat', 'Distortion')
+        node_group.inputs.new('NodeSocketFloat', 'CutoffMin')
+        node_group.inputs.new('NodeSocketFloat', 'CutoffMax')
+        node_group.inputs['Scale'].default_value = 5.8
+        node_group.inputs['Detail'].default_value = 10
+        node_group.inputs['Roughness'].default_value = 0.5
+        node_group.inputs['Distortion'].default_value = 0
+        node_group.inputs['CutoffMin'].default_value = cutoff_min
+        node_group.inputs['CutoffMax'].default_value = cutoff_max
+
+        # object centric coordinate system
+        node = coord = shading_utils.add_node_group(
+            nodes, self.object_coord, pos=self.start)
+        loc = node.location
+        
+        # perlin noise
+        node = noise = nodes.new('ShaderNodeTexNoise')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        links.new(coord.outputs[0], noise.inputs['Vector'])
+        links.new(inputs.outputs['Scale'], noise.inputs['Scale'])
+        links.new(inputs.outputs['Detail'], noise.inputs['Detail'])
+        links.new(inputs.outputs['Roughness'], noise.inputs['Roughness'])
+        links.new(inputs.outputs['Distortion'], noise.inputs['Distortion'])
+
+        # cutoff with new range [0, 1]
+        node = subtract = nodes.new('ShaderNodeMath')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        subtract.operation = 'SUBTRACT'
+        links.new(noise.outputs['Color'], subtract.inputs[0])
+        links.new(inputs.outputs['CutoffMin'], subtract.inputs[1])
+        node = distance = nodes.new('ShaderNodeMath')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        distance.operation = 'SUBTRACT'
+        links.new(inputs.outputs['CutoffMax'], distance.inputs[0])
+        links.new(inputs.outputs['CutoffMin'], distance.inputs[1])
+        node = divide = nodes.new('ShaderNodeMath')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        divide.operation = 'DIVIDE'
+        links.new(subtract.outputs[0], divide.inputs[0])
+        links.new(distance.outputs[0], divide.inputs[1])
+        node.use_clamp = True
+
+        # connect to output
+        links.new(divide.outputs[0], outputs.inputs[0])
+        
     def add_mixing_red_points(self, node_name='MixingRedPoints', strength=0):
         node_group, inputs, outputs = shading_utils.create_node_group(node_name, start=self.start)
         nodes = node_group.nodes
@@ -196,6 +629,31 @@ class CustomShaderNodes():
         
         return node_group
 
+    def add_addition(self, node_name='Addition', n=7):
+        '''
+        stacks multiple math 'Add' nodes to add multiple scalar values
+        '''
+        node_group, inputs, outputs = shading_utils.create_node_group(node_name, start=self.start)
+        nodes = node_group.nodes
+        links = node_group.links
+        loc = self.start
+        node_group.outputs.new('NodeSocketFloat', 'Value')
+        last_node = node_group
+        for i in range(n):
+            node = nodes.new('ShaderNodeMath')
+            node.operation = 'ADD'
+            node.location = (loc[0]+self.sep, loc[1])
+            node.inputs[0].default_value = 0
+            node.inputs[1].default_value = 0
+            loc = node.location
+            node_group.inputs.new('NodeSocketFloat', 'Value'+str(i))
+            links.new(inputs.outputs[i], node.inputs[0])
+            if i == 0:
+                links.new(node.outputs[0], outputs.inputs[0])
+            else:
+                links.new(node.outputs[0], last_node.inputs[1])
+            last_node = node
+        return node_group
 
     def add_principle_noise(self, node_name='PrincipleNoise'):
         node_group, inputs, outputs = shading_utils.create_node_group(node_name, start=self.start)

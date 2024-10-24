@@ -25,6 +25,7 @@ import src.objects.tissue_architecture as arch
 import src.utils.helper_methods as hm
 import src.utils.geometry as geo
 import src.objects.cells as cells
+import src.arrangement.deformation as defo
 
 # this next part forces a reload in case you edit the source after you first start the blender session
 #import imp
@@ -64,13 +65,15 @@ def parse_dataset_args():
     parser.add_argument("--nucleus-color", type=tuple, default=(0.315, 0.003, 0.48, 1), help="Tissue location")
     parser.add_argument("--tissue-location", type=tuple, default=(0, 0, 0.5), help="Tissue location")
     parser.add_argument("--tissue-padding", type=float, default=0.15, help="Tissue padding")  # 0.2
-    parser.add_argument("--tissue-rips", type=float, default=0, help="Degree of rip like structures in tissue")
-    parser.add_argument("--tissue-rips-std", type=float, default=0.2, help="Degree of rip like structures in tissue")
+    parser.add_argument("--tissue-rips", type=float, default=0.5, help="Degree of rip like structures in tissue")
+    parser.add_argument("--tissue-rips-std", type=float, default=0.25, help="Degree of rip like structures in tissue")
+    parser.add_argument("--tissue-rips-curl", type=tuple, default=(0, 1), help="(min ,max) Degree of rip curl")
     parser.add_argument("--stroma-intensity", type=float, default=0.7, help="Degree of rip like structures in tissue")
     parser.add_argument("--noise-seed-shift", type=float, default=0, help="Degree of rip like structures in tissue")
     parser.add_argument("--light-source-brightness", type=float, default=32, help="Degree of rip like structures in tissue")
     parser.add_argument("--adaptiv-brightness", type=bool, default=True, help="Use GPU for rendering")
     parser.add_argument("--focal-offset", type=float, default=0, help="Degree of rip like structures in tissue")
+    parser.add_argument("--over-staining", type=tuple, default=(0, 1), help="Degree of overstaining")
 
     # nuclei
     parser.add_argument("--epi-number", type=int, default=150, help="number of surface cells") # 150
@@ -79,7 +82,7 @@ def parse_dataset_args():
     parser.add_argument("--ratios", type=list, default=[0, 0.1, 0.8, 0.06, 0.04], help="ratios of different cell types (MIX, PLA, LYM, EOS, FIB); LYM should be at least 0.8 for best results")
     parser.add_argument("--surf_scale", type=tuple, default=(0.8, 0.5, 1), help="Surface scale")
     parser.add_argument("--delete-fraction", type=list, default=[0, 0, 0, 0, 0], help="ratios of different cell types")
-    parser.add_argument("--nuclei-intensity", type=float, default=1, help="overall intensity of nuclei") # TODO
+    parser.add_argument("--nuclei-intensity", type=float, default=0.7, help="overall intensity of nuclei") # TODO
     parser.add_argument("--mix-factor", type=float, default=0, help="overall intensity of nuclei") # TODO
     parser.add_argument("--epi-rescaling", type=int, default=0, help="overall intensity of nuclei") # TODO
     parser.add_argument("--mix-cyto", type=float, default=0, help="overall intensity of nuclei") # TODO
@@ -106,7 +109,8 @@ def create_scene(
         tissue_thickness_lb = 0.05, 
         light_source_brightness = 60, adaptiv_brightness = True,
         nucleus_color = (0.315, 0.003, 0.531, 1), red_points_strength = 0,
-        tissue_rips = -0.5, tissue_rips_std = 0.1, nuclei_intensity = 1, mix_cyto = 0,
+        tissue_rips = -0.5, tissue_rips_std = 0.1, tissue_rips_curl = (0, 1),
+        nuclei_intensity = 1, mix_cyto = 0, over_staining = (0, 1),
         tissue_padding = 0.5, epi_count = 80, stroma_density = 0.5, mix_factor = 0, stroma_intensity = 1,
         ratios = [0, 0.1, 0.8, 0.06, 0.04], focal_offset = 0, 
         seed=0, **kwargs):
@@ -137,6 +141,8 @@ def create_scene(
     if adaptiv_brightness:
         light_source_brightness = (light_source_brightness)**(0.01/0.05*tissue_thickness/0.01)
         print(f"Adaptiv brightness: {light_source_brightness}")
+    tissue_rips_curl = uniform_sample(tissue_rips_curl[0], tissue_rips_curl[1], seed=seed)
+    over_staining = uniform_sample(over_staining[0], over_staining[1], seed=seed)
 
     # 1) initialize microscope objects and add to scene
     start = time.time()
@@ -152,11 +158,11 @@ def create_scene(
         'FIB': {
             'Nucleus': {'name': 'Nucleus_FIB', 'color': interpolate(nuclei_intensity, nucleus_color), 'staining_intensity': 270*nuclei_intensity+base_intensity},},
         'EPI': {
-            'Nucleus': {'name': 'Nucleus_EPI', 'color': interpolate(nuclei_intensity, nucleus_color), 'staining_intensity': 100*nuclei_intensity}}}
+            'Nucleus': {'name': 'Nucleus_EPI', 'color': interpolate(nuclei_intensity, nucleus_color), 'staining_intensity': 350*nuclei_intensity+base_intensity}}}
     my_materials = materials.Material(
-        seed=seed, cell_type_params=params_cell_shading, tissue_rips=tissue_rips, 
+        seed=seed, cell_type_params=params_cell_shading, tissue_rips=tissue_rips, tissue_rips_curl=tissue_rips_curl,
         tissue_rips_std=tissue_rips_std, stroma_intensity=stroma_intensity,
-        brightness=light_source_brightness, red_points_strength=red_points_strength)
+        brightness=light_source_brightness, red_points_strength=red_points_strength, over_staining=over_staining)
     print(tissue_location)
     my_tissue = tissue.Tissue(
         my_materials.muscosa, thickness=tissue_thickness,
@@ -198,6 +204,10 @@ def create_scene(
     elapsed_old = elapsed
     elapsed = time.time() - start
     print(f"Architecture bound took {elapsed-elapsed_old} s")
+    # for obj in [crypt_vol_2]:
+    #     if obj.type == 'MESH':
+    #         obj_name = obj.name
+    #         defo.elastic_deform(obj_name, deformation_strength=0.01, noise_scale=8, seed=seed)
     hm.add_boolean_modifier(mucosa_fill, crypt_vol_2, name='add epi to stroma', apply=True)
     elapsed_old = elapsed
     elapsed = time.time() - start 
@@ -229,6 +239,12 @@ def create_scene(
     end = time.time()
     print(f"Volume filling took {end - start} s")
 
+    for obj in bpy.data.objects:
+        if obj.type == 'MESH' and obj.name.startswith("Nucleus_Type_EPI"):
+            obj_name = obj.name
+            defo.elastic_deform(obj_name, deformation_strength=0.01, noise_scale=20, seed=seed)
+            defo.elastic_deform(obj_name, deformation_strength=0.0025, noise_scale=100, seed=seed)
+
     # 4) cut objects and add staining
     start = time.time()
     my_scene.add_cell_params(params_cell_shading)
@@ -248,6 +264,7 @@ def create_scene(
     elapsed = time.time() - start
     print(f"Removing goblet volume took {elapsed-elapsed_old} s")
     my_scene.remove_cells_volume(mucosa_fill)
+    my_scene.remove_cells_volume(crypt_vol_2, types=('EPI'))
     elapsed_old = elapsed
     elapsed = time.time() - start
     print(f"Removing cells volume took {elapsed-elapsed_old} s")
@@ -287,6 +304,17 @@ def create_scene(
         obj.hide_render = True
     end = time.time()
     print(f"Hiding non cell objects took {end - start} s")
+
+    # 6) add elastic deformations
+    start = time.time()
+    for obj in bpy.data.objects:
+        # Check if the object is a cube (type is 'MESH' and name starts with 'Cube')
+        if obj.type == 'MESH' and obj.name.startswith("Plane")==False and obj.name.startswith("tissue")==False:
+            obj_name = obj.name
+            print(obj.name)
+            defo.elastic_deform(obj_name, seed=seed, deformation_strength=0.0125)
+    end = time.time()
+    print(f"Deforming objects took {end - start} s")
 
     return my_scene
 
