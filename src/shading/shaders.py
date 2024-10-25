@@ -13,7 +13,7 @@ imp.reload(shading_utils)
 
 
 class CustomShaderNodes():
-    def __init__(self, start=(0, 0), sep=200, shift=(0, 0, 0), stroma_intensity=1, red_points_strength=0, border_fiber_length=0.7, over_staining=1):
+    def __init__(self, over_staining, start=(0, 0), sep=200, shift=(0, 0, 0), stroma_intensity=1, red_points_strength=0, border_fiber_length=0.7):
         self.shift = shift
         self.start = start
         self.sep = sep
@@ -30,7 +30,7 @@ class CustomShaderNodes():
         
         # tissue
         self.fibers_edge = self.add_edge_detector(node_name='FibersEdge', min=0.331, mid=0.475, max=1, strength=1)
-        self.stroma_edge = self.add_edge_detector(node_name='StromaEdge', min=0.422, mid=0.5, max=0.673, strength=0.174)
+        self.stroma_edge = self.add_edge_detector(node_name='StromaEdge', min=0, mid=0.5, max=1, strength=0.4)  # , min=0.422, mid=0.5, max=0.673, strength=0.174)
         self.fibers_base = self.add_fibers_base()
         self.fibers = self.add_fibers()
         self.stacked_fibers = self.add_stacked_fibers(node_name='StackedFibersLarge')
@@ -422,7 +422,7 @@ class CustomShaderNodes():
 
         return node_group
     
-    def add_fiber_network(self, node_name='FiberNetwork', fill=0.673, density=0.7):
+    def add_fiber_network(self, node_name='FiberNetwork', fill=0.673, density=0.7, fill_residual=0.36):
         '''
         fiber network with filling tissue in between (softening the effect)
         '''
@@ -459,6 +459,11 @@ class CustomShaderNodes():
         node = coord = shading_utils.add_node_group(
             nodes, self.object_coord, pos=(loc[0]+self.sep, loc[1]))
         loc = coord.location
+        node = norm = nodes.new('ShaderNodeMath')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        node.operation = 'DIVIDE'
+        links.new(inputs.outputs['VoronoiVariation'], norm.inputs[0])
+        links.new(inputs.outputs['VoronoiScale'], norm.inputs[1])
         node = scaling_noise = nodes.new('ShaderNodeTexNoise')
         loc = node.location = (loc[0]+self.sep, loc[1])
         node.noise_dimensions = '4D'
@@ -468,21 +473,21 @@ class CustomShaderNodes():
         node.inputs['Roughness'].default_value = 0.5
         node.inputs['Distortion'].default_value = 0
         links.new(coord.outputs[0], scaling_noise.inputs['Vector'])
-        node = var = nodes.new('ShaderNodeMath')
+        node = var = nodes.new('ShaderNodeVectorMath')
         loc = node.location = (loc[0]+self.sep, loc[1])
-        node.operation = 'MULTIPLY'
-        links.new(scaling_noise.outputs[0], var.inputs[0])
-        links.new(inputs.outputs[1], var.inputs[1])
-        node = strength = nodes.new('ShaderNodeMath')
+        node.operation = 'SCALE'
+        links.new(scaling_noise.outputs['Color'], var.inputs[0])
+        links.new(norm.outputs[0], var.inputs['Scale'])
+        node = strength = nodes.new('ShaderNodeVectorMath')
         loc = node.location = (loc[0]+self.sep, loc[1])
         strength.operation = 'ADD'
         links.new(var.outputs[0], strength.inputs[0])
-        links.new(inputs.outputs[0], strength.inputs[1])
+        links.new(coord.outputs[0], strength.inputs[1])
         node = voronoi = nodes.new('ShaderNodeTexVoronoi')
         loc = node.location = (loc[0]+self.sep, loc[1])
         node.feature = 'DISTANCE_TO_EDGE'
-        links.new(strength.outputs[0], voronoi.inputs['Scale'])
-        links.new(coord.outputs[0], voronoi.inputs['Vector'])
+        links.new(strength.outputs[0], voronoi.inputs['Vector'])
+        links.new(inputs.outputs['VoronoiScale'], voronoi.inputs['Scale'])
         node = clipping = nodes.new('ShaderNodeValToRGB')
         loc = node.location = (loc[0]+self.sep, loc[1])
         node.color_ramp.elements[1].position = 0.225
@@ -498,11 +503,11 @@ class CustomShaderNodes():
         node.color_ramp.elements[0].color = (fill, fill, fill, 1)
         node.color_ramp.elements[1].color = (0, 0, 0, 1)
         links.new(add.outputs[0], inverse.inputs[0])
-        node = add_inverse = nodes.new('ShaderNodeMath')
-        loc = node.location = (loc[0]+self.sep, loc[1])
-        add_inverse.operation = 'ADD'
+        node = add_inverse = shading_utils.add_node_group(
+            nodes, self.addition, pos=(loc[0]+self.sep, loc[1]))
         links.new(inverse.outputs[0], add_inverse.inputs[0])
         links.new(add.outputs[0], add_inverse.inputs[1])
+        links.new(inputs.outputs['OverstainingOffset'], add_inverse.inputs[2])
 
         # connect to outputs
         links.new(add_inverse.outputs[0], outputs.inputs[0])
@@ -632,7 +637,7 @@ class CustomShaderNodes():
         node_group.outputs.new('NodeSocketFloat', 'Value')
         node_group.inputs.new('NodeSocketFloat', 'Density')  # uniform voronoi packed 
         node_group.inputs.new('NodeSocketFloat', 'Scale')
-        node_group.inputs['Density'].default_value = 28    
+        node_group.inputs['Density'].default_value = 18
         loc = self.start
 
         # object centric coordinate system

@@ -17,9 +17,8 @@ imp.reload(shaders)
 
 class Material():
     def __init__(
-            self, seed=0, cell_type_params=None, tissue_rips=0.5, tissue_rips_curl=0.5,
+            self, over_staining, seed=0, cell_type_params=None, tissue_rips=0.5, tissue_rips_curl=0.5,
             tissue_rips_std=0.1, stroma_intensity=1, stroma_color=(0.55, 0.2, 0.46, 1.0),
-            over_staining=1,
             brightness=60, **kwargs):
         # delete all materials
         for material in bpy.data.materials:
@@ -35,7 +34,7 @@ class Material():
         rips = np.random.normal(tissue_rips, tissue_rips_std)
         self.muscosa = self.add_mucosa_staining(threshold_rips=1-rips, stroma_intensity=stroma_intensity, base_color=stroma_color, rips_turbulence=tissue_rips_curl)
         self.nuclei_mask = self.add_nuclei_mask()
-        self.crypt_staining = self.add_crypt_staining(staining_intensity=180*stroma_intensity)
+        self.crypt_staining = self.add_crypt_staining(staining_intensity=120*stroma_intensity, staining_irregularity=over_staining)
         self.cell_staining = []
         if cell_type_params is None:
             self.nuclei_staining = self.add_nuclei_staining(name="Nucleus")
@@ -85,6 +84,67 @@ class Material():
 
     def add_crypt_staining(
             self, name="crypt", color=(0.456, 0.011, 0.356, 1),
+            staining_intensity=180, start_pos=(0, 0), sep=200, staining_irregularity=1,
+            fiber_size=70, over_staining=0):
+        
+        material, nodes, links = shading_utils.initialize_material(name)
+        
+        # add object centered coordinate system
+        node = coord = shading_utils.add_node_group(
+            nodes, self.custom_nodes.object_coord, pos=(0, 0))
+        loc = node.location
+
+        # add noisy intensity
+        node = noise = nodes.new('ShaderNodeTexNoise')
+        node.inputs['Scale'].default_value = 2.2
+        node.inputs['Detail'].default_value = 2
+        node.inputs['Roughness'].default_value = 0.5
+        node.inputs['Distortion'].default_value = 0
+        loc = node.location = (loc[0]+sep, loc[1])
+        node = intensity = nodes.new('ShaderNodeValToRGB')
+        loc = node.location = (loc[0]+sep, loc[1])
+        node.color_ramp.elements[0].color = (0, 0, 0, 1)
+        node.color_ramp.elements[1].color = (
+            staining_irregularity, staining_irregularity, staining_irregularity, 1)
+        node.color_ramp.elements[0].position = 0.167
+        node.color_ramp.elements[1].position = 1
+        links.new(coord.outputs[0], noise.inputs['Vector'])
+        links.new(noise.outputs[0], intensity.inputs[0])
+
+        # add fiber network
+        node = fibers = shading_utils.add_node_group(
+            nodes, self.custom_nodes.fiber_network, pos=(loc[0]+sep, loc[1]))
+        loc = node.location
+        node.inputs['VoronoiScale'].default_value = fiber_size
+        node.inputs['VoronoiVariation'].default_value = 10
+        node.inputs['OverstainingOffset'].default_value = over_staining
+        node = add = nodes.new('ShaderNodeMath')
+        add.operation = 'ADD'
+        loc = add.location = (loc[0]+sep, loc[1])
+        links.new(intensity.outputs[0], add.inputs[0])
+        links.new(fibers.outputs[0], add.inputs[1])
+
+        # add volume shader
+        node = volume = shading_utils.add_node_group(
+            nodes, self.custom_nodes.volume, pos=(loc[0]+sep, loc[1]))
+        loc = node.location
+        volume.inputs['AbsorptionColor'].default_value = color
+        volume.inputs['AbsorptionDensity'].default_value = staining_intensity
+        volume.inputs['ScatterDensity'].default_value = 30
+        node = add_structure = nodes.new('ShaderNodeMixShader')
+        loc = add_structure.location = (loc[0]+sep, loc[1])
+        links.new(volume.outputs[0], add_structure.inputs[2])
+        links.new(add.outputs[0], add_structure.inputs['Fac'])
+
+        # connect to output
+        node = material_output = nodes.new('ShaderNodeOutputMaterial')
+        loc = node.location = (loc[0]+sep, loc[1])
+        links.new(add_structure.outputs[0], material_output.inputs['Volume'])
+
+        return material
+
+    def add_crypt_staining_old(
+            self, name="crypt_old", color=(0.456, 0.011, 0.356, 1),
             staining_intensity=180, start_pos=(0, 0), sep=200):
         
         material, nodes, links = shading_utils.initialize_material(name)
@@ -326,7 +386,7 @@ class Material():
         links.new(fibers.outputs[0], fiber_network.inputs['Fac'])
 
         # add noise for rips
-        node = rip_fibers = shading_utils.add_node_group(
+        node = rip_fibers_base = shading_utils.add_node_group(
             nodes, self.custom_nodes.fibers, pos=(loc[0]+sep, loc[1]))
         loc = node.location
         node.inputs['CurlVector'].default_value = (rips_turbulence*200, 0, 0)
@@ -334,6 +394,11 @@ class Material():
         node.inputs['Scale'].default_value = 1
         node.inputs['ScaleDistortion'].default_value = 11.2
         node.inputs['ScaleDensityNoise'].default_value = 8.7
+        node = rip_fibers = nodes.new('ShaderNodeValToRGB')
+        loc = node.location = (loc[0]+sep, loc[1])
+        node.color_ramp.elements[0].position = 0.35
+        node.color_ramp.elements[1].position = 0.65
+        links.new(rip_fibers_base.outputs[0], rip_fibers.inputs[0])
         node = fibers_border = shading_utils.add_node_group(
             nodes, self.custom_nodes.border_fibers, pos=(loc[0]+sep, loc[1]))
         loc = node.location

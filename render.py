@@ -54,7 +54,7 @@ def parse_dataset_args():
     parser.add_argument("--start-idx", type=int, default=0, help="Dataset size")
     parser.add_argument("--index-list", type=str, default='', help="ony considered if len>1, List of indices to render")
     parser.add_argument("--n-samples", type=int, default=100, help="Dataset size")
-    parser.add_argument("--base-16bit", type=int, default=55, help="Output shape")
+    parser.add_argument("--base-16bit", type=int, default=55, help="Base for 16 bit images (55 or 257)")
 
     # DATASET PARAMETERS
     # tissue parameters (when adaptive they orientate at a default tissue thickness of 0.05 and a default tissue size of 1.28)
@@ -73,7 +73,7 @@ def parse_dataset_args():
     parser.add_argument("--light-source-brightness", type=float, default=32, help="Degree of rip like structures in tissue")
     parser.add_argument("--adaptiv-brightness", type=bool, default=True, help="Use GPU for rendering")
     parser.add_argument("--focal-offset", type=float, default=0, help="Degree of rip like structures in tissue")
-    parser.add_argument("--over-staining", type=tuple, default=(0.3, 1), help="Degree of overstaining")
+    parser.add_argument("--over-staining", type=tuple, default=(0, 1), help="Degree of overstaining")
 
     # nuclei
     parser.add_argument("--epi-number", type=int, default=150, help="number of surface cells") # 150
@@ -160,9 +160,10 @@ def create_scene(
         'EPI': {
             'Nucleus': {'name': 'Nucleus_EPI', 'color': interpolate(nuclei_intensity, nucleus_color), 'staining_intensity': 350*nuclei_intensity+base_intensity}}}
     my_materials = materials.Material(
+        over_staining=over_staining,
         seed=seed, cell_type_params=params_cell_shading, tissue_rips=tissue_rips, tissue_rips_curl=tissue_rips_curl,
         tissue_rips_std=tissue_rips_std, stroma_intensity=stroma_intensity,
-        brightness=light_source_brightness, red_points_strength=red_points_strength, over_staining=over_staining)
+        brightness=light_source_brightness, red_points_strength=red_points_strength)#over_staining)
     print(tissue_location)
     my_tissue = tissue.Tissue(
         my_materials.muscosa, thickness=tissue_thickness,
