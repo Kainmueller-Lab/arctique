@@ -48,6 +48,7 @@ Welcome to arctique's documentation!
    Methods
    Contribute
    Cite
+   Uncertainty Sliders<all_sliders>
 
 ..
    Indices and tables
