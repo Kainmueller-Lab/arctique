@@ -59,7 +59,7 @@ def parse_dataset_args():
     # DATASET PARAMETERS
     # tissue parameters (when adaptive they orientate at a default tissue thickness of 0.05 and a default tissue size of 1.28)
     parser.add_argument("--tissue-thickness", type=float, default=0.05, help="Tissue thickness")
-    parser.add_argument("--tissue-thickness_lb", type=float, default=0.02, help="Tissue thickness")
+    parser.add_argument("--tissue-thickness_lb", type=float, default=0.025, help="Tissue thickness")
     parser.add_argument("--tissue-size", type=float, default=1.28, help="Tissue size")
     parser.add_argument("--tissue-color", type=tuple, default=(0.409, 0.215, 0.430, 1), help="Tissue location")
     parser.add_argument("--nucleus-color", type=tuple, default=(0.315, 0.003, 0.48, 1), help="Tissue location")
@@ -73,7 +73,7 @@ def parse_dataset_args():
     parser.add_argument("--light-source-brightness", type=float, default=32, help="Degree of rip like structures in tissue")
     parser.add_argument("--adaptiv-brightness", type=bool, default=True, help="Use GPU for rendering")
     parser.add_argument("--focal-offset", type=float, default=0, help="Degree of rip like structures in tissue")
-    parser.add_argument("--over-staining", type=tuple, default=(0, 1), help="Degree of overstaining")
+    parser.add_argument("--over-staining", type=tuple, default=(0.3, 1), help="Degree of overstaining")
 
     # nuclei
     parser.add_argument("--epi-number", type=int, default=150, help="number of surface cells") # 150

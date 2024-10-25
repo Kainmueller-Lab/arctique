@@ -22,6 +22,7 @@ class CustomShaderNodes():
         self.object_coord = self.add_object_coord(shift=self.shift)
         self.addition = self.add_addition()
         self.volume = self.add_volume()
+        self.blood_cells_base = self.add_blood_cells_base()
         self.mixing_red = self.add_mixing_red_points(strength=red_points_strength)
         self.principle_noise = self.add_principle_noise()
         self.stacked_noise = self.add_stacked_noise()
@@ -431,6 +432,11 @@ class CustomShaderNodes():
         loc = self.start
         node_group.outputs.new('NodeSocketFloat', 'FilledNetwork')
         node_group.outputs.new('NodeSocketFloat', 'Network')
+        node_group.inputs.new('NodeSocketFloat', 'VoronoiScale')
+        node_group.inputs.new('NodeSocketFloat', 'VoronoiVariation')
+        node_group.inputs.new('NodeSocketFloat', 'OverstainingOffset')
+        node_group.inputs['VoronoiScale'].default_value = 100
+        node_group.inputs['VoronoiVariation'].default_value = 10
 
         # fiber base
         node = fibers = shading_utils.add_node_group(
@@ -444,11 +450,46 @@ class CustomShaderNodes():
         exp_fibers.color_ramp.elements[1].position = 0.015
         exp_fibers.color_ramp.elements[1].color = (0.709, 0.709, 0.709, 1)
         links.new(fibers.outputs[0], exp_fibers.inputs[0])
-        node = add = nodes.new('ShaderNodeMath')
-        loc = node.location = (loc[0]+self.sep, loc[1])
-        add.operation = 'ADD'
+        node = add = shading_utils.add_node_group(
+            nodes, self.addition, pos=(loc[0]+self.sep, loc[1]))
         links.new(exp_fibers.outputs[0], add.inputs[0])
         links.new(fibers.outputs[0], add.inputs[1])
+
+        # add voronoi fibers
+        node = coord = shading_utils.add_node_group(
+            nodes, self.object_coord, pos=(loc[0]+self.sep, loc[1]))
+        loc = coord.location
+        node = scaling_noise = nodes.new('ShaderNodeTexNoise')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        node.noise_dimensions = '4D'
+        node.inputs['W'].default_value = 5.6
+        node.inputs['Scale'].default_value = 3.3
+        node.inputs['Detail'].default_value = 2
+        node.inputs['Roughness'].default_value = 0.5
+        node.inputs['Distortion'].default_value = 0
+        links.new(coord.outputs[0], scaling_noise.inputs['Vector'])
+        node = var = nodes.new('ShaderNodeMath')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        node.operation = 'MULTIPLY'
+        links.new(scaling_noise.outputs[0], var.inputs[0])
+        links.new(inputs.outputs[1], var.inputs[1])
+        node = strength = nodes.new('ShaderNodeMath')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        strength.operation = 'ADD'
+        links.new(var.outputs[0], strength.inputs[0])
+        links.new(inputs.outputs[0], strength.inputs[1])
+        node = voronoi = nodes.new('ShaderNodeTexVoronoi')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        node.feature = 'DISTANCE_TO_EDGE'
+        links.new(strength.outputs[0], voronoi.inputs['Scale'])
+        links.new(coord.outputs[0], voronoi.inputs['Vector'])
+        node = clipping = nodes.new('ShaderNodeValToRGB')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        node.color_ramp.elements[1].position = 0.225
+        node.color_ramp.elements[1].color = (0, 0, 0, 1)
+        node.color_ramp.elements[0].color = (1, 1, 1, 1)
+        links.new(voronoi.outputs[0], clipping.inputs[0])
+        links.new(clipping.outputs[0], add.inputs[2])
 
         # add inverse to fill in between
         node = inverse = nodes.new('ShaderNodeValToRGB')
@@ -580,8 +621,130 @@ class CustomShaderNodes():
 
         # connect to output
         links.new(divide.outputs[0], outputs.inputs[0])
+
+    def add_blood_cells_base(self, node_name='BloodCellsBase', inner_intensity=0.286):
+        '''
+        creates a bw base for blood cells
+        '''
+        node_group, inputs, outputs = shading_utils.create_node_group(node_name, start=self.start)
+        nodes = node_group.nodes
+        links = node_group.links
+        node_group.outputs.new('NodeSocketFloat', 'Value')
+        node_group.inputs.new('NodeSocketFloat', 'Density')  # uniform voronoi packed 
+        node_group.inputs.new('NodeSocketFloat', 'Scale')
+        node_group.inputs['Density'].default_value = 28    
+        loc = self.start
+
+        # object centric coordinate system
+        node = coord = shading_utils.add_node_group(
+            nodes, self.object_coord, pos=(loc[0]+self.sep, loc[1]))
+        loc = node.location
+
+        # voronoi compartements
+        node = noise = nodes.new('ShaderNodeTexVoronoi')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        links.new(coord.outputs[0], noise.inputs['Vector'])
+        links.new(inputs.outputs['Density'], noise.inputs['Scale'])
+        node = noise_subtract = nodes.new('ShaderNodeTexVoronoi')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        node.feature = 'SMOOTH_F1'
+        links.new(coord.outputs[0], noise_subtract.inputs['Vector'])
+        links.new(inputs.outputs['Density'], noise_subtract.inputs['Scale'])
+        node.inputs['Smoothness'].default_value = 1
+        node = cell = nodes.new('ShaderNodeMath')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        cell.operation = 'SUBTRACT'
+        links.new(noise.outputs['Distance'], cell.inputs[0])
+        links.new(noise_subtract.outputs['Distance'], cell.inputs[1])
+
+        # cutoff offset/scale
+        node = cutoff = nodes.new('ShaderNodeValToRGB')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        node.color_ramp.elements[0].position = 0.276
+        node.color_ramp.elements[1].position = 0.629
+        links.new(inputs.outputs['Scale'], cutoff.inputs[0])
+        node = scale = nodes.new('ShaderNodeMath')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        scale.operation = 'ADD'
+        links.new(cutoff.outputs[0], scale.inputs[0])
+        links.new(cell.outputs[0], scale.inputs[1])
+
+        # make visibility/intensity of cells
+        node = shading = nodes.new('ShaderNodeValToRGB')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        node.color_ramp.elements[0].position = 0
+        node.color_ramp.elements[1].position = 0.027
+        node.color_ramp.elements.new(0.098)
+        node.color_ramp.elements.new(0.156)
+        node.color_ramp.elements[0].color = (inner_intensity, inner_intensity, inner_intensity, 1)
+        node.color_ramp.elements[1].color = (1, 1, 1, 1)
+        node.color_ramp.elements[2].color = (1, 1, 1, 1)
+        node.color_ramp.elements[3].color = (0, 0, 0, 1)
+        links.new(scale.outputs[0], shading.inputs[0])
+
+        # connect to output
+        links.new(shading.outputs[0], outputs.inputs[0])
+
+        return node_group
+    
+    def add_mixing_red_points(self, node_name='MixingRedPoints', strength=0.5):
+        node_group, inputs, outputs = shading_utils.create_node_group(node_name, start=self.start)
+        nodes = node_group.nodes
+        links = node_group.links
+        node_group.outputs.new('NodeSocketShader', 'Shader')
+        node_group.inputs.new('NodeSocketShader', 'Shader')     
         
-    def add_mixing_red_points(self, node_name='MixingRedPoints', strength=0):
+        # volum shader
+        node = vol = shading_utils.add_node_group(
+            nodes, self.volume,
+            pos=(self.start[0]+self.sep, self.start[1]-1.5*self.sep))
+        loc = node.location
+        node.inputs['AbsorptionColor'].default_value = (0.605, 0.017, 0.043, 1)
+        node.inputs['ScatterColor'].default_value = (0.605, 0.019, 0.088, 1)
+        node.inputs['AbsorptionDensity'].default_value = 125 * (1+0.3*strength)
+        node.inputs['ScatterDensity'].default_value = 0.6
+        
+        # object centric coordinate system
+        node = coord = shading_utils.add_node_group(
+            nodes, self.object_coord,
+            pos=(self.start[0]+self.sep, self.start[1]))
+        loc = node.location
+        
+        # abundance/strength off blood cells
+        node = staining_noise = nodes.new('ShaderNodeTexNoise')
+        node.inputs['Scale'].default_value = 5
+        node.inputs['Detail'].default_value = 0
+        node.inputs['Roughness'].default_value = 0
+        node.inputs['Distortion'].default_value = 0
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        node = scale = nodes.new('ShaderNodeMath')
+        loc = node.location = (loc[0]+self.sep, loc[1])
+        scale.operation = 'MULTIPLY'
+        scale.inputs[1].default_value = 1.5-strength
+        links.new(coord.outputs[0], staining_noise.inputs['Vector'])
+        links.new(staining_noise.outputs[0], scale.inputs[0])
+
+        # add blood cells
+        node = blood_cells = shading_utils.add_node_group(
+            nodes, self.blood_cells_base,
+            pos=(loc[0]+self.sep, loc[1]))
+        loc = node.location
+        links.new(scale.outputs[0], blood_cells.inputs['Scale'])
+        
+        # Mix Shader
+        node = mix_shader = nodes.new('ShaderNodeMixShader')
+        loc = node.location = (loc[0]+1.5*self.sep, loc[1])
+        links.new(vol.outputs[0], mix_shader.inputs[2])
+        links.new(blood_cells.outputs[0], mix_shader.inputs['Fac'])
+        
+        # connect to inputs and outputs
+        links.new(inputs.outputs[0], mix_shader.inputs[1])
+        outputs.location = (loc[0]+self.sep, loc[1])
+        links.new(mix_shader.outputs[0], outputs.inputs[0])
+        
+        return node_group
+        
+    def add_mixing_red_points_legacy(self, node_name='MixingRedPoints', strength=0):
         node_group, inputs, outputs = shading_utils.create_node_group(node_name, start=self.start)
         nodes = node_group.nodes
         links = node_group.links
