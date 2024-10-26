@@ -60,7 +60,7 @@ def parse_dataset_args():
     # tissue parameters (when adaptive they orientate at a default tissue thickness of 0.05 and a default tissue size of 1.28)
     parser.add_argument("--tissue-thickness", type=float, default=0.05, help="Tissue thickness")
     parser.add_argument("--tissue-thickness_lb", type=float, default=0.025, help="Tissue thickness")
-    parser.add_argument("--tissue-size", type=float, default=1.28, help="Tissue size")
+    parser.add_argument("--tissue-size", type=float, default=1.28, help="Tissue size")  # 1.28
     parser.add_argument("--tissue-color", type=tuple, default=(0.409, 0.215, 0.430, 1), help="Tissue location")
     parser.add_argument("--nucleus-color", type=tuple, default=(0.315, 0.003, 0.48, 1), help="Tissue location")
     parser.add_argument("--tissue-location", type=tuple, default=(0, 0, 0.5), help="Tissue location")
@@ -132,6 +132,8 @@ def create_scene(
     '''
     scene.BioMedicalScene.clear()
 
+    params = {}
+
     # 0) parameters for variations
     base_intensity = 100*(1-nuclei_intensity)
     cells.initialize_mixing_attribute(mix_factor)
@@ -167,9 +169,11 @@ def create_scene(
     print(tissue_location)
     my_tissue = tissue.Tissue(
         my_materials.muscosa, thickness=tissue_thickness,
-        size=tissue_size, location=tissue_location)
+        size=tissue_size+tissue_padding/2, location=tissue_location)
     my_light_source = scene.LightSource(material=my_materials.light_source)
-    my_camera = scene.Camera(focus_pos=0.6221+(tissue_thickness*(1+focal_offset)-0.05))
+    my_camera = scene.Camera(
+        focus_pos=0.6221+(tissue_thickness*(1+focal_offset)-0.05),
+        size=tissue_size)
     my_scene = scene.BioMedicalScene(my_light_source, my_camera)
     my_scene.add_cell_params(params_cell_shading)
     my_scene.add_tissue(tissue=my_tissue.tissue)
@@ -317,7 +321,28 @@ def create_scene(
     end = time.time()
     print(f"Deforming objects took {end - start} s")
 
-    return my_scene
+    # write all randomized parameters to a file
+    params = {
+        'seed': seed,
+        'tissue_thickness': tissue_thickness,
+        'tissue_size': tissue_size,
+        'tissue_location': tissue_location,
+        'tissue_padding': tissue_padding,
+        'tissue_rips': tissue_rips,
+        'tissue_rips_std': tissue_rips_std,
+        'tissue_rips_curl': tissue_rips_curl,
+        'stroma_intensity': stroma_intensity,
+        'nuclei_intensity': nuclei_intensity,
+        'mix_factor': mix_factor,
+        'stroma_density': stroma_density,
+        'ratios': ratios,
+        'focal_offset': focal_offset,
+        'light_source_brightness': light_source_brightness,
+        'adaptiv_brightness': adaptiv_brightness,
+        'over_staining': over_staining,
+        'red_points_strength': red_points_strength}
+
+    return my_scene, params
 
 
 class MainpulateScene(object):
@@ -358,7 +383,8 @@ def recreate_scene(**kwargs):
 
 def render_scene(
         my_scene, render_path, sample_name, gpu=True, device=0, 
-        output_shape=(512, 512), max_samples=1024, render_masks=True, base_16bit=55):
+        output_shape=(512, 512), max_samples=1024, render_masks=True, base_16bit=55,
+        additional_info=None):
     '''
     renders a scene
     Args:
@@ -398,7 +424,8 @@ def render_scene(
                     obj3d = False, # if true scene is saved as 3d object
                     output_shape = output_shape, # dimensions of output
                     max_samples = max_samples,
-                    base_16bit = base_16bit) # number of samples for rendering. Fewer samples will render more quickly. Default is 1024
+                    base_16bit = base_16bit,
+                    additional_info=additional_info) # number of samples for rendering. Fewer samples will render more quickly. Default is 1024
 
 
 def main():
@@ -436,8 +463,10 @@ def main():
                 paramters[key] = value
         with open(dir_parameters+f'/parameters_{i+1}.json', 'w') as outfile:
             json.dump(paramters, outfile)
-        my_scene = create_scene(**paramters)
-        render_scene(my_scene, render_path, i+1, gpu=args.gpu, device=args.gpu_device, base_16bit=args.base_16bit)
+        my_scene, rand_params = create_scene(**paramters)
+        render_scene(
+            my_scene, render_path, i+1, gpu=args.gpu, device=args.gpu_device,
+            base_16bit=args.base_16bit, additional_info=rand_params)
         bpy.ops.wm.read_factory_settings(use_empty=True)
 
 if __name__ == "__main__":

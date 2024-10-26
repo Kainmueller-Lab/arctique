@@ -121,8 +121,8 @@ class BioMedicalScene:
         self.tissue_empty.name = 'tissue_empty'
         self.tissue_empty.hide_viewport = True
         self.tissue_empty.hide_render = True
-        self.tissue_empty.dimensions.x = self.size
-        self.tissue_empty.dimensions.y = self.size
+        # self.tissue_empty.dimensions.x = self.size
+        # self.tissue_empty.dimensions.y = self.size
         self.tissue_empty.scale.z = 0.95
 
         # add tissue empty for cytoplasm
@@ -228,7 +228,7 @@ class BioMedicalScene:
     
     def cut_cells(self):
         for cell in self.cell_objects:
-            if cell.name.startswith('Nucleus') or cell.name.startswith('Cytoplasm'):
+            if cell.name.startswith('Nucleus') or cell.name.startswith('Cytoplasm') or cell.name.startswith('Goblet'):
                 hm.shade_switch(cell, flat=True)  # NOTE!!! always before boolean shade flat
                 hm.apply_transform(cell)
                 hm.apply_transform(self.tissue_empty)
@@ -425,11 +425,13 @@ class BioMedicalScene:
         self.unhide_everything()
         #ph.reduce_single_masks(self.filepath, [cell_info_dict["Filename"] for cell_info_dict in self.cell_info])# reduce RGBA image to only alpha channel
         
-    def create_cell_info(self):    
+    def create_cell_info(self, additional_info = None):    
         ''''
         TODO add position in pixel
         TODO check if idx starts add 0 or 1 for color putting -> node setup
         create a list of dictionaries wich contains for each cell its type and ID 
+        Args:
+            additional_info: dictionary with additional information that should be stored for each cell
         ''' 
         self.cell_info = []
         unique_type_counter = 0
@@ -469,6 +471,8 @@ class BioMedicalScene:
                 "staining_color": cell_params["color"],
                 "staining_intensity": cell_params["staining_intensity"],
                 "location": loc_in_scene, "location_pixel": loc_in_pixel}
+            if additional_info is not None:
+                cell_info_tuple.update(additional_info)
             self.cell_info.append(cell_info_tuple)
 
         with open(Path(metadata_path).joinpath(f'metadata_{self.sample_name}.json'), 'w') as f:
@@ -692,7 +696,8 @@ class BioMedicalScene:
                max_samples = 10,
                n_slices = 10, 
                slice_thickness = None,
-               base_16bit = 55):
+               base_16bit = 55,
+               additional_info = None):
         '''
         filepath: the folder where all outputs will be stored
         scene: if true a png of the scene will be generated
@@ -716,7 +721,7 @@ class BioMedicalScene:
         
         # switch to non focus camera and switch material of nuclei
         self.camera.switch_to_mask_camera(self.scene)
-        self.create_cell_info()
+        self.create_cell_info(additional_info=additional_info)
         self.add_nuclei_mask(bpy.data.materials.get("nuclei_mask"))
 
         if semantic_mask: 
