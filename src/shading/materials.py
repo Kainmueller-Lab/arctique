@@ -18,7 +18,7 @@ imp.reload(shaders)
 class Material():
     def __init__(
             self, over_staining, seed=0, cell_type_params=None, tissue_rips=0.5, tissue_rips_curl=0.5,
-            tissue_rips_std=0.1, stroma_intensity=1, stroma_color=(0.55, 0.2, 0.46, 1.0),
+            tissue_rips_std=0.1, stroma_intensity=1, stroma_color=(0.55, 0.2, 0.46, 1.0), goblet_intensity=1,
             brightness=60, **kwargs):
         # delete all materials
         for material in bpy.data.materials:
@@ -34,7 +34,8 @@ class Material():
         rips = np.random.normal(tissue_rips, tissue_rips_std)
         self.muscosa = self.add_mucosa_staining(threshold_rips=1-rips, stroma_intensity=stroma_intensity, base_color=stroma_color, rips_turbulence=tissue_rips_curl)
         self.nuclei_mask = self.add_nuclei_mask()
-        self.crypt_staining = self.add_crypt_staining(staining_intensity=120*stroma_intensity, staining_irregularity=over_staining)
+        self.crypt_staining = self.add_crypt_staining(staining_intensity=120*stroma_intensity, staining_irregularity=over_staining, color=stroma_color)
+        self.goblet_staining = self.add_goblet_staining(name='Goblet_GOB' ,staining_intensity=120*stroma_intensity, voronoi_scale=50, color=stroma_color, goblet_intensity=goblet_intensity)
         self.cell_staining = []
         if cell_type_params is None:
             self.nuclei_staining = self.add_nuclei_staining(name="Nucleus")
@@ -79,6 +80,74 @@ class Material():
         # link nodes
         material_output = material.node_tree.nodes.get('Material Output')
         material.node_tree.links.new(principled_bsdf.outputs['BSDF'], material_output.inputs['Surface'])
+
+        return material
+    
+    def add_goblet_staining(
+            self, name="Goblet", color=(0.315, 0.003, 0.631, 1), staining_intensity=120, goblet_intensity=1, # min 0.4 max 5
+            voronoi_scale=50, start_pos=(0, 0), sep=200):
+        material, nodes, links = shading_utils.initialize_material(name)
+        
+        # add object centered coordinate system
+        node = coord = shading_utils.add_node_group(
+            nodes, self.custom_nodes.object_coord, pos=start_pos)
+        loc = node.location
+
+        # add noisy intensity
+        node = noise = nodes.new('ShaderNodeTexNoise')
+        node.inputs['Scale'].default_value = 31
+        node.inputs['Detail'].default_value = 10
+        node.inputs['Roughness'].default_value = 0.5
+        node.inputs['Distortion'].default_value = 0
+        loc = node.location = (loc[0]+sep, loc[1])
+        node = intensity = nodes.new('ShaderNodeValToRGB')
+        loc = node.location = (loc[0]+sep, loc[1])
+        node.color_ramp.elements[0].color = (0, 0, 0, 1)
+        node.color_ramp.elements[1].color = (1, 1, 1, 1)
+        node.color_ramp.elements[0].position = 0.48
+        links.new(coord.outputs[0], noise.inputs['Vector'])
+        links.new(noise.outputs[0], intensity.inputs[0])
+
+        # base voronoi pattern
+        node = voronoi = nodes.new('ShaderNodeTexVoronoi')
+        loc = voronoi.location = (loc[0]+sep, loc[1])
+        node.feature = 'DISTANCE_TO_EDGE'
+        node.inputs['Scale'].default_value = voronoi_scale
+        links.new(coord.outputs[0], voronoi.inputs['Vector'])
+        node = noisy_voronoi = nodes.new('ShaderNodeMath')
+        noisy_voronoi.operation = 'ADD'
+        loc = noisy_voronoi.location = (loc[0]+sep, loc[1])
+        links.new(intensity.outputs[0], noisy_voronoi.inputs[0])
+        links.new(voronoi.outputs[0], noisy_voronoi.inputs[1])
+
+        # sharpen and overall intensity
+        node = sharpen = nodes.new('ShaderNodeValToRGB')
+        loc = sharpen.location = (loc[0]+sep, loc[1])
+        node.color_ramp.elements[1].position = 0.15
+        node.color_ramp.elements[1].color = (0.8, 0.8, 0.8, 1)
+        node = intensity = nodes.new('ShaderNodeMath')
+        intensity.operation = 'MULTIPLY'
+        node.inputs[1].default_value = goblet_intensity
+        loc = intensity.location = (loc[0]+sep, loc[1])
+        links.new(noisy_voronoi.outputs[0], sharpen.inputs[0])
+        links.new(sharpen.outputs[0], intensity.inputs[0])
+
+        # add volume shader
+        node = volume = shading_utils.add_node_group(
+            nodes, self.custom_nodes.volume, pos=(loc[0]+sep, loc[1]))
+        loc = node.location
+        volume.inputs['AbsorptionColor'].default_value = color
+        volume.inputs['AbsorptionDensity'].default_value = staining_intensity
+        volume.inputs['ScatterDensity'].default_value = 30
+        node = add_structure = nodes.new('ShaderNodeMixShader')
+        loc = add_structure.location = (loc[0]+sep, loc[1])
+        links.new(volume.outputs[0], add_structure.inputs[1])
+        links.new(intensity.outputs[0], add_structure.inputs['Fac'])
+
+        # link nodes
+        node = material_output = nodes.new('ShaderNodeOutputMaterial')
+        loc = node.location = (loc[0]+sep, loc[1])
+        links.new(add_structure.outputs[0], material_output.inputs['Volume'])
 
         return material
 

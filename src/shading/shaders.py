@@ -13,17 +13,17 @@ imp.reload(shading_utils)
 
 
 class CustomShaderNodes():
-    def __init__(self, over_staining, start=(0, 0), sep=200, shift=(0, 0, 0), stroma_intensity=1, red_points_strength=0, border_fiber_length=0.7):
+    def __init__(self, over_staining, start=(0, 0), sep=200, shift=(0, 0, 0), stroma_intensity=1, red_points_strength=0, border_fiber_length=0.7, red_base=(0.605, 0.017, 0.043, 1)):
         self.shift = shift
         self.start = start
         self.sep = sep
         
         # general
         self.object_coord = self.add_object_coord(shift=self.shift)
-        self.addition = self.add_addition()
+        self.addition = self.add_addition(n=10)
         self.volume = self.add_volume()
         self.blood_cells_base = self.add_blood_cells_base()
-        self.mixing_red = self.add_mixing_red_points(strength=red_points_strength)
+        self.mixing_red = self.add_mixing_red_points(strength=red_points_strength, red_base=red_base)
         self.principle_noise = self.add_principle_noise()
         self.stacked_noise = self.add_stacked_noise()
         self.perlin_noise = self.add_perlin_noise()
@@ -36,9 +36,10 @@ class CustomShaderNodes():
         self.stacked_fibers = self.add_stacked_fibers(node_name='StackedFibersLarge')
         self.stacked_fibers_tissue = self.add_stacked_fibers(
             node_name='StackedFibersTissue',
-            scales=[0.7, 10.8, 12.8, 14.6, 15.3, 27.2, 32.5],
-            scale_distortions=[0.5, 35.9, 39, 22.1, 22.1, 22.1, 22.1],
-            scale_density_noises=[7.9, 8.7, 5, 5, 7.9, 6, 5])
+            scales=[0.7, 1, 10.8, 12.8, 14.6, 15.3, 27.2, 32.5],
+            scale_distortions=[0.5, 0.2, 35.9, 39, 22.1, 22.1, 22.1, 22.1],
+            scale_density_noises=[7.9, 7.9, 8.7, 5, 5, 7.9, 6, 5],
+            weights=[0.1, 0.05, 1, 1, 1, 1, 1, 1])
         self.fiber_network = self.add_fiber_network(fill=0.673*over_staining)
         self.border_fibers = self.add_border_fibers(length=border_fiber_length)
         self.lamina_propria_tissue_base = self.add_lamina_propria_tissue_base(stroma_intensity=stroma_intensity)
@@ -386,7 +387,8 @@ class CustomShaderNodes():
     def add_stacked_fibers(
             self, node_name='StackedFibers',
             scales=[5, 6, 1, 0.7], scale_distortions=[30, 30, 5, 0.5],
-            scale_density_noises=[5, 5, 5, 5]):
+            scale_density_noises=[5, 5, 5, 5],
+            weights=[0.1, 0.1, 0.1, 0.7]):
         '''
         Adds up multiple fiber nodes with different scales
         '''
@@ -400,6 +402,7 @@ class CustomShaderNodes():
 
         # add fiber nodes
         fibers = []
+        fiber_weights = []
         for i in range(len(scales)):
             node = fiber = shading_utils.add_node_group(
             nodes, self.fibers, pos=(loc[0]+self.sep, loc[1]))
@@ -407,14 +410,19 @@ class CustomShaderNodes():
             fiber.inputs['Scale'].default_value = scales[i]
             fiber.inputs['ScaleDistortion'].default_value = scale_distortions[i]
             fiber.inputs['ScaleDensityNoise'].default_value = scale_density_noises[i]
+            fiber_weight = nodes.new('ShaderNodeMath')
+            fiber_weight.operation = 'MULTIPLY'
+            fiber_weight.inputs[1].default_value = weights[i]
+            links.new(fiber.outputs[0], fiber_weight.inputs[0])
             fibers.append(fiber)
+            fiber_weights.append(fiber_weight)
 
         # add values
         node = add = shading_utils.add_node_group(
             nodes, self.addition, pos=(loc[0]+self.sep, loc[1]))
         loc = node.location
         for i, fiber in enumerate(fibers):
-            links.new(fiber.outputs[0], add.inputs[i])
+            links.new(fiber_weights[i].outputs[0], add.inputs[i])
             links.new(inputs.outputs[0], fiber.inputs['Density'])
         
         # connect to inputs and outputs
@@ -637,7 +645,7 @@ class CustomShaderNodes():
         node_group.outputs.new('NodeSocketFloat', 'Value')
         node_group.inputs.new('NodeSocketFloat', 'Density')  # uniform voronoi packed 
         node_group.inputs.new('NodeSocketFloat', 'Scale')
-        node_group.inputs['Density'].default_value = 18
+        node_group.inputs['Density'].default_value = 16.5
         loc = self.start
 
         # object centric coordinate system
@@ -692,7 +700,7 @@ class CustomShaderNodes():
 
         return node_group
     
-    def add_mixing_red_points(self, node_name='MixingRedPoints', strength=0.5):
+    def add_mixing_red_points(self, node_name='MixingRedPoints', strength=0.5, red_base=(0.605, 0.017, 0.043, 1)):
         node_group, inputs, outputs = shading_utils.create_node_group(node_name, start=self.start)
         nodes = node_group.nodes
         links = node_group.links
@@ -704,9 +712,9 @@ class CustomShaderNodes():
             nodes, self.volume,
             pos=(self.start[0]+self.sep, self.start[1]-1.5*self.sep))
         loc = node.location
-        node.inputs['AbsorptionColor'].default_value = (0.605, 0.017, 0.043, 1)
-        node.inputs['ScatterColor'].default_value = (0.605, 0.019, 0.088, 1)
-        node.inputs['AbsorptionDensity'].default_value = 125 * (1+0.3*strength)
+        node.inputs['AbsorptionColor'].default_value = red_base
+        node.inputs['ScatterColor'].default_value = (1, 1, 1, 1)
+        node.inputs['AbsorptionDensity'].default_value = 140
         node.inputs['ScatterDensity'].default_value = 0.6
         
         # object centric coordinate system

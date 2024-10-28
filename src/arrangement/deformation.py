@@ -7,6 +7,7 @@ import mathutils.noise as noise_blender
 import bpy
 
 from src.utils.geometry import subdivide
+import src.utils.helper_methods as hm
 
 # Permutation table for Perlin noise
 permutation = [151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233, 7, 225,
@@ -139,7 +140,9 @@ def deform_objects(obj_list, deformation_strength=0.25): # TODO add tuple / prop
         for v in obj.data.vertices:
             rad = (obj.matrix_world @ v.co - centroid).length
             v.co = v.co + deformation(v.co, parameters) * rad * deformation_strength
-        subdivide(obj, 1)
+        #subdivide(obj, 1, viewport=False, apply=False)
+    hm.subdivide_list(obj_list, level=1)
+    hm.convert2mesh_list(obj_list)
     print(f"Deformed {len(obj_list)} objects in {time.time() - start} seconds")
 
 

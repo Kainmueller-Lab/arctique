@@ -168,6 +168,16 @@ def convert2mesh_list(obj_list):
     if len(obj_list) > 0:
         bpy.ops.object.convert(target='MESH')
 
+def subdivide_list(obj_list, level, type='CATMULL_CLARK'):
+    '''
+    subdivides a list of objects
+    '''
+    bpy.ops.object.select_all(action='DESELECT')
+    for obj in obj_list:
+        obj.select_set(True)
+        bpy.context.view_layer.objects.active = obj
+    if len(obj_list) > 0:
+        bpy.ops.object.subdivision_set(level=level, relative=False)#, type=type)
 
 def apply_transform(obj):
     '''

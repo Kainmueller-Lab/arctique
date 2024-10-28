@@ -74,7 +74,7 @@ class Camera:
 class LightSource:
     def __init__(self, material, name='lightsource'):
         # create mesh
-        bpy.ops.mesh.primitive_plane_add(size=1.28, location=(0, 0, -0.2))
+        bpy.ops.mesh.primitive_plane_add(size=2, location=(0, 0, -0.2))
         self.light_source = bpy.context.active_object
 
         # add shading
@@ -310,8 +310,12 @@ class BioMedicalScene:
         print(self.cell_params)
 
     def add_arrangement(self, cell_arrangement: arr.CellArrangement, bounding_mesh=None):
+        t = time.time()
         self.arrangements.append(cell_arrangement)
+        print('time to add arrangement:', time.time()-t)
+        t = time.time()
         cell_arrangement.add()
+        print('time to add cells:', time.time()-t)
         print(f"Added arrangement {cell_arrangement.name} with {len(cell_arrangement.objects)} objects.")
         self.nuclei_objects = self.nuclei_objects + cell_arrangement.nuclei # TODO change that to just access per name since we will have more and more cell parts
         self.cytoplasm_objetcs = self.cytoplasm_objetcs + cell_arrangement.cytoplasm
@@ -712,6 +716,8 @@ class BioMedicalScene:
         self.filepath = filepath        
         bpy.app.handlers.render_complete.append(fn_print_time_when_render_done)
         self.base_16bit = base_16bit
+        #bpy.context.scene.cycles.volume_step_rate = 5
+        bpy.context.scene.cycles.volume_max_steps = 256
 
         if scene: 
             print("rendering scene")

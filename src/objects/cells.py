@@ -51,8 +51,8 @@ class PLA(CellAttribute):
     def __init__(self):
         super().__init__()
         self.cell_type = CellType.PLA
-        self.size = 0.058 # 0.9
-        self.nucleus_size = 0.038
+        self.size = 0.053 # 0.9
+        self.nucleus_size = 0.035
         self.scale = (1,0.8,0.7) # (1, 0.6, 0.5)
         self.deformation_strength = 0.4 # 0.7
         self.attribute_name = "Plasma Cell"
@@ -69,7 +69,7 @@ class PLA(CellAttribute):
         cytoplasm.scale = self.scale
 
         # Add nucleus
-        bpy.ops.mesh.primitive_ico_sphere_add(radius=self.nucleus_size)
+        bpy.ops.mesh.primitive_ico_sphere_add(radius=self.nucleus_size, subdivisions=2)
         nucleus = bpy.context.active_object
         #deform_mesh(nucleus, self)
         #subdivide(nucleus, self.subdivision_levels, apply=apply_subdivide)
@@ -90,7 +90,7 @@ class LYM(CellAttribute):
         self.max_bending_strength = 0.2
     
     def add_cell_objects(self, location, direction, apply_subdivide=False):
-        bpy.ops.mesh.primitive_ico_sphere_add(radius=self.size)
+        bpy.ops.mesh.primitive_ico_sphere_add(radius=self.size, subdivisions=2)
         nucleus = bpy.context.active_object
         #deform_mesh(nucleus, self)
         #subdivide(nucleus, self.subdivision_levels, apply=apply_subdivide)
@@ -104,7 +104,7 @@ class EOS(CellAttribute):
         super().__init__()
         self.cell_type = CellType.EOS
         self.size = 0.045
-        self.nucleus_size = 0.02
+        self.nucleus_size = 0.025
         self.scale = (1,1,1)
         self.deformation_strength = 0.2
         self.attribute_name = "Eosinophil"
@@ -172,7 +172,7 @@ class EPI(CellAttribute):
     def __init__(self):
         super().__init__()
         self.cell_type = CellType.EPI
-        self.size = 0.033
+        self.size = 0.025#0.033
         self.attribute_name = "Epithelial Cell"
         self.smooth_factor = 2 # (float 1) Controls the roundness of the object. 0 = identical to surrounding mesh, the higher this number, the rounder the mesh.
         self.smooth_roundness = 2 # (int, 2) Controls the size of objects, the higher this number, the smaller the mesh. Should be at least 2.
@@ -184,7 +184,7 @@ class GOB(CellAttribute):
     def __init__(self):
         super().__init__()
         self.cell_type = CellType.GOB
-        self.size = 0.1
+        self.size = 0.08#0.01
         self.attribute_name = "Goblet Cell"
         self.smooth_factor = 1.5 # (float, 1) Controls the roundness of the object. 0 = identical to surrounding mesh, the higher this number, the rounder the mesh.
         self.smooth_roundness = 2 # (int, 2) Controls the size of objects, the higher this number, the smaller the mesh. Should be at least 2.

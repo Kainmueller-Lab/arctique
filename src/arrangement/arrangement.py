@@ -126,7 +126,7 @@ class VoronoiFill(CellArrangement):
         self.bounding_box = bounding_box
         self.attribute = CellAttribute.from_type(self.type)
         self.radius = self.attribute.size
-        self.max_count = 500 # NOTE: The volume will be filled up with maximally this number of nuclei
+        self.max_count = 1000 # NOTE: The volume will be filled up with maximally this number of nuclei
         self.surface_subdivision_levels = 2 # NOTE: Increase this for finer subdvision and more quasi-random placement, but will be slower
         self.add_nuclei() 
 
@@ -177,6 +177,7 @@ class VoronoiFill(CellArrangement):
             print('deleted compartments', len(deleted_objects))
 
         # Place nuclei
+        placed_nuclei = []
         for idx, obj in enumerate(region_objects):
             remove_loose_vertices(obj) # NOTE: For some strange reason the intersection with "FAST" solver leads to ca 1000 loose vertices per region. - ck
             prism_coords = [obj.matrix_world @ v.co for v in obj.data.vertices]
@@ -188,16 +189,21 @@ class VoronoiFill(CellArrangement):
             nucleus = bpy.context.active_object
             shrinkwrap(obj, nucleus, apply=False, viewport=True)
             smoothen_object(nucleus, self.attribute.smooth_factor, self.attribute.smooth_roundness, apply=False, viewport=True)
-            subdivide(nucleus, self.attribute.subdivision_levels, apply=False, viewport=True)
+            #subdivide(nucleus, self.attribute.subdivision_levels, apply=False, viewport=False)
 
             if self.type.name == "GOB":
                 nucleus.name = f"Goblet_Type_{self.type.name}_{idx}"
             else:
                 nucleus.name = f"Nucleus_Type_{self.type.name}_{idx}"
+            placed_nuclei.append(nucleus)
             self.objects.append(nucleus)
             self.nuclei.append(nucleus)
         convert2mesh_list(self.objects)
         remove_objects(region_objects + [surface_obj])
+
+        # add subdivision at once
+        hm.subdivide_list(placed_nuclei, self.attribute.subdivision_levels)
+        convert2mesh_list(placed_nuclei)
 
         print('part 2 done')
 
