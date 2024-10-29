@@ -1,5 +1,32 @@
 import bpy
 import numpy as np
+import colorsys
+
+def hsv_shift(rgb, hsv_shift):
+    """
+    Adjusts RGB values based on HSV shifts.
+    
+    Parameters:
+    r, g, b (float): Original RGB values (0 to 1 range).
+    hue_shift (float): Amount to shift the hue (0 to 1, wraps around).
+    saturation_shift (float): Amount to shift the saturation (-1 to 1).
+    value_shift (float): Amount to shift the value (-1 to 1).
+    
+    Returns:
+    tuple: Adjusted RGB values (0 to 1 range).
+    """
+    # Convert RGB to HSV
+    h, s, v = colorsys.rgb_to_hsv(rgb[0], rgb[1], rgb[2])
+    
+    # Apply HSV shifts
+    h = (h + hsv_shift[0]) % 1.0  # Wrap hue within [0, 1] range
+    s = max(0.0, min(1.0, s + hsv_shift[1]))  # Clamp saturation between [0, 1]
+    v = max(0.0, min(1.0, v + hsv_shift[2]))  # Clamp value between [0, 1]
+    
+    # Convert back to RGB
+    r_adj, g_adj, b_adj = colorsys.hsv_to_rgb(h, s, v)
+    
+    return r_adj, g_adj, b_adj
 
 
 def clear_scene():

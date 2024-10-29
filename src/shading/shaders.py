@@ -13,7 +13,7 @@ imp.reload(shading_utils)
 
 
 class CustomShaderNodes():
-    def __init__(self, over_staining, start=(0, 0), sep=200, shift=(0, 0, 0), stroma_intensity=1, red_points_strength=0, border_fiber_length=0.7, red_base=(0.605, 0.017, 0.043, 1)):
+    def __init__(self, over_staining, start=(0, 0), sep=200, shift=(0, 0, 0), stroma_intensity=1, red_points_strength=0.0, border_fiber_length=0.7, red_base=(0.605, 0.017, 0.043, 1)):
         self.shift = shift
         self.start = start
         self.sep = sep

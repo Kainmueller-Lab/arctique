@@ -1,6 +1,6 @@
 #!/bin/bash
 START_BASE=0
-N_SAMPLES=5
+N_SAMPLES=50
 BASE_16BIT=257
 INDEX_FILE="missing_renders.txt"
 

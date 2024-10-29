@@ -39,7 +39,7 @@ class VolumeFill(CellArrangement):
     Ratios of corresponding types must be given and determine how many nuclei of each type should be placed.
     If strict_boundary is set to true, nuclei objects will be placed only inside the mesh, otherwise only their locations will be inside the mesh.
     '''
-    def __init__(self, mesh, density, types, ratios, seed=None):
+    def __init__(self, mesh, density, types, ratios, seed=None, rescaling=0):
         """
         Initializes a CellArrangement object with the given parameters.
         Fills a volume with randomly placed nuclei of different types without intersection.
@@ -106,7 +106,7 @@ class VolumeFill(CellArrangement):
 
 
 class VoronoiFill(CellArrangement):
-    def __init__(self, mesh_obj, surface_obj, type, bounding_box=None):
+    def __init__(self, mesh_obj, surface_obj, type, bounding_box=None, rescaling=0):
         """
         Initializes a CellArrangement object with the given parameters.
         Takes as input a mesh_obj which needs to consist of an outer and an inner wall mesh, e.g. an annulus.
@@ -125,7 +125,7 @@ class VoronoiFill(CellArrangement):
         self.type = type
         self.bounding_box = bounding_box
         self.attribute = CellAttribute.from_type(self.type)
-        self.radius = self.attribute.size
+        self.radius = self.attribute.size*(1+rescaling)
         self.max_count = 1000 # NOTE: The volume will be filled up with maximally this number of nuclei
         self.surface_subdivision_levels = 2 # NOTE: Increase this for finer subdvision and more quasi-random placement, but will be slower
         self.add_nuclei() 

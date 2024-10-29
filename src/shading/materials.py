@@ -19,7 +19,7 @@ class Material():
     def __init__(
             self, over_staining, seed=0, cell_type_params=None, tissue_rips=0.5, tissue_rips_curl=0.5,
             tissue_rips_std=0.1, stroma_intensity=1, stroma_color=(0.55, 0.2, 0.46, 1.0), goblet_intensity=1,
-            brightness=60, **kwargs):
+            brightness=60, darker_crypts=0, **kwargs):
         # delete all materials
         for material in bpy.data.materials:
             bpy.data.materials.remove(material)
@@ -34,7 +34,7 @@ class Material():
         rips = np.random.normal(tissue_rips, tissue_rips_std)
         self.muscosa = self.add_mucosa_staining(threshold_rips=1-rips, stroma_intensity=stroma_intensity, base_color=stroma_color, rips_turbulence=tissue_rips_curl)
         self.nuclei_mask = self.add_nuclei_mask()
-        self.crypt_staining = self.add_crypt_staining(staining_intensity=120*stroma_intensity, staining_irregularity=over_staining, color=stroma_color)
+        self.crypt_staining = self.add_crypt_staining(staining_intensity=(1+darker_crypts)*120*stroma_intensity, staining_irregularity=over_staining, color=stroma_color)
         self.goblet_staining = self.add_goblet_staining(name='Goblet_GOB' ,staining_intensity=120*stroma_intensity, voronoi_scale=50, color=stroma_color, goblet_intensity=goblet_intensity)
         self.cell_staining = []
         if cell_type_params is None:

@@ -66,7 +66,6 @@ def parse_dataset_args():
     parser.add_argument("--nucleus-color", type=tuple, default=(0.315, 0.003, 0.48, 1), help="Tissue location")
     parser.add_argument("--color-variation", type=tuple, default=(0.0, 0.0, 0.0), help="std of HSV color variation")
     parser.add_argument("--red-base", type=tuple, default=(0.605, 0.017, 0.216, 1), help="Tissue location")
-    parser.add_argument("--red-shift", type=tuple, default=(1, 1), help="(min, max) Tissue location")
     parser.add_argument("--tissue-location", type=tuple, default=(0, 0, 0.5), help="Tissue location")
     parser.add_argument("--tissue-padding", type=float, default=0.15, help="Tissue padding")  # 0.2
     parser.add_argument("--tissue-rips", type=float, default=0.5, help="Degree of rip like structures in tissue")
@@ -80,6 +79,7 @@ def parse_dataset_args():
     parser.add_argument("--over-staining", type=tuple, default=(0.2, 1), help="Degree of overstaining")
     parser.add_argument("--goblet-intensity", type=tuple, default=(0, 1), help="Degree goblet cell staining")
     parser.add_argument("--nuclei-deformation", type=float, default=1, help="Degree of nuclei deformation")
+    parser.add_argument("--darker-crypts", type=float, default=0.0, help="Degree of nuclei deformation")
 
     # nuclei
     parser.add_argument("--epi-number", type=int, default=300, help="number of surface cells") # 150
@@ -90,7 +90,7 @@ def parse_dataset_args():
     parser.add_argument("--delete-fraction", type=list, default=[0, 0, 0, 0, 0], help="ratios of different cell types")
     parser.add_argument("--nuclei-intensity", type=float, default=0.7, help="overall intensity of nuclei") # TODO
     parser.add_argument("--mix-factor", type=float, default=0, help="overall intensity of nuclei") # TODO
-    parser.add_argument("--epi-rescaling", type=int, default=0, help="overall intensity of nuclei") # TODO
+    parser.add_argument("--epi-rescaling", type=float, default=0, help="overall intensity of nuclei") # TODO
     parser.add_argument("--mix-cyto", type=float, default=0, help="overall intensity of nuclei") # TODO
     parser.add_argument("--red-points-strength", type=float, default=0, help="Degree of rip like structures in tissue")
     
@@ -111,8 +111,8 @@ def uniform_sample(min, max, seed=0):
 
 
 def create_scene(
-        tissue_thickness = 0.05, tissue_size = 1.28, tissue_location = (0, 0, 0.5),
-        tissue_thickness_lb = 0.05, scale_scene = 1.15, 
+        tissue_thickness = 0.05, tissue_size = 1.28, tissue_location = (0, 0, 0.5), color_variation = (0, 0, 0),
+        tissue_thickness_lb = 0.05, scale_scene = 1.15, epi_rescaling = 0, red_shift = (1, 1), darker_crypts = 0,
         light_source_brightness = 60, adaptiv_brightness = True, tissue_color = (0.409, 0.215, 0.430, 1),
         nucleus_color = (0.315, 0.003, 0.531, 1), red_points_strength = 0, red_base = (0.605, 0.017, 0.216, 1),
         tissue_rips = -0.5, tissue_rips_std = 0.1, tissue_rips_curl = (0, 1),
@@ -154,6 +154,14 @@ def create_scene(
     over_staining = uniform_sample(over_staining[0], over_staining[1], seed=seed)
     goblet_intensity = (0.7 + uniform_sample(0, goblet_intensity[1]-goblet_intensity[0], seed=seed)*1.3)*over_staining + 2*(1-over_staining)
 
+    # color shifts of all colors
+    tissue_color = (hm.hsv_shift(tissue_color[:-1], color_variation)) + (tissue_color[-1],)
+    nucleus_color = (hm.hsv_shift(nucleus_color[:-1], color_variation)) + (nucleus_color[-1],)
+    red_base = (hm.hsv_shift(red_base[:-1], color_variation)) + (red_base[-1],)
+
+    # scale red shift
+    red_base = interpolate(red_shift[0], red_base, tissue_color) 
+
     # 1) initialize microscope objects and add to scene
     start = time.time()
     params_cell_shading = {
@@ -173,7 +181,7 @@ def create_scene(
         over_staining=over_staining,
         seed=seed, cell_type_params=params_cell_shading, tissue_rips=tissue_rips, tissue_rips_curl=tissue_rips_curl, red_base=red_base,
         tissue_rips_std=tissue_rips_std, stroma_intensity=stroma_intensity, goblet_intensity=goblet_intensity, stroma_color=tissue_color,
-        brightness=light_source_brightness, red_points_strength=red_points_strength)#over_staining)
+        brightness=light_source_brightness, red_points_strength=red_points_strength, darker_crypts=darker_crypts)#over_staining)
     print(tissue_location)
     my_tissue = tissue.Tissue(
         my_materials.muscosa, thickness=tissue_thickness,
@@ -232,7 +240,7 @@ def create_scene(
     # add epi volume filling
     start = time.time()
     crypt_goblet = arr.VoronoiFill(vol_goblet, ext_stroma, cells.CellType.GOB)
-    crypt_fill = arr.VoronoiFill(crypt_vol_1, ext_stroma, cells.CellType.EPI)
+    crypt_fill = arr.VoronoiFill(crypt_vol_1, ext_stroma, cells.CellType.EPI, rescaling=epi_rescaling)
     my_scene.add_arrangement(crypt_fill, my_scene.tissue_empty) # NOTE: 200 nuclei take about 40 s
     my_scene.add_arrangement(crypt_goblet, my_scene.tissue_empty)
     end = time.time()
@@ -498,6 +506,15 @@ def main():
         with open(dir_parameters+f'/parameters_{i+1}.json', 'w') as outfile:
             json.dump(paramters, outfile)
         my_scene, rand_params = create_scene(**paramters)
+
+        if args.save_scene:
+            if not os.path.exists(render_path + '/scenes'):
+                os.makedirs(render_path + '/scenes')
+            bpy.ops.wm.save_as_mainfile(
+                filepath=render_path + f'/scenes/scene_{i+1}.blend', check_existing=False)
+            with open(render_path + f'/scenes/scene_{i+1}.pkl', 'wb') as f:
+                pickle.dump(my_scene, f,  pickle.HIGHEST_PROTOCOL)
+
         render_scene(
             my_scene, render_path, i+1, gpu=args.gpu, device=args.gpu_device,
             base_16bit=args.base_16bit, additional_info=rand_params)
