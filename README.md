@@ -30,6 +30,8 @@ pip install -r requirements.txt
 
 done :sparkles: Now we can use blender without the need to install the full suite.
 
+We ensure functionality on Linux and Windows.
+
 
 ## Quickstart
 
