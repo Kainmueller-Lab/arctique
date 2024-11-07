@@ -14,17 +14,18 @@ if not dir in sys.path:
     sys.path.append(dir)
 
 import src.arrangement.arrangement as arr 
+import src.arrangement.surface_filling as sf
 import src.objects.cells as cells
 import src.objects.tissue as tissue
 import src.shading.materials as materials
 import src.scene as scene
 import src.utils as utils
 import src.utils.geometry as geom
-import src.utils.surface_filling as sf
 import src.objects.tissue_architecture as arch
 import src.utils.helper_methods as hm
 import src.utils.geometry as geo
 import src.objects.cells as cells
+import src.arrangement.deformation as defo
 
 # this next part forces a reload in case you edit the source after you first start the blender session
 #import imp
@@ -53,35 +54,44 @@ def parse_dataset_args():
     parser.add_argument("--start-idx", type=int, default=0, help="Dataset size")
     parser.add_argument("--index-list", type=str, default='', help="ony considered if len>1, List of indices to render")
     parser.add_argument("--n-samples", type=int, default=100, help="Dataset size")
-    parser.add_argument("--base-16bit", type=int, default=55, help="Output shape")
+    parser.add_argument("--base-16bit", type=int, default=55, help="Base for 16 bit images (55 or 257)")
 
     # DATASET PARAMETERS
     # tissue parameters (when adaptive they orientate at a default tissue thickness of 0.05 and a default tissue size of 1.28)
     parser.add_argument("--tissue-thickness", type=float, default=0.05, help="Tissue thickness")
-    parser.add_argument("--tissue-thickness_lb", type=float, default=0.02, help="Tissue thickness")
-    parser.add_argument("--tissue-size", type=float, default=1.28, help="Tissue size")
-    parser.add_argument("--tissue-color", type=tuple, default=(0.409, 0.215, 0.430, 1), help="Tissue location")
+    parser.add_argument("--tissue-thickness_lb", type=float, default=0.025, help="Tissue thickness")
+    parser.add_argument("--tissue-size", type=float, default=1.28, help="Tissue size in 100 microns")  # 1.28
+    parser.add_argument("--scale_scene", type=tuple, default=1.15, help="Scale scene (to adapt to different cell scalings)")
+    parser.add_argument("--tissue-color", type=tuple, default=(0.64, 0.347, 0.642, 1), help="Tissue location")
     parser.add_argument("--nucleus-color", type=tuple, default=(0.315, 0.003, 0.48, 1), help="Tissue location")
+    parser.add_argument("--color-variation", type=tuple, default=(0.0, 0.0, 0.0), help="std of HSV color variation")
+    parser.add_argument("--red-base", type=tuple, default=(0.605, 0.017, 0.216, 1), help="Tissue location")
+    parser.add_argument("--red-shift", type=tuple, default=(1, 1), help="...")
     parser.add_argument("--tissue-location", type=tuple, default=(0, 0, 0.5), help="Tissue location")
     parser.add_argument("--tissue-padding", type=float, default=0.15, help="Tissue padding")  # 0.2
-    parser.add_argument("--tissue-rips", type=float, default=0, help="Degree of rip like structures in tissue")
-    parser.add_argument("--tissue-rips-std", type=float, default=0.2, help="Degree of rip like structures in tissue")
+    parser.add_argument("--tissue-rips", type=float, default=0.5, help="Degree of rip like structures in tissue")
+    parser.add_argument("--tissue-rips-std", type=float, default=0.25, help="Degree of rip like structures in tissue")
+    parser.add_argument("--tissue-rips-curl", type=tuple, default=(0, 1), help="(min ,max) Degree of rip curl")
     parser.add_argument("--stroma-intensity", type=float, default=0.7, help="Degree of rip like structures in tissue")
     parser.add_argument("--noise-seed-shift", type=float, default=0, help="Degree of rip like structures in tissue")
     parser.add_argument("--light-source-brightness", type=float, default=32, help="Degree of rip like structures in tissue")
     parser.add_argument("--adaptiv-brightness", type=bool, default=True, help="Use GPU for rendering")
     parser.add_argument("--focal-offset", type=float, default=0, help="Degree of rip like structures in tissue")
+    parser.add_argument("--over-staining", type=tuple, default=(0.2, 1), help="Degree of overstaining")
+    parser.add_argument("--goblet-intensity", type=tuple, default=(0, 1), help="Degree goblet cell staining")
+    parser.add_argument("--nuclei-deformation", type=float, default=1, help="Degree of nuclei deformation")
+    parser.add_argument("--darker-crypts", type=float, default=0.0, help="Degree of nuclei deformation")
 
     # nuclei
-    parser.add_argument("--epi-number", type=int, default=150, help="number of surface cells") # 150
+    parser.add_argument("--epi-number", type=int, default=300, help="number of surface cells") # 150
     parser.add_argument("--filler-scale", type=float, default=0.8, help="Scale of the size of smaller filler nuclei w.r.t to the original nuclei size")
     parser.add_argument("--stroma-density", type=int, default= 1, help="density in stroma") # 0.5, 1200
-    parser.add_argument("--ratios", type=list, default=[0, 0.25, 0.45, 0.15, 0.15], help="ratios of different cell types")
+    parser.add_argument("--ratios", type=list, default=[0, 0.2, 0.4, 0.2, 0.2], help="ratios of different cell types (MIX, PLA, LYM, EOS, FIB); LYM should be at least 0.8 for best results")
     parser.add_argument("--surf_scale", type=tuple, default=(0.8, 0.5, 1), help="Surface scale")
     parser.add_argument("--delete-fraction", type=list, default=[0, 0, 0, 0, 0], help="ratios of different cell types")
-    parser.add_argument("--nuclei-intensity", type=float, default=1, help="overall intensity of nuclei") # TODO
+    parser.add_argument("--nuclei-intensity", type=float, default=0.7, help="overall intensity of nuclei") # TODO
     parser.add_argument("--mix-factor", type=float, default=0, help="overall intensity of nuclei") # TODO
-    parser.add_argument("--epi-rescaling", type=int, default=0, help="overall intensity of nuclei") # TODO
+    parser.add_argument("--epi-rescaling", type=float, default=0, help="overall intensity of nuclei") # TODO
     parser.add_argument("--mix-cyto", type=float, default=0, help="overall intensity of nuclei") # TODO
     parser.add_argument("--red-points-strength", type=float, default=0, help="Degree of rip like structures in tissue")
     
@@ -102,13 +112,14 @@ def uniform_sample(min, max, seed=0):
 
 
 def create_scene(
-        tissue_thickness = 0.05, tissue_size = 1.28, tissue_location = (0, 0, 0.5),
-        tissue_thickness_lb = 0.05, 
-        light_source_brightness = 60, adaptiv_brightness = True,
-        nucleus_color = (0.315, 0.003, 0.531, 1), red_points_strength = 0,
-        tissue_rips = -0.5, tissue_rips_std = 0.1, nuclei_intensity = 1, mix_cyto = 0,
+        tissue_thickness = 0.05, tissue_size = 1.28, tissue_location = (0, 0, 0.5), color_variation = (0, 0, 0),
+        tissue_thickness_lb = 0.05, scale_scene = 1.15, epi_rescaling = 0, red_shift = (1, 1), darker_crypts = 0,
+        light_source_brightness = 60, adaptiv_brightness = True, tissue_color = (0.409, 0.215, 0.430, 1),
+        nucleus_color = (0.315, 0.003, 0.531, 1), red_points_strength = 0, red_base = (0.605, 0.017, 0.216, 1),
+        tissue_rips = -0.5, tissue_rips_std = 0.1, tissue_rips_curl = (0, 1),
+        nuclei_intensity = 1, mix_cyto = 0, over_staining = (0, 1), goblet_intensity = (0.5, 2),
         tissue_padding = 0.5, epi_count = 80, stroma_density = 0.5, mix_factor = 0, stroma_intensity = 1,
-        ratios = [0, 0.3, 0.4, 0.2, 0.1], focal_offset = 0,
+        ratios = [0, 0.1, 0.8, 0.06, 0.04], focal_offset = 0, 
         seed=0, **kwargs):
     '''
     creates a tissue crop with cells and nuclei
@@ -128,8 +139,11 @@ def create_scene(
     '''
     scene.BioMedicalScene.clear()
 
+    params = {}
+
     # 0) parameters for variations
-    base_intensity = 100*(1-nuclei_intensity)
+    base_intensity = 120*(1-nuclei_intensity)
+    tissue_size = tissue_size*scale_scene
     cells.initialize_mixing_attribute(mix_factor)
     if tissue_thickness != tissue_thickness_lb:
         tissue_thickness = uniform_sample(tissue_thickness_lb, tissue_thickness, seed=seed)
@@ -137,32 +151,46 @@ def create_scene(
     if adaptiv_brightness:
         light_source_brightness = (light_source_brightness)**(0.01/0.05*tissue_thickness/0.01)
         print(f"Adaptiv brightness: {light_source_brightness}")
+    tissue_rips_curl = uniform_sample(tissue_rips_curl[0], tissue_rips_curl[1], seed=seed)
+    over_staining = uniform_sample(over_staining[0], over_staining[1], seed=seed)
+    goblet_intensity = (0.7 + uniform_sample(0, goblet_intensity[1]-goblet_intensity[0], seed=seed)*1.3)*over_staining + 2*(1-over_staining)
+
+    # color shifts of all colors
+    tissue_color = (hm.hsv_shift(tissue_color[:-1], color_variation)) + (tissue_color[-1],)
+    nucleus_color = (hm.hsv_shift(nucleus_color[:-1], color_variation)) + (nucleus_color[-1],)
+    red_base = (hm.hsv_shift(red_base[:-1], color_variation)) + (red_base[-1],)
+
+    # scale red shift
+    red_base = interpolate(red_shift[0], red_base, tissue_color) 
 
     # 1) initialize microscope objects and add to scene
     start = time.time()
     params_cell_shading = {
         'PLA': {
-            'Nucleus': {'name': 'Nucleus_PLA', 'color': nucleus_color, 'staining_intensity': 300*nuclei_intensity},
-            'Cytoplasm': {'name': 'Cytoplasm_PLA', 'color': (0.456, 0.011, 0.356, 1), 'staining_intensity': 200}},
+            'Nucleus': {'name': 'Nucleus_PLA', 'color': nucleus_color, 'staining_intensity': 250*nuclei_intensity+base_intensity},
+            'Cytoplasm': {'name': 'Cytoplasm_PLA', 'color': tissue_color, 'staining_intensity': 240}},
         'LYM': {
-            'Nucleus': {'name': 'Nucleus_LYM', 'color': interpolate(nuclei_intensity, nucleus_color), 'staining_intensity': 350*nuclei_intensity+base_intensity},},
+            'Nucleus': {'name': 'Nucleus_LYM', 'color': interpolate(nuclei_intensity, nucleus_color), 'staining_intensity': 400*nuclei_intensity+base_intensity},},
         'EOS': {
-            'Nucleus': {'name': 'Nucleus_EOS', 'color': nucleus_color, 'staining_intensity': 350*nuclei_intensity},
-            'Cytoplasm': {'name': 'Cytoplasm_EOS', 'color': interpolate(1-mix_cyto, (0.605, 0.017, 0.043, 1), (0.456, 0.011, 0.356, 1)), 'staining_intensity': 200}},
+            'Nucleus': {'name': 'Nucleus_EOS', 'color': nucleus_color, 'staining_intensity': 350*nuclei_intensity+base_intensity},
+            'Cytoplasm': {'name': 'Cytoplasm_EOS', 'color': interpolate(1-mix_cyto, red_base, tissue_color), 'staining_intensity': 200}},
         'FIB': {
-            'Nucleus': {'name': 'Nucleus_FIB', 'color': interpolate(nuclei_intensity, nucleus_color), 'staining_intensity': 270*nuclei_intensity+base_intensity},},
+            'Nucleus': {'name': 'Nucleus_FIB', 'color': interpolate(nuclei_intensity, nucleus_color), 'staining_intensity': 290*nuclei_intensity+base_intensity},},
         'EPI': {
-            'Nucleus': {'name': 'Nucleus_EPI', 'color': interpolate(nuclei_intensity, nucleus_color), 'staining_intensity': 100*nuclei_intensity}}}
+            'Nucleus': {'name': 'Nucleus_EPI', 'color': interpolate(nuclei_intensity, nucleus_color), 'staining_intensity': 290*nuclei_intensity+base_intensity}}}
     my_materials = materials.Material(
-        seed=seed, cell_type_params=params_cell_shading, tissue_rips=tissue_rips, 
-        tissue_rips_std=tissue_rips_std, stroma_intensity=stroma_intensity,
-        brightness=light_source_brightness, red_points_strength=red_points_strength)
+        over_staining=over_staining,
+        seed=seed, cell_type_params=params_cell_shading, tissue_rips=tissue_rips, tissue_rips_curl=tissue_rips_curl, red_base=red_base,
+        tissue_rips_std=tissue_rips_std, stroma_intensity=stroma_intensity, goblet_intensity=goblet_intensity, stroma_color=tissue_color,
+        brightness=light_source_brightness, red_points_strength=red_points_strength, darker_crypts=darker_crypts)#over_staining)
     print(tissue_location)
     my_tissue = tissue.Tissue(
         my_materials.muscosa, thickness=tissue_thickness,
-        size=tissue_size, location=tissue_location)
+        size=tissue_size+tissue_padding/2, location=tissue_location)
     my_light_source = scene.LightSource(material=my_materials.light_source)
-    my_camera = scene.Camera(focus_pos=0.6221+(tissue_thickness*(1+focal_offset)-0.05))
+    my_camera = scene.Camera(
+        focus_pos=0.6221+(tissue_thickness*(1+focal_offset)-0.05),
+        size=tissue_size)
     my_scene = scene.BioMedicalScene(my_light_source, my_camera)
     my_scene.add_cell_params(params_cell_shading)
     my_scene.add_tissue(tissue=my_tissue.tissue)
@@ -198,6 +226,10 @@ def create_scene(
     elapsed_old = elapsed
     elapsed = time.time() - start
     print(f"Architecture bound took {elapsed-elapsed_old} s")
+    # for obj in [crypt_vol_2]:
+    #     if obj.type == 'MESH':
+    #         obj_name = obj.name
+    #         defo.elastic_deform(obj_name, deformation_strength=0.01, noise_scale=8, seed=seed)
     hm.add_boolean_modifier(mucosa_fill, crypt_vol_2, name='add epi to stroma', apply=True)
     elapsed_old = elapsed
     elapsed = time.time() - start 
@@ -209,7 +241,7 @@ def create_scene(
     # add epi volume filling
     start = time.time()
     crypt_goblet = arr.VoronoiFill(vol_goblet, ext_stroma, cells.CellType.GOB)
-    crypt_fill = arr.VoronoiFill(crypt_vol_1, ext_stroma, cells.CellType.EPI)
+    crypt_fill = arr.VoronoiFill(crypt_vol_1, ext_stroma, cells.CellType.EPI, rescaling=epi_rescaling)
     my_scene.add_arrangement(crypt_fill, my_scene.tissue_empty) # NOTE: 200 nuclei take about 40 s
     my_scene.add_arrangement(crypt_goblet, my_scene.tissue_empty)
     end = time.time()
@@ -224,13 +256,41 @@ def create_scene(
         cells.CellType.LYM, 
         cells.CellType.EOS, 
         cells.CellType.FIB]
-    volume_fill = arr.VolumeFill(
-        mucosa_fill, stroma_density, MIX_TYPES, ratios, strict_boundary=True, seed=seed)
+    volume_fill = arr.VolumeFill(mucosa_fill, stroma_density, MIX_TYPES, ratios, seed=seed)
     my_scene.add_arrangement(volume_fill, bounding_mesh=mucosa_fill) # NOTE: 240 nuclei take about 20 s
     end = time.time()
     print(f"Volume filling took {end - start} s")
 
+    # Deform tissue
+    # apply simple subdivision to smooth the surface
+    # hm.subdivide_list([mucosa_fill, crypt_vol_2], 1, type='SIMPLE')
+    # hm.subdivide_object(mucosa_fill, 1, type='SIMPLE')
+    # hm.subdivide_object(crypt_vol_2, 1, type='SIMPLE')
+    # for obj in [mucosa_fill, crypt_vol_2]:
+    #     if obj.type == 'MESH':
+    #         obj_name = obj.name
+    #         defo.elastic_deform(obj_name, deformation_strength=0.01, noise_scale=20, seed=seed)
+
+    # Deform goblet cells
+    for obj in bpy.data.objects:
+        if obj.type == 'MESH' and obj.name.startswith("Goblet_Type_GOB"):
+            obj_name = obj.name
+            defo.elastic_deform(obj_name, deformation_strength=0.01, noise_scale=15, seed=seed)
+            defo.elastic_deform(obj_name, deformation_strength=0.02, noise_scale=5, seed=seed)
+    
+    # Deform epithelial cells
+    for obj in bpy.data.objects:
+        if obj.type == 'MESH' and obj.name.startswith("Nucleus_Type_EPI"):
+            obj_name = obj.name
+            defo.elastic_deform(obj_name, deformation_strength=0.01, noise_scale=20, seed=seed)
+            defo.elastic_deform(obj_name, deformation_strength=0.0025, noise_scale=100, seed=seed)
+
     # 4) cut objects and add staining
+
+    # my_scene.cut_tissue()
+    # elapsed_old = elapsed
+    # elapsed = time.time() - start  # TODO switch back
+
     start = time.time()
     my_scene.add_cell_params(params_cell_shading)
     elapsed = time.time() - start
@@ -244,11 +304,13 @@ def create_scene(
     elapsed = time.time() - start
     print(f"Cutting cytoplasm and nuclei took {elapsed-elapsed_old} s")
     #my_scene.remove_goblet_volume(crypt_vol_2)
-    my_scene.remove_cells_volume(crypt_vol_2, tolerance=0, types=('GOB'))
+    #my_scene.cut_tissue() # TODO switch back
+    my_scene.remove_cells_volume(crypt_vol_2, tolerance=0.01, types=('GOB'))
     elapsed_old = elapsed
     elapsed = time.time() - start
     print(f"Removing goblet volume took {elapsed-elapsed_old} s")
     my_scene.remove_cells_volume(mucosa_fill)
+    my_scene.remove_cells_volume(crypt_vol_2, types=('EPI'))
     elapsed_old = elapsed
     elapsed = time.time() - start
     print(f"Removing cells volume took {elapsed-elapsed_old} s")
@@ -256,7 +318,7 @@ def create_scene(
     elapsed_old = elapsed
     elapsed = time.time() - start
     print(f"Cutting cells took {elapsed-elapsed_old} s")
-    my_scene.cut_tissue()
+    my_scene.cut_tissue() # TODO switch back
     elapsed_old = elapsed
     elapsed = time.time() - start
     print(f"Cutting tissue took {elapsed-elapsed_old} s")
@@ -269,12 +331,25 @@ def create_scene(
     elapsed = time.time() - start
     print(f"Adding nuclei mask took {elapsed-elapsed_old} s")
     my_scene.add_staining_to_cell(materials=my_materials.cell_staining)
+    my_scene.add_staining_to_cell(materials=[my_materials.goblet_staining])
     elapsed_old = elapsed
     elapsed = time.time() - start
     print(f"Adding cell staining took {elapsed-elapsed_old} s")
     mucosa_fill.location.z = mucosa_fill.location.z - 0.0005
     end = time.time()
     print(f"Cutting and staining took {end - start} s")
+
+    # 6) add elastic deformations
+    start = time.time()
+    for obj in bpy.data.objects:
+        # Check if the object is a cube (type is 'MESH' and name starts with 'Cube')
+        print(obj.name)
+        if obj.type == 'MESH' and obj.name.startswith("Plane")==False and obj.name.startswith("tissue")==False:
+            obj_name = obj.name
+            print(obj.name)
+            defo.elastic_deform(obj_name, seed=seed, deformation_strength=0.0125)
+    end = time.time()
+    print(f"Deforming objects took {end - start} s")
 
     # 5) hide non cell objects
     start = time.time()
@@ -283,13 +358,34 @@ def create_scene(
         cell_type = cell.name.split('_')[-2]
         if cell_type == 'GOB':
             goblet_cells.append(cell)
-    for obj in [crypt, crypt_vol_1, mucosa, ext_stroma, vol_goblet]+goblet_cells:
+    for obj in [crypt, crypt_vol_1, mucosa, ext_stroma, vol_goblet]:#+goblet_cells:
         obj.hide_viewport = True
         obj.hide_render = True
     end = time.time()
     print(f"Hiding non cell objects took {end - start} s")
 
-    return my_scene
+    # write all randomized parameters to a file
+    params = {
+        'seed': seed,
+        'tissue_thickness': tissue_thickness,
+        'tissue_size': tissue_size,
+        'tissue_location': tissue_location,
+        'tissue_padding': tissue_padding,
+        'tissue_rips': tissue_rips,
+        'tissue_rips_std': tissue_rips_std,
+        'tissue_rips_curl': tissue_rips_curl,
+        'stroma_intensity': stroma_intensity,
+        'nuclei_intensity': nuclei_intensity,
+        'mix_factor': mix_factor,
+        'stroma_density': stroma_density,
+        'ratios': ratios,
+        'focal_offset': focal_offset,
+        'light_source_brightness': light_source_brightness,
+        'adaptiv_brightness': adaptiv_brightness,
+        'over_staining': over_staining,
+        'red_points_strength': red_points_strength}
+
+    return my_scene, params
 
 
 class MainpulateScene(object):
@@ -330,7 +426,8 @@ def recreate_scene(**kwargs):
 
 def render_scene(
         my_scene, render_path, sample_name, gpu=True, device=0, 
-        output_shape=(512, 512), max_samples=1024, render_masks=True, base_16bit=55):
+        output_shape=(512, 512), max_samples=1024, render_masks=True, base_16bit=55,
+        additional_info=None):
     '''
     renders a scene
     Args:
@@ -370,7 +467,8 @@ def render_scene(
                     obj3d = False, # if true scene is saved as 3d object
                     output_shape = output_shape, # dimensions of output
                     max_samples = max_samples,
-                    base_16bit = base_16bit) # number of samples for rendering. Fewer samples will render more quickly. Default is 1024
+                    base_16bit = base_16bit,
+                    additional_info=additional_info) # number of samples for rendering. Fewer samples will render more quickly. Default is 1024
 
 
 def main():
@@ -408,8 +506,19 @@ def main():
                 paramters[key] = value
         with open(dir_parameters+f'/parameters_{i+1}.json', 'w') as outfile:
             json.dump(paramters, outfile)
-        my_scene = create_scene(**paramters)
-        render_scene(my_scene, render_path, i+1, gpu=args.gpu, device=args.gpu_device, base_16bit=args.base_16bit)
+        my_scene, rand_params = create_scene(**paramters)
+
+        if args.save_scene:
+            if not os.path.exists(render_path + '/scenes'):
+                os.makedirs(render_path + '/scenes')
+            bpy.ops.wm.save_as_mainfile(
+                filepath=render_path + f'/scenes/scene_{i+1}.blend', check_existing=False)
+            with open(render_path + f'/scenes/scene_{i+1}.pkl', 'wb') as f:
+                pickle.dump(my_scene, f,  pickle.HIGHEST_PROTOCOL)
+
+        render_scene(
+            my_scene, render_path, i+1, gpu=args.gpu, device=args.gpu_device,
+            base_16bit=args.base_16bit, additional_info=rand_params)
         bpy.ops.wm.read_factory_settings(use_empty=True)
 
 if __name__ == "__main__":

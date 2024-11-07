@@ -47,7 +47,8 @@ def create_render_dir(args):
         os.makedirs(dir_parameters)
     return render_path, dir_parameters
 
-
+def load_scene_from_file(file_path):
+    bpy.ops.wm.open_mainfile(filepath=file_path)
 
 def main():
     args = parse_dataset_args() 
@@ -78,9 +79,9 @@ def main():
             json.dump(paramters, outfile)
         
         # recreate scene and render
-        my_scene = r.create_scene(**paramters)
-        my_manipulation = r.MainpulateScene(my_scene)
-        my_manipulation.inflate_epi_cells(factor=1+paramters['epi_rescaling'])
+        my_scene, params = r.create_scene(**paramters)
+        #my_manipulation = r.MainpulateScene(my_scene)
+        #my_manipulation.inflate_epi_cells(factor=1+paramters['epi_rescaling'])
         r.render_scene(my_scene, render_path, i, gpu=args.gpu, device=args.gpu_device, render_masks=args.render_masks)
         bpy.ops.wm.read_factory_settings(use_empty=True)
 

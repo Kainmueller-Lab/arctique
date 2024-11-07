@@ -3,12 +3,13 @@ import random
 from collections import namedtuple
 from mathutils import Vector
 
+from src.arrangement.deformation import deform_objects
+from src.arrangement.surface_filling import fill_surface
+from src.arrangement.volume_filling import fill_volume
+from src.arrangement.voronoi import *
 from src.objects.cells import CellAttribute
 from src.utils.geometry import *
 from src.utils.helper_methods import *
-from src.utils.surface_filling import fill_surface
-from src.utils.volume_filling import fill_volume
-from src.utils.voronoi import *
 import src.utils.helper_methods as hm
 
 
@@ -31,7 +32,6 @@ class CellArrangement:
         CellArrangement.count += 1
 
         
-# TODO: Add blowup algorithm (Monte Carlo)
 class VolumeFill(CellArrangement):
     '''
     A volume fill arrangement. Given a volume mesh, fills the volume with randomly placed nuclei of different cell types without intersection.
@@ -39,7 +39,7 @@ class VolumeFill(CellArrangement):
     Ratios of corresponding types must be given and determine how many nuclei of each type should be placed.
     If strict_boundary is set to true, nuclei objects will be placed only inside the mesh, otherwise only their locations will be inside the mesh.
     '''
-    def __init__(self, mesh, density, types, ratios, strict_boundary = True, seed=None, bounding_box=None):
+    def __init__(self, mesh, density, types, ratios, seed=None, rescaling=0):
         """
         Initializes a CellArrangement object with the given parameters.
         Fills a volume with randomly placed nuclei of different types without intersection.
@@ -57,46 +57,44 @@ class VolumeFill(CellArrangement):
         self.mesh = mesh
         self.density = density
         self.subdivision_levels = 2
-        self.max_count = 1000 # Max number of nuclei to be placed
         self.types = types
         self.attributes = [CellAttribute.from_type(type) for type in self.types]
         self.ratios = ratios
-        self.strict_boundary = strict_boundary # If true will place nuclei fully inside the mesh, if false only centroids will be placed fully inside the mesh
-        # Get count
-        sum = np.sum(ratios)
-        normalized_ratios = [ratio/sum for ratio in ratios]
-        self.counts = [int(ratio*self.max_count) for ratio in normalized_ratios]
         # Generate points inside mesh with given minimum distance
-        # TODO: Generate based on Mahalanobis distance for scaled spheres
-        self.points_per_type = fill_volume(
-            self.counts, self.density, self.attributes, self.mesh, self.strict_boundary, seed=seed)
-        # remove all points outside of bounding box before adding objects
-        # print('points per type', self.points_per_type)
-        # if bounding_box is not None:
-        #     self._remove_outside_bbox(bounding_box)
+        self.points_per_attribute = fill_volume(
+            self.ratios, self.density, self.attributes, self.mesh, self.seed)
+
 
     def add(self):
-        for locations, radius, type in self.points_per_type:
-            attribute = CellAttribute.from_type(type)
+        for locations, attribute in self.points_per_attribute:
             for idx, location in enumerate(locations):
-                direction = Vector(random_unit_vector())
+                direction = Vector(random_unit_vector(seed=idx+self.seed))
                 cell_objects = attribute.add_cell_objects(location, direction, apply_subdivide=True)
                 cytoplasm = None
                 if len(cell_objects) == 2:
                     cytoplasm = cell_objects[1]
-                    cytoplasm.name = f"Cytoplasm_Type_{type.name}_{idx}"
+                    cytoplasm.name = f"Cytoplasm_Type_{attribute.cell_type.name}_{idx}"
                     self.objects.append(cytoplasm)
                     self.cytoplasm.append(cytoplasm)
                 nucleus = cell_objects[0]
                 hm.shade_switch(nucleus, flat=True)
-                nucleus.name = f"Nucleus_Type_{type.name}_{idx}"
+                nucleus.name = f"Nucleus_Type_{attribute.cell_type.name}_{idx}"
                 self.objects.append(nucleus)
                 self.nuclei.append(nucleus)
-        #convert2mesh_list(self.objects)
+        # NOTE: We currently deform only objects which are not EOS nuclei and FIBs, because those nuclei are based on metaball objects. - ck
+        def is_deformable(obj):
+            return not (obj.name.startswith('Nucleus_Type_EOS') or obj.name.startswith('Nucleus_Type_FIB'))
+        deformable_objects = [obj for obj in self.objects if is_deformable(obj)]
+        # NOTE: One could move the general deformation to the end such that also EPIs can be deformed.
+        # However I think that those deforms will look bad due to difference in nucleus size.
+        # In the future apply a more detailed noise deformation field for different regions. - ck
+        deform_objects(deformable_objects)
+        convert2mesh_list(self.objects)
+
     
     def _remove_outside_bbox(self, bbox):
         deleted_objects = []
-        for obj in self.points_per_type:
+        for obj in self.points_per_attribute:
             # construct bounding box
             pass
             
@@ -108,7 +106,7 @@ class VolumeFill(CellArrangement):
 
 
 class VoronoiFill(CellArrangement):
-    def __init__(self, mesh_obj, surface_obj, type, bounding_box=None):
+    def __init__(self, mesh_obj, surface_obj, type, bounding_box=None, rescaling=0):
         """
         Initializes a CellArrangement object with the given parameters.
         Takes as input a mesh_obj which needs to consist of an outer and an inner wall mesh, e.g. an annulus.
@@ -127,9 +125,9 @@ class VoronoiFill(CellArrangement):
         self.type = type
         self.bounding_box = bounding_box
         self.attribute = CellAttribute.from_type(self.type)
-        self.radius = self.attribute.size
-        self.max_count = 500 # NOTE: The volume will be filled up with maximally this number of nuclei
-        self.surface_subdivision_levels = 2  # 3 # NOTE: Increase this for finer subdvision and more quasi-random placement, but will be slower
+        self.radius = self.attribute.size*(1+rescaling)
+        self.max_count = 1000 # NOTE: The volume will be filled up with maximally this number of nuclei
+        self.surface_subdivision_levels = 2 # NOTE: Increase this for finer subdvision and more quasi-random placement, but will be slower
         self.add_nuclei() 
 
 
@@ -179,6 +177,7 @@ class VoronoiFill(CellArrangement):
             print('deleted compartments', len(deleted_objects))
 
         # Place nuclei
+        placed_nuclei = []
         for idx, obj in enumerate(region_objects):
             remove_loose_vertices(obj) # NOTE: For some strange reason the intersection with "FAST" solver leads to ca 1000 loose vertices per region. - ck
             prism_coords = [obj.matrix_world @ v.co for v in obj.data.vertices]
@@ -190,16 +189,21 @@ class VoronoiFill(CellArrangement):
             nucleus = bpy.context.active_object
             shrinkwrap(obj, nucleus, apply=False, viewport=True)
             smoothen_object(nucleus, self.attribute.smooth_factor, self.attribute.smooth_roundness, apply=False, viewport=True)
-            subdivide(nucleus, self.attribute.subdivision_levels, apply=False, viewport=True)
+            #subdivide(nucleus, self.attribute.subdivision_levels, apply=False, viewport=False)
 
             if self.type.name == "GOB":
                 nucleus.name = f"Goblet_Type_{self.type.name}_{idx}"
             else:
                 nucleus.name = f"Nucleus_Type_{self.type.name}_{idx}"
+            placed_nuclei.append(nucleus)
             self.objects.append(nucleus)
             self.nuclei.append(nucleus)
         convert2mesh_list(self.objects)
         remove_objects(region_objects + [surface_obj])
+
+        # add subdivision at once
+        hm.subdivide_list(placed_nuclei, self.attribute.subdivision_levels)
+        convert2mesh_list(placed_nuclei)
 
         print('part 2 done')
 
