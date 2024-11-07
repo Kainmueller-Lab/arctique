@@ -75,7 +75,7 @@ render
 
 ### Generate a variation of a rendered example
 
-The full power of the ARCTIQUE framework unfolds when varying the scene gradually, which allows to study concepts such as uncertainty in a controlled manner. To this end, we provide parameter sliders such as the nuclei intensity, which we can reduce for example:
+The full power of the ARCTIQUE framework unfolds when varying the scene gradually, which allows to study concepts such as uncertainty in a controlled manner. To this end, we provide parameter sliders to control e.g. the nuclei intensity:
 
 ![Graphical Abstract](examples/fig_nuclei_intensity.png)
 
