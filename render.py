@@ -66,6 +66,7 @@ def parse_dataset_args():
     parser.add_argument("--nucleus-color", type=tuple, default=(0.315, 0.003, 0.48, 1), help="Tissue location")
     parser.add_argument("--color-variation", type=tuple, default=(0.0, 0.0, 0.0), help="std of HSV color variation")
     parser.add_argument("--red-base", type=tuple, default=(0.605, 0.017, 0.216, 1), help="Tissue location")
+    parser.add_argument("--red-shift", type=tuple, default=(1, 1), help="...")
     parser.add_argument("--tissue-location", type=tuple, default=(0, 0, 0.5), help="Tissue location")
     parser.add_argument("--tissue-padding", type=float, default=0.15, help="Tissue padding")  # 0.2
     parser.add_argument("--tissue-rips", type=float, default=0.5, help="Degree of rip like structures in tissue")
