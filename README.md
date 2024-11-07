@@ -4,7 +4,7 @@ ARCTIQUE: ARtificial Colon Tissue Images for Quantitativ Uncertainty Evaluation
 
 With this tool you can generate synthetic images of microscopic colon tissue images, which A) exhibit a complexity comparable to real images, B) can be manipulated and re-rendered in a controlled fashion, and C) are rendered together with the exact pixelwise nuclei masks - instance and semantic. This makes Arctique a powerful tool for the evaluation of concepts such as uncertainty quantification.
 
-As shown below, to mimic the complex structure of real colon tissue images ...
+As shown below, to mimic the complex structure of real colon tissue images we a) generate a 3D model of the tissue, b) slice through the tissue and populate it with nuclei of different cell types, c) render the 2D image and its instance and semantic masks (2D and 3D).
 
 ![Graphical Abstract](examples/generation_overview.png#gh-light-mode-only)
 ![Graphical Abstract](examples/generation_overview_dark.png#gh-dark-mode-only)
@@ -35,7 +35,11 @@ done :sparkles: Now we can use blender without the need to install the full suit
 
 ### Generate an example
  
-Let's generate an example image and its corresponding masks as shown in the figure above. To do so, you can simply run the following command in the terminal:
+Let's generate an example image and its corresponding masks such as:
+
+![Examples](examples/fig_examples.png)
+
+To do so, you can simply run the following command in the terminal:
 
 ```bash
 python render.py --start-idx 42 --n-samples 1
@@ -71,12 +75,15 @@ render
 
 ### Generate a variation of a rendered example
 
-The full power of the ARCTIQUE framework unfolds when varying the scene gradually, which allows to study concepts such as uncertainty in a controlled manner. To this end, we provide parameter sliders such as:
+The full power of the ARCTIQUE framework unfolds when varying the scene gradually, which allows to study concepts such as uncertainty in a controlled manner. To this end, we provide parameter sliders to control e.g. the nuclei intensity:
 
-- example
+![Graphical Abstract](examples/fig_nuclei_intensity.png)
 
-In order to generate a variation of a rendered example, you can use the following command:
+
+In order to generate a variation of a rendered examples, you can place the original parameter files in the `rendered/parameters_og` folder and the .json file with the altered parameters (e.g. `changed_params.json`) in the `rendered/parameters_changed` folder. Then, you can run the following command in the terminal
 
 ```bash
-python render_variation.py 
+python render_variation.py --file-changed-parameters changed_params.json
 ```
+
+and it will re-render all the files in the 'parameters_og' folder with the altered parameters. The rendered images and masks will be saved in a folder with the same name as the changed parameter file, e.g. `rendered/changed_params`.
