@@ -55,13 +55,14 @@ def parse_dataset_args():
     parser.add_argument("--index-list", type=str, default='', help="ony considered if len>1, List of indices to render")
     parser.add_argument("--n-samples", type=int, default=100, help="Dataset size")
     parser.add_argument("--base-16bit", type=int, default=55, help="Base for 16 bit images (55 or 257)")
+    parser.add_argument("--save-scene", type=bool, default=False, help="Flag to save scene")
 
     # DATASET PARAMETERS
     # tissue parameters (when adaptive they orientate at a default tissue thickness of 0.05 and a default tissue size of 1.28)
     parser.add_argument("--tissue-thickness", type=float, default=0.05, help="Tissue thickness")
     parser.add_argument("--tissue-thickness_lb", type=float, default=0.025, help="Tissue thickness")
     parser.add_argument("--tissue-size", type=float, default=1.28, help="Tissue size in 100 microns")  # 1.28
-    parser.add_argument("--scale_scene", type=tuple, default=1.15, help="Scale scene (to adapt to different cell scalings)")
+    parser.add_argument("--scale-scene", type=tuple, default=1.15, help="Scale scene (to adapt to different cell scalings)")
     parser.add_argument("--tissue-color", type=tuple, default=(0.64, 0.347, 0.642, 1), help="Tissue location")
     parser.add_argument("--nucleus-color", type=tuple, default=(0.315, 0.003, 0.48, 1), help="Tissue location")
     parser.add_argument("--color-variation", type=tuple, default=(0.0, 0.0, 0.0), help="std of HSV color variation")
