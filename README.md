@@ -1,16 +1,17 @@
 # ARCTIQUE
 
-ARCTIQUE: ARtificial Colon Tissue Images for Quantitativ Uncertainty Evaluation
+This repository corresponds to the dataset generation code for the NeurIPS 2024 Datasets and Benchmark Track Paper: 
 
-With this tool you can generate synthetic images of microscopic colon tissue images, which A) exhibit a complexity comparable to real images, B) can be manipulated and re-rendered in a controlled fashion, and C) are rendered together with the exact pixelwise nuclei masks; instance and semantic. This makes Arctique a powerful tool for the evaluation of concepts such as uncertainty quantification.
+**Arctique: An artificial histopathological dataset
+unifying realism and controllability for uncertainty
+quantification** Jannik Franzen, Claudia Winklmayr, Vanessa E. Guarino, Christoph Karg, Xiaoyan Yu, Nora Koreuber, Jan P. Albrecht, Philip Bischoff, Dagmar Kainmueller; https://arxiv.org/pdf/2411.07097, when using ARCTIQUE, please cite our work
 
-As shown below, to mimic the complex structure of real colon tissue images we a) generate a 3D model of the tissue, b) slice through the tissue and populate it with nuclei of different cell types, c) render the 2D image and its instance and semantic masks (2D and 3D).
+So what exactly is ARCTIQUE? **AR**tificial **C**olon **T**issue **I**mages for **Q**uantitativ **U**ncertainty **E**valuation. These images: A) exhibit a complexity comparable to real images, B) can be manipulated and re-rendered in a controlled fashion, and C) are rendered together with the exact pixelwise nuclei masks (instance and semantic). This makes Arctique a powerful tool for method evaluation; in particular uncertainty quantification.
+
+To render complex sceneries, we use blender's python API, mimicking the workflow of histopathological imaging (as shown below): a) generate a 3D model of the tissue, b) slice through the tissue and populate it with nuclei of different cell types, c) render the 2D image and its instance and semantic masks (2D and 3D).
 
 ![Graphical Abstract](examples/generation_overview.png#gh-light-mode-only)
 ![Graphical Abstract](examples/generation_overview_dark.png#gh-dark-mode-only)
-
-
-
 
 ## Installation
 
@@ -31,6 +32,21 @@ pip install -r requirements.txt
 done :sparkles: Now we can use blender without the need to install the full suite.
 
 We tested ARCTIQUE on Linux and Windows.
+
+
+## Pre-Rendered Datasets
+
+Since the scene creation and 3D ray tracing can take quite some time, we make all pre-rendered datasets public on Zenodo. To recreate or manipulate the pre-rendered samples, you can use the following code version:
+
+| Code version | Dataset version | Zenodo-Link |
+| -| - | - |
+| **1.0.0** | **v3** (~3k: 1.5k normal / 1.5k noisy / variations on 50 samples) | [14016860](https://zenodo.org/records/14016860) |
+| 0.1.1 | **v2** (~50k including variations for 50 samples) |  [12704955](https://zenodo.org/records/12704955) |
+
+
+
+
+
 
 
 ## Quickstart
