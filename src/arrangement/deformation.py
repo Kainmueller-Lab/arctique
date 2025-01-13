@@ -82,6 +82,22 @@ def noise(x, y, z):
 
 
 def perlin(x, y, z, amplitude, frequency, octave_count, persistence, lacunarity):
+    """
+    Evaluates the Perlin noise function at the given point in space.
+
+    Parameters:
+        x (float): The x-coordinate of the point.
+        y (float): The y-coordinate of the point.
+        z (float): The z-coordinate of the point.
+        amplitude (float): The amplitude of the noise.
+        frequency (float): The frequency of the noise.
+        octave_count (int): The number of octaves to evaluate.
+        persistence (float): The persistence of the noise.
+        lacunarity (float): The lacunarity of the noise.
+
+    Returns:
+        float: The value of the Perlin noise at the given point.
+    """
     value = 0.0
     for _ in range(octave_count):
         value += amplitude * noise(x * frequency, y * frequency, z * frequency)
@@ -90,13 +106,29 @@ def perlin(x, y, z, amplitude, frequency, octave_count, persistence, lacunarity)
     return value
 
 def deformation(input_vector, params):
+    """
+    Computes a normalized deformation vector for a given input vector using Perlin noise.
+
+    Parameters:
+    - input_vector (iterable): A 3D vector (x, y, z) representing the input point in space.
+    - params (tuple): A tuple containing Perlin noise parameters:
+        - amplitude (float): The amplitude of the noise.
+        - frequency (float): The frequency of the noise.
+        - octave_count (int): The number of octaves for the noise.
+        - persistence (float): The persistence of the noise.
+        - lacunarity (float): The lacunarity of the noise.
+
+    Returns:
+    - Vector: A normalized 3D vector representing the deformation at the given point.
+    """
+
     amplitude, frequency, octave_count, persistence, lacunarity = params
     dx = perlin(input_vector[0], input_vector[1], input_vector[2], amplitude, frequency, octave_count, persistence, lacunarity)
     dy = perlin(input_vector[0] + 100, input_vector[1] + 100, input_vector[2] + 100, amplitude, frequency, octave_count, persistence, lacunarity)
     dz = perlin(input_vector[0] + 200, input_vector[1] + 200, input_vector[2] + 200, amplitude, frequency, octave_count, persistence, lacunarity)
 
     # Create deformation vector
-    # NOTE: We normalize the deformation vector to a unit vector. Otherwise the deformations could be to drastic. 
+    # NOTE: We normalize the deformation vector to a unit vector. Otherwise the deformations could be too drastic. 
     deformation_vector = Vector((dx, dy, dz)).normalized() 
     return deformation_vector 
 
@@ -144,23 +176,6 @@ def deform_objects(obj_list, deformation_strength=0.25): # TODO add tuple / prop
     hm.subdivide_list(obj_list, level=1)
     hm.convert2mesh_list(obj_list)
     print(f"Deformed {len(obj_list)} objects in {time.time() - start} seconds")
-
-
-# def deform_objects(obj_dict):
-#     '''
-#     Deforms a dictionary of objects using Perlin noise parameters.
-#     Parameters:
-#         obj_dict (dict): Nested dictionary of objects to be deformed including the noise parameters.
-#         {object_name: {object: object, deformations: {name: {strength: float, params: **kwargs}}}
-#     '''
-#     for obj_name, d in obj_dict.items():
-#         obj = d['object']
-#         deformations = d['deformations']
-#         for name, deformation in deformations.items():
-#             deformation_strength = deformation['strength']
-#             deformation_params = deformation['params']
-#             if name == 'perlin':
-#                 deform_objects_perlin([obj], deformation_strength, deformation_params)
 
 
 def elastic_deform(obj_name, deformation_strength=0.025, noise_scale=3, seed=3, quad_falloff=0):

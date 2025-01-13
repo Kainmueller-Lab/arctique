@@ -47,6 +47,16 @@ def random_unit_vector(seed=None):
     return unit_vector
 
 def rotate_objects(objects, alpha):
+    """
+    Rotate a list of objects by a given angle around the Z-axis.
+
+    Parameters:
+    objects (list): a list of objects to rotate
+    alpha (float): the angle of rotation in degrees
+
+    Returns:
+    None
+    """
     # Convert angle to radians
     alpha_rad = math.radians(alpha)
     # Select the objects and activate the context
@@ -66,6 +76,16 @@ def rotate_objects(objects, alpha):
     return  
 
 def translate_objects(objects, location):
+    """
+    Translate a list of objects by a given location.
+
+    Parameters:
+    objects (list): a list of objects to translate
+    location (tuple of 3 floats): the location to translate the objects to
+
+    Returns:
+    None
+    """
     # Select the objects and activate the context
     bpy.context.view_layer.objects.active = objects[0]
     bpy.ops.object.select_all(action='DESELECT')
@@ -102,7 +122,17 @@ def is_point_inside_mesh(mesh, point):
     return do_intersect
 
 def do_intersect(obj1, obj2):
-    # Set the active object for the boolean operation
+    """
+    Determines if two Blender objects intersect by applying a Boolean INTERSECT operation.
+    
+    Parameters:
+    obj1 (bpy.types.Object): The first Blender object to check for intersection.
+    obj2 (bpy.types.Object): The second Blender object to check for intersection.
+    
+    Returns:
+    bool: True if the objects intersect, False otherwise.
+    """
+
     bpy.context.view_layer.objects.active = obj1
     # Apply the Boolean modifier with INTERSECT operation
     mod = bpy.ops.object.modifier_add(type='BOOLEAN')
@@ -136,6 +166,16 @@ def compute_mean_scale(object):
     return (diameter[0]*diameter[1]*diameter[2]) ** (1/3)
 
 def remove_objects_inside_mesh(objects, empty_regions):
+    '''
+    Removes all objects in the given list that are inside any of the given meshes.
+    
+    Parameters:
+    objects (list of bpy.types.Object): The list of objects to check for intersection with the given meshes.
+    empty_regions (list of bpy.types.Object): The list of meshes to check against.
+    
+    Returns:
+    list of bpy.types.Object: The objects that were not inside any of the given meshes.
+    '''
     nuclei_to_remove = []
     nuclei_to_keep = []
     for nucleus_object in objects:
@@ -166,13 +206,32 @@ def add_point_cloud(locations, radius):
 
 
 def add_box(min_coords, max_coords):
+    """
+    Generates a box with the given minimum and maximum coordinates.
+
+    Parameters:
+        min_coords (list or tuple of 3 floats): The minimum x, y, z coordinates of the box.
+        max_coords (list or tuple of 3 floats): The maximum x, y, z coordinates of the box.
+
+    Returns:
+        bpy.types.Object: The generated box object.
+    """
     bpy.ops.mesh.primitive_cube_add(size=1, enter_editmode=False, align='WORLD', location=((max_coords[0]+min_coords[0])/2, (max_coords[1]+min_coords[1])/2, (max_coords[2]+min_coords[2])/2))
     bpy.context.active_object.dimensions = [(max_coords[i] - min_coords[i]) for i in range(3)]
     bpy.context.active_object.location = [(max_coords[i] + min_coords[i]) / 2 for i in range(3)]
     return bpy.context.active_object
 
 def intersect_with_object(target_objects, box_object):
-    # Iterate through each target object
+    """
+    Intersects each target object with the given box object.
+
+    Parameters:
+        target_objects (list of bpy.types.Object): The objects that will be intersected with the box.
+        box_object (bpy.types.Object): The box object that will be used for the intersection.
+
+    Returns:
+        list of bpy.types.Object: The modified target objects.
+    """
     for target_object in target_objects:
         boolean = target_object.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
         boolean.show_viewport = False
@@ -183,7 +242,16 @@ def intersect_with_object(target_objects, box_object):
     return target_objects
 
 def subtract_object(target_objects, subtract_object):
-    # Iterate through each target object
+    """
+    Subtracts the given object from each target object.
+
+    Parameters:
+        target_objects (list of bpy.types.Object): The objects that will have the subtract object subtracted from them.
+        subtract_object (bpy.types.Object): The object that will be used for the subtraction.
+
+    Returns:
+        list of bpy.types.Object: The modified target objects.
+    """
     for target_object in target_objects:
         boolean = target_object.modifiers.new(name="Boolean Modifier", type='BOOLEAN')
         boolean.show_viewport = False
@@ -196,6 +264,19 @@ def subtract_object(target_objects, subtract_object):
     return target_objects
 
 def smoothen_object(obj, factor, iterations, apply=True, viewport=True):
+    """
+    Smooths the given object by applying a Smooth modifier with the given factor and number of iterations.
+
+    Parameters:
+        obj (bpy.types.Object): The object to be smoothed.
+        factor (float): The smoothness factor.
+        iterations (int): The number of iterations the smooth modifier will run.
+        apply (bool): Whether to apply the modifier immediately. Defaults to True.
+        viewport (bool): Whether to show the modifier in the viewport. Defaults to True.
+
+    Returns:
+        None
+    """
     smooth_mod = obj.modifiers.new(name="Smooth Modifier", type='SMOOTH')
     if not viewport:
         smooth_mod.show_viewport = False
@@ -205,6 +286,18 @@ def smoothen_object(obj, factor, iterations, apply=True, viewport=True):
         bpy.ops.object.modifier_apply(modifier="Smooth Modifier")
 
 def shrinkwrap(target, wrapper, apply=True, viewport=True):
+    """
+    Applies a Shrinkwrap modifier to the wrapper object to make it conform to the target object.
+
+    Parameters:
+        target (bpy.types.Object): The object that the wrapper object will conform to.
+        wrapper (bpy.types.Object): The object that will be modified to conform to the target.
+        apply (bool): Whether to apply the modifier immediately. Defaults to True.
+        viewport (bool): Whether to show the modifier in the viewport. Defaults to True.
+
+    Returns:
+        None
+    """
     shrinkwrap_mod = wrapper.modifiers.new(name="Shrinkwrap", type='SHRINKWRAP')
     if not viewport:
         shrinkwrap_mod.show_viewport = False
@@ -214,18 +307,20 @@ def shrinkwrap(target, wrapper, apply=True, viewport=True):
     if apply:
         bpy.ops.object.modifier_apply(modifier=shrinkwrap_mod.name)
 
-# NOTE: OLD METHOD
-def shrinkwrap_old(cell_objects, type):
-    nucleus_objects = []
-    for cell_object in cell_objects:
-        bpy.ops.mesh.primitive_cube_add(enter_editmode=False, align='WORLD', location=cell_object.location)
-        nucleus_object = bpy.context.active_object
-        shrinkwrap = nucleus_object.modifiers.new(name="Shrinkwrap Modifier", type='SHRINKWRAP')
-        shrinkwrap.target = cell_object
-        bpy.ops.object.modifier_apply(modifier="Shrinkwrap Modifier")
-    return nucleus_objects
-
 def subdivide(obj, levels, apply=True, viewport=True):
+    """
+    Subdivides the given object by adding a Subdivision modifier to it.
+
+    Parameters:
+        obj (bpy.types.Object): The object to be subdivided.
+        levels (int): The number of times the object will be subdivided.
+        apply (bool): Whether to immediately apply the modifier. Defaults to True.
+        viewport (bool): Whether to show the modifier in the viewport. Defaults to True.
+
+    Returns:
+        None
+    """
+
     obj.modifiers.new(name="Subdivision", type='SUBSURF')
     if not viewport:
         obj.modifiers["Subdivision"].show_viewport = False
@@ -235,26 +330,47 @@ def subdivide(obj, levels, apply=True, viewport=True):
     
 
 def move_selection(offset_vector):
+    """
+    Moves all selected objects by a given offset.
+
+    Parameters:
+        offset_vector (Vector): The vector by which to move each selected object.
+
+    Returns:
+        None
+    """
+
     selection = bpy.context.selected_objects
     for obj in selection:
         obj.location += offset_vector
 
 def pos_value(x):
+    """
+    Returns the positive value of the input or zero if the input is negative.
+
+    Parameters:
+        x (float or int): The input value to evaluate.
+
+    Returns:
+        float or int: The input value if it is positive, otherwise zero.
+    """
+
     return x if x>0 else 0
 
-def perturb_vertices_old(mesh, deform_strength):
-    VERTS_TO_MOVE = 8 # TODO: Take care of magical number
-    PROPORTIONAL_SIZE = 0.5 # TODO: Necessary? If yes implement
-    for _ in range(VERTS_TO_MOVE):
-    # TODO: Test different deformations
-        #source_v = mesh.vertices[random.randint(0, len(mesh.vertices) - 1)]
-        #direction = source_v.normal
-        direction = Vector(random_unit_vector())
-        for w in mesh.vertices:
-            mu = deform_strength * pos_value(np.dot(direction, w.normal))
-            w.co += direction * mu
-
 def perturb_vertices(mesh, scaled_deform_strength):
+    """
+    Perturbs the vertices of a mesh by moving them in a random direction according to
+    their normal vector. This function is used to create a more realistic, irregular
+    shape for the tissue surface.
+
+    Parameters:
+        mesh (bpy.types.Mesh): The mesh object to be perturbed.
+        scaled_deform_strength (float): A scaling factor to control the strength of the
+            perturbation. The perturbation amount is proportional to this value.
+
+    Returns:
+        None
+    """
     VERTS_TO_MOVE = 10
     for _ in range(VERTS_TO_MOVE):
         direction = Vector(random_unit_vector())
@@ -263,12 +379,42 @@ def perturb_vertices(mesh, scaled_deform_strength):
             w.co -= direction * mu
     
 def rescale_obj(obj, size, scale):
+    """
+    Rescales the vertices of a mesh object to fit within a specified size and scale.
+
+    This function first normalizes the mesh based on its maximum radius and then
+    rescales it according to the provided size and scale factors.
+
+    Parameters:
+        obj (bpy.types.Object): The mesh object to be rescaled.
+        size (float): The target size for normalization.
+        scale (tuple of float): A tuple of scale factors for each axis (x, y, z).
+
+    Returns:
+        None
+    """
+
     max_radius = max(np.linalg.norm(v.co) for v in obj.data.vertices)
     for v in obj.data.vertices:
         v.co *= size/max_radius
         v.co = Vector([v/sc for v, sc in zip(v.co, scale)])
             
 def deform_mesh(obj, attribute):
+    """
+    Deforms a mesh object according to the provided attribute parameters.
+
+    The deformation is done by perturbing the vertices of the mesh object in a
+    random direction proportional to their normal vector. The amount of
+    perturbation is proportional to the deform strength and size of the mesh.
+
+    Parameters:
+        obj (bpy.types.Object): The mesh object to be deformed.
+        attribute (CellAttribute): An object containing the size, scale, and
+            deformation strength of the object.
+
+    Returns:
+        None
+    """
     size = attribute.size
     scale = attribute.scale
     deform_strength = attribute.deformation_strength
@@ -277,24 +423,47 @@ def deform_mesh(obj, attribute):
     perturb_vertices(mesh, scaled_deform_strength)
 
 def bend_mesh(obj, bend):
-        """
-        Bend mesh along Z axis.
-        """
-        modifier = obj.modifiers.new("Simple Deform Modifier", "SIMPLE_DEFORM")
-        modifier.show_viewport = False
-        modifier.deform_method = 'BEND'
-        bpy.ops.object.empty_add(type='ARROWS', align='WORLD', location=obj.location, scale=(1, 1, 1))
-        empty = bpy.context.active_object
-        # Set the origin and deform axis
-        modifier.origin = empty
-        modifier.deform_axis = 'Z'
-        modifier.angle = 2*np.pi*bend*random.uniform(-1,1)
-        bpy.context.view_layer.objects.active = obj
-        obj.select_set(True)
-        bpy.ops.object.modifier_apply(modifier="Simple Deform Modifier")
-        bpy.data.objects.remove(empty, do_unlink=True)
+    """
+    Bends a mesh object randomly around its loal z-axis by a given factor.
+
+    The bending is done by adding a Simple Deform modifier to the object and
+    applying it. The modifier is set to bend the mesh around its local z-axis
+    by a random angle between -2*PI*bend and 2*PI*bend.
+
+    Parameters:
+        obj (bpy.types.Object): The mesh object to be bent.
+        bend (float): The bending factor. A factor of 0 results in no bending.
+
+    Returns:
+        None
+    """
+
+    modifier = obj.modifiers.new("Simple Deform Modifier", "SIMPLE_DEFORM")
+    modifier.show_viewport = False
+    modifier.deform_method = 'BEND'
+    bpy.ops.object.empty_add(type='ARROWS', align='WORLD', location=obj.location, scale=(1, 1, 1))
+    empty = bpy.context.active_object
+    # Set the origin and deform axis
+    modifier.origin = empty
+    modifier.deform_axis = 'Z'
+    modifier.angle = 2*np.pi*bend*random.uniform(-1,1)
+    bpy.context.view_layer.objects.active = obj
+    obj.select_set(True)
+    bpy.ops.object.modifier_apply(modifier="Simple Deform Modifier")
+    bpy.data.objects.remove(empty, do_unlink=True)
 
 def remove_top_and_bottom_faces(obj):
+    """
+    Removes the top and bottom faces of a mesh object.
+
+    The function removes all faces of the object that have a normal with a z-component close to -1 or 1 (i.e., the faces that are parallel to the xy-plane).
+
+    Parameters:
+        obj (bpy.types.Object): The mesh object whose faces are to be removed.
+
+    Returns:
+        bpy.types.Object: The modified object with the top and bottom faces removed.
+    """
     mesh = bpy.data.meshes.new(name="ModifiedMesh")
     bm = bmesh.new()
     bm.from_mesh(obj.data)
@@ -322,6 +491,17 @@ def remove_top_and_bottom_faces(obj):
     return new_obj
 
 def remove_vertical_and_horizontal_faces(obj):
+    """
+    Removes the vertical and horizontal faces of a mesh object.
+
+    The function removes all faces of the object that have a normal with a x- or y-component close to -1 or 1 (i.e., the faces that are parallel to the xz- or yz-plane).
+
+    Parameters:
+        obj (bpy.types.Object): The mesh object whose faces are to be removed.
+
+    Returns:
+        bpy.types.Object: The modified object with the vertical and horizontal faces removed.
+    """
     mesh = bpy.data.meshes.new(name="ModifiedMesh")
     bm = bmesh.new()
     bm.from_mesh(obj.data)

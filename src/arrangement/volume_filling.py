@@ -1,18 +1,23 @@
-import bpy
 import numpy as np
 import random
 
-from itertools import combinations
 from math import pi, sin, cos
 from mathutils import Vector, Matrix
-
-from src.utils.geometry import random_unit_vector
 
 
 def fill_volume(ratios, density, attributes, volume, seed=None):
     '''
-    Idea: Fill volume first with few large cell types that are randomly placed within the bounding box of the volume.
-    Then fill the remaining space with small cell types densely.
+    Fills a given volume with nuclei of different cell types without intersection.
+
+    Parameters:
+        - ratios (list): list of ratios of nuclei types to populate
+        - density (float): density of nuclei to place
+        - attributes (list): list of CellAttribute objects corresponding to the ratios
+        - volume (Mesh): mesh of volume to populate with nuclei
+        - seed (int): seed for random generation
+
+    Returns:
+        list of tuples of lists of positions and corresponding CellAttribute objects
     '''
     assert len(ratios) == len(attributes), "list of ratios and attributes need to have the same lengths."
     if seed is not None:
@@ -107,18 +112,47 @@ def fill_volume(ratios, density, attributes, volume, seed=None):
 
 
 def do_seeds_intersect(seeds, candidate_seed, min_distance=0):
-        current_point, current_attribute = candidate_seed
-        for seed_point, seed_attribute in seeds:
-            if (seed_point - current_point).length <= current_attribute.size + seed_attribute.size + min_distance:
-                return True
-        return False
+    """
+    Check if a candidate seed intersects with any seed in a list of seeds.
+
+    Parameters:
+        seeds (List[Tuple[Vector, CellAttribute]]): A list of seeds, where each seed is a tuple of a 3D location and a CellAttribute.
+        candidate_seed (Tuple[Vector, CellAttribute]): A candidate seed, which is a tuple of a 3D location and a CellAttribute.
+        min_distance (float): The minimum distance between two seeds that is considered an intersection.
+
+    Returns:
+        bool: True if the candidate seed intersects with any seed in the list, False otherwise.
+    """
+    current_point, current_attribute = candidate_seed
+    for seed_point, seed_attribute in seeds:
+        if (seed_point - current_point).length <= current_attribute.size + seed_attribute.size + min_distance:
+            return True
+    return False
 
 
 def is_inside_bbox(seed_point, min_corner, max_corner):
+    """Check if a 3D point is inside a bounding box defined by the two corners `min_corner` and `max_corner`."""
     return (min_corner[0] <= seed_point[0] <= max_corner[0] and min_corner[1] <= seed_point[1] <= max_corner[1] and min_corner[2] <= seed_point[2] <= max_corner[2])
     
 
 def get_sorted_lattice_points(volume):
+    """
+    Generates and sorts a lattice of 3D points within a specified volume.
+
+    Parameters:
+        volume: A 3D mesh object defining the volume in which lattice points are generated.
+
+    Returns:
+        list: A sorted list of lattice points (Vector objects) within the volume, 
+              ordered by their distance to the midpoint of the volume.
+              
+    Notes:
+        - The maximum number of lattice points is limited by MAX_COUNT.
+        - Lattice points are initially shuffled to introduce randomness.
+        - DELTA determines the spacing between lattice points; smaller values 
+          result in denser and more random placements but increase computation time.
+    """
+
     MAX_COUNT = 6000 # Default: 6000 / Maximum number of cells placed in the volume
     DELTA = 0.01 # Default: 0.01 / Lattice spacing, smaller values yield more random placements but increases processing time
     
@@ -133,6 +167,17 @@ def get_sorted_lattice_points(volume):
 
 
 def get_min_max_corners_of_bbox(volume):
+    """
+    Calculates the minimum and maximum corner points of a bounding box in world coordinates.
+
+    Parameters:
+        volume: A 3D mesh object with a bounding box to evaluate.
+
+    Returns:
+        tuple: A tuple containing two Vector objects, the minimum and maximum corners of the bounding box 
+               in world coordinates.
+    """
+
     bounds = volume.bound_box
     world_corners = [volume.matrix_world @ Vector(corner) for corner in bounds]
     min_corner = Vector((min(x for x, y, z in world_corners), min(y for x, y, z in world_corners), min(z for x, y, z in world_corners)))
@@ -141,9 +186,18 @@ def get_min_max_corners_of_bbox(volume):
 
 
 def is_inside(point, obj, shrink=0):
-    '''
-    Checks whether a given point lies inside a shrinked version of the given mesh.
-    '''
+    """
+    Determines if a given point is inside a 3D mesh object.
+
+    Parameters:
+        point (Vector): The point to check.
+        obj (Mesh): The 3D mesh object to check against.
+        shrink (float, optional): An optional shrink factor to adjust the boundary. Defaults to 0.
+
+    Returns:
+        bool: True if the point is inside the mesh, False otherwise.
+    """
+
     nearest_vert, _ = nearest_vertex(obj, point)
     if nearest_vert is None:
         return False
@@ -154,6 +208,16 @@ def is_inside(point, obj, shrink=0):
 
 
 def nearest_vertex(obj, q):
+    '''
+    Find the nearest vertex to a given query point in a mesh object.
+
+    Parameters:
+        obj: A 3D mesh object
+        q: The query point
+
+    Returns:
+        tuple: A tuple containing the nearest vertex object and its distance to the query point
+    '''
     if len(obj.data.vertices) == 0:
         return None, None
     vertices = [v for v in obj.data.vertices]

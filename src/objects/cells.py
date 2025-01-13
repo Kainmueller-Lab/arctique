@@ -1,13 +1,8 @@
 import bpy 
-import bmesh
 import random
-import math
 
 from enum import Enum
-from mathutils import Vector
-from typing import Optional
 
-from src.shading.materials import Material
 from src.utils.geometry import *
 
 class CellType(Enum):
@@ -24,6 +19,14 @@ TYPE_MIXING = 0.3
 
 class CellAttribute():
     def __init__(self):
+        '''
+        Initializes a CellAttribute object.
+
+        self.cell_type: CellType
+        self.size: float
+        self.attribute_name: str
+        self.subdivision_levels: int
+        '''
         self.cell_type = None
         self.size = None
         self.attribute_name = None
@@ -47,7 +50,8 @@ class CellAttribute():
 # - scale: is the ellipsoid scale of the nucleus
 # The scale of an attribute should always be normalized such the maximal scale value is 1. 
 # This ensures that the maximal diameter of a cell nucleus is twice its size.
-class PLA(CellAttribute):
+
+class PLA(CellAttribute): # Plasma cells
     def __init__(self):
         super().__init__()
         self.cell_type = CellType.PLA
@@ -78,7 +82,7 @@ class PLA(CellAttribute):
         nucleus.scale = self.scale
         return [nucleus, cytoplasm] # NOTE: Important: Nucleus needs to be first in list. - ck
 
-class LYM(CellAttribute):
+class LYM(CellAttribute): # Lmymphocytes
     def __init__(self):
         super().__init__()
         self.cell_type = CellType.LYM
@@ -99,7 +103,7 @@ class LYM(CellAttribute):
         nucleus.scale = self.scale
         return [nucleus]
 
-class EOS(CellAttribute):
+class EOS(CellAttribute): # Eosinophils
     def __init__(self):
         super().__init__()
         self.cell_type = CellType.EOS
@@ -138,7 +142,7 @@ class EOS(CellAttribute):
         nucleus.scale = self.scale
         return [nucleus, cytoplasm]
 
-class FIB(CellAttribute):
+class FIB(CellAttribute): # Fibroblasts
     def __init__(self):
         super().__init__()
         self.cell_type = CellType.FIB
@@ -168,7 +172,7 @@ class FIB(CellAttribute):
         nucleus.scale = self.scale
         return [nucleus]
 
-class EPI(CellAttribute):
+class EPI(CellAttribute): # Epithelial cells
     def __init__(self):
         super().__init__()
         self.cell_type = CellType.EPI
@@ -180,7 +184,7 @@ class EPI(CellAttribute):
     def add_cell_objects(self, location, direction, apply_subdivide=False):
         pass
 
-class GOB(CellAttribute):
+class GOB(CellAttribute): # Goblet cells
     def __init__(self):
         super().__init__()
         self.cell_type = CellType.GOB
@@ -195,7 +199,7 @@ class GOB(CellAttribute):
 
 
 
-class MixAttribute(CellAttribute):
+class MixAttribute(CellAttribute): # Mix type of two cell attributes
     def __init__(self, true_attribute: CellAttribute, mixing_attribute: CellAttribute, mix: float):
         '''
         Produces a cell attribute that is a combination of two cell attributes in terms of numerical values.

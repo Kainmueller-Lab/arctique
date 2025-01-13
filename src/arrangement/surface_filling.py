@@ -6,17 +6,13 @@ import random
 from itertools import combinations
 from mathutils import Vector, Matrix
 
-def edge_length(mesh, edge):
-    v1 = mesh.vertices[edge.vertices[0]].co
-    v2 = mesh.vertices[edge.vertices[1]].co
-    return (v2 - v1).length
-
-def min_max_edges(mesh):
-    lengths = [edge_length(mesh, edge) for edge in mesh.edges]
-    res = (min(lengths), max(lengths)) if lengths else (0, 0)
-    return res
-
 def triangulate_object(obj):
+    """
+    Triangulates a mesh object. This is necessary for the mesh to be renderable.
+
+    Parameters:
+        obj (bpy.types.Object): The object to triangulate.
+    """
     me = obj.data
     # Get a BMesh representation
     bm = bmesh.new()
@@ -26,34 +22,19 @@ def triangulate_object(obj):
     # Finish up, write the bmesh back to the mesh
     bm.to_mesh(me)
     bm.free()
-    
-def nearest_point_dist(pt, points):
-    distances = [np.linalg.norm(pt, q) for q in points]
-    return np.min(distances)
-
-def add_point_cloud(locations, radius):
-    # Create a small sphere object for each base point
-    for idx, location in enumerate(locations):
-        bpy.ops.mesh.primitive_uv_sphere_add(radius=radius, location=location)
-        sphere = bpy.context.active_object
-        sphere.name = f"Point_{idx}"
-        
-def mesh_area(mesh):
-    # Initialize total area
-    total_area = 0.0
-    # Iterate over the faces and compute their areas
-    for face in mesh.polygons:
-        # Get the vertices of the face
-        verts = [mesh.matrix_world @ mesh.vertices[i].co for i in face.vertices]
-        assert len(verts) == 3, "Face must be triangle"
-        a = verts[1] - verts[0]
-        b = verts[2] - verts[0]
-        # Compute the area of the face using cross product
-        area = a.cross(b).length
-        total_area += np.abs(area) / 2.0
-    return total_area
 
 def refine_mesh(mesh, delta, smoothness=1):
+    """
+    Refines a mesh by subdividing its faces based on a given maximum diameter.
+
+    Parameters:
+        mesh (bpy.types.Mesh): The mesh object to refine.
+        delta (float): The maximum allowable diameter for any face. Faces larger than this will be subdivided.
+        smoothness (float, optional): The smoothness factor for subdivision. Default is 1.
+
+    Returns:
+        bpy.types.Mesh: The refined mesh object with subdivided faces.
+    """
     bpy.ops.object.mode_set(mode='EDIT')
     for face in mesh.polygons:
         # Get longest side length of face
@@ -70,6 +51,18 @@ def refine_mesh(mesh, delta, smoothness=1):
     return mesh
 
 def sample_centers(verts, dist, max_count):
+    """
+    Samples a subset of vertices from a list, ensuring a minimum distance between any two sampled vertices.
+
+    Parameters:
+        verts (list): A list of vertex objects with a 'co' attribute representing their coordinates.
+        dist (float): The minimum required distance between any two sampled vertices.
+        max_count (int): The maximum number of vertices to sample.
+
+    Returns:
+        list: The list of sampled vertex objects.
+    """
+
     sampled_verts = []
     for v in verts:
         is_free = True
@@ -84,6 +77,20 @@ def sample_centers(verts, dist, max_count):
     return sampled_verts
         
 def sample_fillers(mesh_verts, center_verts, center_dist, fill_dist, max_count):
+    """
+    Samples a subset of vertices to serve as fillers, ensuring a minimum distance from both center vertices and other fillers.
+
+    Parameters:
+        mesh_verts (list): A list of vertex objects with a 'co' attribute representing their coordinates.
+        center_verts (list): A list of center vertex objects with a 'co' attribute representing their coordinates.
+        center_dist (float): The distance used to calculate the separation threshold from center vertices.
+        fill_dist (float): The minimum required distance between any two filler vertices.
+        max_count (int): The maximum number of filler vertices to sample.
+
+    Returns:
+        list: The list of sampled filler vertex objects.
+    """
+
     filler_verts = []
     for v in mesh_verts:
         is_free = True
@@ -101,46 +108,37 @@ def sample_fillers(mesh_verts, center_verts, center_dist, fill_dist, max_count):
             break
     return filler_verts
         
-        
-def add_oriented_points(points, directions, scale, radius):
-    for idx, (pt, dir) in enumerate(zip(points, directions)):
-        bpy.ops.mesh.primitive_uv_sphere_add(radius=radius)
-        sphere = bpy.context.active_object
-        sphere.location = pt
-        
-        rotation_matrix = Matrix.Translation(sphere.location) @ dir.to_track_quat('X').to_matrix().to_4x4()
-        # Apply the rotation to the object
-        sphere.matrix_world = rotation_matrix
-        sphere.scale = scale
-        
-        sphere.name = f"Point_{idx}"
-        
 
 def fill_surface(obj, max_point_count, attribute, filler_scale):
-    '''
-    First refines the mesh of the object until the edges are sufficiently small.
-    Then samples the maximal number of vertices on the refined mesh such that intersection free placement of nuclei is possible.
-    '''
+    """
+    Fills the surface of a mesh with cell nuclei.
+
+    Parameters:
+        obj (bpy.types.Object): The object to fill with cell nuclei.
+        max_point_count (int): The maximum number of cell nuclei to place on the surface.
+        attribute (CellAttribute): The cell attribute to use for filling the surface.
+        filler_scale (float): The ratio of the filler nucleus size to the center nucleus size.
+
+    Returns:
+        tuple: A tuple containing:
+            - center_verts (list): The list of sampled center vertex objects.
+            - filler_verts (list): The list of sampled filler vertex objects.
+            - mesh_delta (float): The distance used to refine the mesh.
+    """
     min_dist = 2 * attribute.radius * attribute.scale[1] # NOTE: Use medium radius of scale, as max radius is for normal direction. - ck
     # NOTE: That's the best idea so far for creating packed surfaces. Is there better way? - ck
     fill_dist = min_dist * filler_scale # Smaller radius of nucleus to fill the gaps between large ones
     # NOTE: Find optimal value, min_dist/3 looks good? - ck
     mesh_delta = min_dist/3 # Refine mesh until vertices in mesh grid are at most mesh_delta apart.
 
+    # Refine mesh
     triangulate_object(obj)
     mesh = obj.data
-
-    # Refine mesh
-    # _, max_edge = min_max_edges(mesh)
-    # print(f"Before refinement: {len(mesh.vertices)} vertices, mesh offset {max_edge}")
     mesh = refine_mesh(mesh, mesh_delta)
-    # _, max_edge = min_max_edges(mesh)
-    # print(f"After refinement: {len(mesh.vertices)} vertices, mesh offset {max_edge}")
 
     # Sample nuclei centers
     grid_verts = list(mesh.vertices)
     random.shuffle(grid_verts)
     center_verts = sample_centers(grid_verts, min_dist, max_point_count)
     filler_verts = sample_fillers(grid_verts, center_verts, min_dist, fill_dist, max_point_count)
-    #print(f"Placed {len(center_verts)} centers and {len(filler_verts)} fillers")
     return center_verts, filler_verts, mesh_delta
