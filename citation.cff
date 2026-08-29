@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the paper below."
+title: "arctique"
+version: "0.0.1"
+authors:
+  - family-names: Franzen
+    given-names: Jannik
+  - family-names: Winklmayr
+    given-names: Claudia
+  - family-names: Guarino
+    given-names: Vanessa Emanuela
+  - family-names: Karg
+    given-names: Christoph
+  - family-names: Yu
+    given-names: Xiaoyan
+  - family-names: Koreuber
+    given-names: Nora
+  - family-names: Albrecht
+    given-names: Jan P.
+  - family-names: Bischoff
+    given-names: Philip
+  - family-names: Kainmüller
+    given-names: Dagmar
+
+repository-code: "https://github.com/Kainmueller-Lab/arctique"
+url: "https://github.com/Kainmueller-Lab/arctique"
