@@ -14,6 +14,10 @@ permissions:
 jobs:
   build_linux:
     runs-on: ubuntu-latest
+
+    env:
+      PIP_EXTRA_INDEX_URL: https://download.blender.org/pypi/
+
     strategy:
       matrix:
         python-version: ["3.10"]
@@ -36,6 +40,9 @@ jobs:
 
   build_windows:
     runs-on: windows-latest
+    env:
+      PIP_EXTRA_INDEX_URL: https://download.blender.org/pypi/
+
     strategy:
       matrix:
         python-version: ["3.10"]
