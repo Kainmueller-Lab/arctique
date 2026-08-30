@@ -1,5 +1,7 @@
 # first install python 3.10.0
 
+--extra-index-url https://download.blender.org/pypi/
+
 scipy
 Pillow
 tqdm
